@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="chat_bg">#F5F5F5</color>
+    <color name="bubble_user">#DCF8C6</color>
+    <color name="bubble_agent">#FFFFFF</color>
+    <color name="bubble_error">#FFEBEE</color>
+    <color name="bubble_result_ok">#E3F2FD</color>
+    <color name="bubble_border">#E0E0E0</color>
+    <color name="text_primary">#1A1A1A</color>
+    <color name="text_secondary">#616161</color>
+    <color name="status_ok">#2E7D32</color>
+    <color name="status_fail">#C62828</color>
+    <color name="status_timeout">#E65100</color>
+</resources>

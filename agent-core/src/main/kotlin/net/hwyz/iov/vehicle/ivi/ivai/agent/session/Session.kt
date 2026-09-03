@@ -15,6 +15,10 @@ class Session(val sessionId: String = UUID.randomUUID().toString()) {
     var pendingTask: PendingTask? = null
         private set
 
+    /** Confirmation id of the current pending confirmation, if any. */
+    val pendingConfirmationId: String?
+        get() = pendingTask?.takeIf { it.needConfirmation }?.confirmationId
+
     var lastRoute: AgentRoute? = null
         private set
 
@@ -35,13 +39,21 @@ class Session(val sessionId: String = UUID.randomUUID().toString()) {
     fun storePendingTask(
         intent: Intent,
         needConfirmation: Boolean,
-        missingArguments: List<String>
+        missingArguments: List<String>,
+        confirmationId: String? = null,
+        toolName: String? = null,
+        requestId: String? = null,
+        turnId: String? = null
     ) {
         pendingTask = PendingTask(
             intent = intent,
             needConfirmation = needConfirmation,
             missingArguments = missingArguments,
-            createdAtMs = System.currentTimeMillis()
+            createdAtMs = System.currentTimeMillis(),
+            confirmationId = confirmationId,
+            toolName = toolName,
+            requestId = requestId,
+            turnId = turnId
         )
     }
 
@@ -54,10 +66,19 @@ class Session(val sessionId: String = UUID.randomUUID().toString()) {
 
 /**
  * A task waiting for user follow-up: either a missing-argument dialogue or a confirmation.
+ *
+ * @param confirmationId non-null when [needConfirmation] is true; used by the idempotent
+ *   confirm()/cancel() API (IVI-IVAI-DSN-CR-002).
+ * @param requestId / [turnId] of the original turn, kept for event traceability when the
+ *   user confirms or cancels later.
  */
 data class PendingTask(
     val intent: Intent,
     val needConfirmation: Boolean,
     val missingArguments: List<String>,
-    val createdAtMs: Long
+    val createdAtMs: Long,
+    val confirmationId: String? = null,
+    val toolName: String? = null,
+    val requestId: String? = null,
+    val turnId: String? = null
 )

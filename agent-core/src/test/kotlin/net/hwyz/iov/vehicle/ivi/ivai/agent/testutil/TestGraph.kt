@@ -13,6 +13,7 @@ import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.ToolRegistry
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.ClimateToolDefinitions
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.AdapterRegistry
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.DefaultToolExecutor
+import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.ToolExecutor
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.ToolLifecycleListener
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.ToolPolicyEngine
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.ToolValidator
@@ -29,12 +30,14 @@ object TestGraph {
         lifecycle: ToolLifecycleListener? = null,
         config: AgentConfig = AgentConfig(model = "qwen3.5:4b", ollamaBaseUrl = "http://localhost:11434"),
         adapter: MockClimateToolAdapter = MockClimateToolAdapter(),
-        idempotencyGuard: IdempotencyGuard = IdempotencyGuard()
+        idempotencyGuard: IdempotencyGuard = IdempotencyGuard(),
+        toolExecutor: ToolExecutor? = null,
+        eventListener: net.hwyz.iov.vehicle.ivi.ivai.agent.event.AgentEventListener? = null
     ): Pair<AgentWorkflow, MockClimateToolAdapter> {
         val registry = ClimateToolDefinitions.registerAll(ToolRegistry())
         val validator = ToolValidator(registry)
         val agentPolicy = AgentPolicyEngine(registry, ToolPolicyEngine())
-        val executor = DefaultToolExecutor(
+        val executor = toolExecutor ?: DefaultToolExecutor(
             registry = registry,
             adapterRegistry = AdapterRegistry().register(adapter),
             lifecycleListener = lifecycle,
@@ -52,7 +55,8 @@ object TestGraph {
             vehicleStateProvider = VehicleStateProvider { adapter.snapshot() },
             telemetryRecorder = telemetry,
             lifecycleListener = lifecycle,
-            idempotencyGuard = idempotencyGuard
+            idempotencyGuard = idempotencyGuard,
+            eventListener = eventListener
         )
         return workflow to adapter
     }
