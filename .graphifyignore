@@ -1,0 +1,8 @@
+# build outputs
+build/
+.gradle/
+.idea/
+.git/
+*.iml
+local.properties
+graphify-out/

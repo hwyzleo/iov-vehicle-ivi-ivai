@@ -1,0 +1,28 @@
+package net.hwyz.iov.vehicle.ivi.ivai.agent
+
+/**
+ * Agent state machine (IVI-IVAI-DSN-CR-001):
+ * RECEIVED → ROUTED → MODEL_REQUESTED → MODEL_RESPONDED → PARSED → VALIDATED
+ *   ├─ NEED_DIALOGUE → WAITING_USER → 恢复任务
+ *   ├─ CLOUD_REQUIRED
+ *   ├─ REJECTED
+ *   └─ AUTHORIZED → EXECUTING → SUCCEEDED / FAILED / TIMEOUT → REPORTED
+ */
+enum class AgentState {
+    RECEIVED,
+    ROUTED,
+    MODEL_REQUESTED,
+    MODEL_RESPONDED,
+    PARSED,
+    VALIDATED,
+    NEED_DIALOGUE,
+    WAITING_USER,
+    CLOUD_REQUIRED,
+    REJECTED,
+    AUTHORIZED,
+    EXECUTING,
+    SUCCEEDED,
+    FAILED,
+    TIMEOUT,
+    REPORTED
+}
