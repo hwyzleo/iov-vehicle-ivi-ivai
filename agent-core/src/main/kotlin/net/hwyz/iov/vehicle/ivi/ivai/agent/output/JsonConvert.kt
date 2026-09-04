@@ -23,3 +23,16 @@ fun jsonElementToValue(element: JsonElement): Any? = when (element) {
 
 fun jsonArgsToValues(arguments: Map<String, JsonElement>): Map<String, Any?> =
     arguments.mapValues { (_, value) -> jsonElementToValue(value) }
+
+/** Converts plain Kotlin values back into JSON elements (L0 candidate → AgentOutput). */
+fun valueToJsonElement(value: Any?): JsonElement = when (value) {
+    is JsonElement -> value
+    is Number -> JsonPrimitive(value)
+    is Boolean -> JsonPrimitive(value)
+    is String -> JsonPrimitive(value)
+    null -> kotlinx.serialization.json.JsonNull
+    else -> JsonPrimitive(value.toString())
+}
+
+fun valuesToJsonArgs(arguments: Map<String, Any?>): Map<String, JsonElement> =
+    arguments.mapValues { (_, value) -> valueToJsonElement(value) }

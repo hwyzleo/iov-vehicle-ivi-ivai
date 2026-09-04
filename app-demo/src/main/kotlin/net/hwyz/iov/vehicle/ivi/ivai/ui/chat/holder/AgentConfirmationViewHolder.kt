@@ -22,12 +22,14 @@ class AgentConfirmationViewHolder(
 ) : RecyclerView.ViewHolder(itemView) {
 
     private val textView: TextView = itemView.findViewById(R.id.confirmationText)
+    private val tierBadge: TextView? = itemView.findViewById(R.id.tierBadge)
     private val confirmButton: Button = itemView.findViewById(R.id.confirmButton)
     private val cancelButton: Button = itemView.findViewById(R.id.cancelButton)
 
     fun bind(message: ChatMessage) {
         val confirmation = message.confirmation ?: return
         textView.text = confirmation.text.ifBlank { message.text }
+        AgentTextViewHolder.bindTierBadge(tierBadge, message)
 
         val enabled = message.status == ChatMessageStatus.WAITING_USER
         confirmButton.isEnabled = enabled

@@ -59,7 +59,9 @@ data class AgentSessionSnapshot(
     val sessionId: String,
     val history: List<HistoryEntry>,
     val pendingConfirmationId: String?,
-    val activeTurnId: String?
+    val activeTurnId: String?,
+    /** Last turn's execution path (CR-005), for tier-label reconciliation on reconnect. */
+    val lastExecutionPath: net.hwyz.iov.vehicle.ivi.ivai.agent.event.AgentExecutionPath? = null
 ) {
     data class HistoryEntry(val role: String, val text: String)
 }

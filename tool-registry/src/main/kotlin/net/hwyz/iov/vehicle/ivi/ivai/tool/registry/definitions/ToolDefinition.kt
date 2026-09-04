@@ -18,5 +18,9 @@ data class ToolDefinition(
     val selectionPriority: Int,
     val parameterSchema: String,
     val policy: ToolPolicy,
-    val execution: ToolExecutionBinding
+    val execution: ToolExecutionBinding,
+    /** L0 deterministic routing rules (IVI-IVAI-DSN-CR-005); empty = never L0. */
+    val deterministicRules: List<DeterministicIntentRule> = emptyList(),
+    /** Deployment / vehicle / version availability (IVI-IVAI-DSN-CR-005). */
+    val availability: ToolAvailability = ToolAvailability()
 )

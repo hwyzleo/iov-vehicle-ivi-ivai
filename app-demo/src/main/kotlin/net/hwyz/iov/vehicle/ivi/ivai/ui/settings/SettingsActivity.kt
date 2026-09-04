@@ -13,24 +13,29 @@ import net.hwyz.iov.vehicle.ivi.ivai.demo.R
 import net.hwyz.iov.vehicle.ivi.ivai.service.AgentService
 import net.hwyz.iov.vehicle.ivi.ivai.ui.settings.prompt.PromptInfoFragment
 import net.hwyz.iov.vehicle.ivi.ivai.ui.settings.prompt.ServicePromptInfoGateway
+import net.hwyz.iov.vehicle.ivi.ivai.ui.settings.rag.RagConfigFragment
+import net.hwyz.iov.vehicle.ivi.ivai.ui.settings.rag.ServiceRagConfigGateway
 
 /**
- * Settings host (IVI-IVAI-DSN-CR-004). Binds the agent service and attaches the
- * read-only PromptInfo page once connected.
+ * Settings host (IVI-IVAI-DSN-CR-004 + CR-005). Binds the agent service and
+ * attaches the read-only PromptInfo page plus the 检索增强 (RAG) config group
+ * once connected.
  */
 class SettingsActivity : FragmentActivity() {
 
-    private var fragment: PromptInfoFragment? = null
+    private var promptFragment: PromptInfoFragment? = null
+    private var ragFragment: RagConfigFragment? = null
     private var agentService: AgentService? = null
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
             val service = (binder as AgentService.LocalBinder).getService()
             agentService = service
-            fragment?.attach(
+            promptFragment?.attach(
                 ServicePromptInfoGateway(service),
                 showFullContent = BuildConfig.DEBUG
             )
+            ragFragment?.attach(ServiceRagConfigGateway(service))
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
@@ -42,18 +47,25 @@ class SettingsActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
         findViewById<Button>(R.id.backButton).setOnClickListener { finish() }
-        fragment = if (savedInstanceState == null) {
-            PromptInfoFragment.newInstance().also {
+        if (savedInstanceState == null) {
+            promptFragment = PromptInfoFragment.newInstance().also {
                 supportFragmentManager.beginTransaction()
-                    .replace(R.id.settingsContainer, it)
+                    .replace(R.id.settingsPromptContainer, it)
+                    .commit()
+            }
+            ragFragment = RagConfigFragment.newInstance().also {
+                supportFragmentManager.beginTransaction()
+                    .replace(R.id.settingsRagContainer, it)
                     .commit()
             }
         } else {
-            supportFragmentManager.findFragmentById(R.id.settingsContainer) as? PromptInfoFragment
+            promptFragment = supportFragmentManager.findFragmentById(R.id.settingsPromptContainer) as? PromptInfoFragment
+            ragFragment = supportFragmentManager.findFragmentById(R.id.settingsRagContainer) as? RagConfigFragment
         }
         // The service may already be bound (chat screen stays alive behind us).
         agentService?.let { service ->
-            fragment?.attach(ServicePromptInfoGateway(service), showFullContent = BuildConfig.DEBUG)
+            promptFragment?.attach(ServicePromptInfoGateway(service), showFullContent = BuildConfig.DEBUG)
+            ragFragment?.attach(ServiceRagConfigGateway(service))
         }
     }
 

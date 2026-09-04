@@ -59,6 +59,7 @@ dependencies {
     // (configRepository), so app-demo needs them on its compile classpath.
     api(project(":model-client"))
     implementation(project(":tool-registry"))
+    implementation(project(":retrieval"))
 
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)

@@ -11,4 +11,8 @@
     <color name="status_ok">#2E7D32</color>
     <color name="status_fail">#C62828</color>
     <color name="status_timeout">#E65100</color>
+    <!-- CR-005 层级 Badge：弱强调的小型标签 -->
+    <color name="tier_badge_bg">#ECEFF1</color>
+    <color name="tier_badge_border">#B0BEC5</color>
+    <color name="tier_badge_text">#546E7A</color>
 </resources>

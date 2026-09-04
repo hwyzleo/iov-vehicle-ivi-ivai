@@ -73,7 +73,8 @@ class AgentWorkflowTest {
 
     @Test
     fun `补充温度后恢复温度设置任务并生成合法参数`() = runTest {
-        val stub = StubModelProvider(dialogueMissingTemp, setTemp24)
+        // CR-005: “温度调到”由 L0 缺参快路径直接追问（不调模型），因此补参轮次才消费模型输出。
+        val stub = StubModelProvider(setTemp24)
         val (workflow, adapter) = TestGraph.build(stub)
         val session = Session()
 
@@ -126,7 +127,8 @@ class AgentWorkflowTest {
         val unknown = """{"route":"LOCAL_TOOL","intents":[{"toolId":"climate.ghost","arguments":{}}],"modelConfidence":0.9,"riskLevel":"low","needConfirmation":false,"missingArguments":[]}"""
         val stub = StubModelProvider(unknown)
         val (workflow, adapter) = TestGraph.build(stub)
-        val result = workflow.process(input("req-7", "打开空调"), Session())
+        // CR-005: “我有点冷”走 L1，模型候选仍会被白名单校验拦截。
+        val result = workflow.process(input("req-7", "我有点冷"), Session())
 
         assertEquals(AgentState.REJECTED, result.state)
         assertEquals("IVAI-TOOL-001", result.errorCode)
@@ -140,7 +142,7 @@ class AgentWorkflowTest {
         val missing = """{"route":"LOCAL_TOOL","intents":[{"toolId":"climate.temperature_set","arguments":{}}],"modelConfidence":0.8,"riskLevel":"medium","needConfirmation":false,"missingArguments":[]}"""
         val stub = StubModelProvider(missing)
         val (workflow, adapter) = TestGraph.build(stub)
-        val result = workflow.process(input("req-8", "温度调到24度"), Session())
+        val result = workflow.process(input("req-8", "我有点冷"), Session())
 
         assertEquals(AgentState.REJECTED, result.state)
         assertEquals("IVAI-TOOL-002", result.errorCode)
@@ -152,7 +154,7 @@ class AgentWorkflowTest {
     fun `非法 JSON 返回 IVAI-MODEL-002`() = runTest {
         val stub = StubModelProvider("this is { not json")
         val (workflow, adapter) = TestGraph.build(stub)
-        val result = workflow.process(input("req-9", "打开空调"), Session())
+        val result = workflow.process(input("req-9", "我有点冷"), Session())
 
         assertEquals(AgentState.FAILED, result.state)
         assertEquals("IVAI-MODEL-002", result.errorCode)
@@ -163,7 +165,7 @@ class AgentWorkflowTest {
     fun `输出不符合 Schema 返回 IVAI-SCHEMA-001`() = runTest {
         val stub = StubModelProvider("""[1,2,3]""")
         val (workflow, adapter) = TestGraph.build(stub)
-        val result = workflow.process(input("req-10", "打开空调"), Session())
+        val result = workflow.process(input("req-10", "我有点冷"), Session())
 
         assertEquals(AgentState.FAILED, result.state)
         assertEquals("IVAI-SCHEMA-001", result.errorCode)
@@ -175,7 +177,7 @@ class AgentWorkflowTest {
         val badRoute = """{"route":"FLY_TO_MOON","intents":[],"modelConfidence":0.9,"riskLevel":"low","needConfirmation":false,"missingArguments":[]}"""
         val stub = StubModelProvider(badRoute)
         val (workflow, adapter) = TestGraph.build(stub)
-        val result = workflow.process(input("req-11", "打开空调"), Session())
+        val result = workflow.process(input("req-11", "我有点冷"), Session())
 
         assertEquals(AgentState.REJECTED, result.state)
         assertEquals("IVAI-ROUTE-001", result.errorCode)
@@ -190,7 +192,8 @@ class AgentWorkflowTest {
             }
         }
         val (workflow, adapter) = TestGraph.build(stub)
-        val result = workflow.process(input("req-12", "打开空调"), Session())
+        // CR-005: “我有点冷”走 L1 才会调用模型，从而触发模型不可达。
+        val result = workflow.process(input("req-12", "我有点冷"), Session())
 
         assertEquals(AgentState.FAILED, result.state)
         assertEquals("IVAI-MODEL-001", result.errorCode)
@@ -234,20 +237,20 @@ class AgentWorkflowTest {
 
     @Test
     fun `确认后执行之前需要确认的工具`() = runTest {
-        // Model requests confirmation for a LOCAL_TOOL.
-        val confirm = """{"route":"LOCAL_TOOL","intents":[{"toolId":"climate.power_on","arguments":{"position":"driver"}}],"modelConfidence":0.9,"riskLevel":"low","needConfirmation":true,"missingArguments":[]}"""
+        // CR-005: L0 仅放行低风险唯一指令；确认流程通过 L1 隐式表达验证（模型请求确认）。
+        val confirm = """{"route":"LOCAL_TOOL","intents":[{"toolId":"climate.temperature_increase","arguments":{"position":"driver","step":1}}],"modelConfidence":0.9,"riskLevel":"medium","needConfirmation":true,"missingArguments":[]}"""
         val stub = StubModelProvider(confirm)
         val (workflow, adapter) = TestGraph.build(stub)
         val session = Session()
 
-        val ask = workflow.process(input("req-c1", "打开空调"), session)
+        val ask = workflow.process(input("req-c1", "我有点冷"), session)
         assertEquals(AgentState.WAITING_USER, ask.state)
         assertTrue(ask.responseText.contains("确认"))
-        assertFalse(adapter.state.powerOn)
+        assertEquals(24.0, adapter.state.driverTemperature)
 
         val approved = workflow.process(input("req-c2", "确认"), session)
         assertEquals(AgentState.SUCCEEDED, approved.state)
-        assertTrue(adapter.state.powerOn)
+        assertEquals(25.0, adapter.state.driverTemperature)
     }
 
     private fun input(requestId: String, text: String) =

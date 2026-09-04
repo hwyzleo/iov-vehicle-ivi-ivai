@@ -3,6 +3,9 @@ package net.hwyz.iov.vehicle.ivi.ivai.agent.prompt
 import net.hwyz.iov.vehicle.ivi.ivai.agent.session.Session
 import net.hwyz.iov.vehicle.ivi.ivai.agent.workflow.AgentInput
 import net.hwyz.iov.vehicle.ivi.ivai.model.ChatMessage
+import net.hwyz.iov.vehicle.ivi.ivai.retrieval.KnowledgeChunk
+import net.hwyz.iov.vehicle.ivi.ivai.retrieval.ToolCandidate
+import net.hwyz.iov.vehicle.ivi.ivai.retrieval.ToolDefinitionSummary
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.ToolRegistry
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.ToolDefinition
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.VehicleStateSnapshot
@@ -27,7 +30,9 @@ class PromptBuilder(private val registry: ToolRegistry) {
             appendLine(SYSTEM_PROMPT)
             appendLine()
             appendLine("## 候选工具（只能使用以下 toolId）")
-            registry.all().sortedByDescending { it.selectionPriority }.forEach { appendLine(renderTool(it)) }
+            registry.all()
+                .sortedByDescending { it.selectionPriority }
+                .forEach { appendLine(renderToolSummary(ToolDefinitionSummary.from(it))) }
             appendLine()
             appendLine("## 输出 Schema")
             appendLine(OUTPUT_SCHEMA)
@@ -39,9 +44,69 @@ class PromptBuilder(private val registry: ToolRegistry) {
         input: AgentInput,
         vehicleState: VehicleStateSnapshot?
     ): List<ChatMessage> {
+        val summaries = registry.all()
+            .sortedByDescending { it.selectionPriority }
+            .map { ToolDefinitionSummary.from(it) }
+        return buildToolSelection(session, input, vehicleState, summaries)
+    }
+
+    /**
+     * L1 tool-selection prompt (CR-005): the candidate set is the recalled Top-K
+     * (retrieved or fixed) instead of the full registry. The output Schema stays
+     * identical so the downstream parse / validate / execute chain is unchanged.
+     */
+    fun buildWithCandidates(
+        session: Session,
+        input: AgentInput,
+        vehicleState: VehicleStateSnapshot?,
+        candidates: List<ToolCandidate>
+    ): List<ChatMessage> =
+        buildToolSelection(session, input, vehicleState, candidates.map { it.definition })
+
+    private fun buildToolSelection(
+        session: Session,
+        input: AgentInput,
+        vehicleState: VehicleStateSnapshot?,
+        toolSummaries: List<ToolDefinitionSummary>
+    ): List<ChatMessage> {
         val messages = mutableListOf<ChatMessage>()
-        messages += ChatMessage("system", buildSystem(session, input, vehicleState))
+        messages += ChatMessage("system", buildSystem(session, input, vehicleState, toolSummaries))
         messages += FEW_SHOT_EXAMPLES
+        messages += session.history().takeLast(MAX_HISTORY_TURNS)
+        messages += ChatMessage("user", input.text)
+        return messages
+    }
+
+    /**
+     * L2 knowledge-answer prompt (CR-005): the local LLM answers STRICTLY from
+     * the provided chunks — no tool calls, no fabrication; insufficient or
+     * conflicting evidence is reported instead of guessing.
+     */
+    fun buildKnowledge(
+        session: Session,
+        input: AgentInput,
+        vehicleState: VehicleStateSnapshot?,
+        chunks: List<KnowledgeChunk>
+    ): List<ChatMessage> {
+        val messages = mutableListOf<ChatMessage>()
+        messages += ChatMessage(
+            "system",
+            buildString {
+                appendLine(KNOWLEDGE_SYSTEM_PROMPT)
+                appendLine()
+                appendLine("## 运行上下文")
+                appendLine("- 用户输入：${input.text}")
+                appendLine("- 车辆状态：${renderVehicleState(vehicleState)}")
+                appendLine()
+                appendLine("## 可用知识片段（只依据以下片段回答）")
+                chunks.forEachIndexed { index, chunk ->
+                    appendLine("### [${index + 1}] ${chunk.title}（${chunk.documentId} · ${chunk.documentVersion}）")
+                    appendLine(chunk.content)
+                    appendLine()
+                }
+            }.trim()
+        )
+        messages += KNOWLEDGE_FEW_SHOT_EXAMPLES
         messages += session.history().takeLast(MAX_HISTORY_TURNS)
         messages += ChatMessage("user", input.text)
         return messages
@@ -50,7 +115,8 @@ class PromptBuilder(private val registry: ToolRegistry) {
     private fun buildSystem(
         session: Session,
         input: AgentInput,
-        vehicleState: VehicleStateSnapshot?
+        vehicleState: VehicleStateSnapshot?,
+        toolSummaries: List<ToolDefinitionSummary>
     ): String = buildString {
         appendLine(SYSTEM_PROMPT)
         appendLine()
@@ -60,8 +126,8 @@ class PromptBuilder(private val registry: ToolRegistry) {
         appendLine("- 会话状态：${session.lastRoute?.name ?: "新会话"}")
         appendLine("- 车辆状态：${renderVehicleState(vehicleState)}")
         appendLine()
-        appendLine("## 候选工具（只能使用以下 toolId）")
-        registry.all().sortedByDescending { it.selectionPriority }.forEach { appendLine(renderTool(it)) }
+        appendLine("## 候选工具（只能使用以下 toolId，不得使用集合之外的工具）")
+        toolSummaries.forEach { appendLine(renderToolSummary(it)) }
         appendLine()
         appendLine("## 输出 Schema")
         appendLine(OUTPUT_SCHEMA)
@@ -70,7 +136,7 @@ class PromptBuilder(private val registry: ToolRegistry) {
     private fun renderVehicleState(state: VehicleStateSnapshot?): String =
         state?.let { "空调电源：${if (it.powerOn) "开" else "关"}" } ?: "未知"
 
-    private fun renderTool(tool: ToolDefinition): String = buildString {
+    private fun renderToolSummary(tool: ToolDefinitionSummary): String = buildString {
         appendLine("- ${tool.toolId}${tool.functionId?.let { " (${it})" } ?: ""}：${tool.name}")
         appendLine("  说明：${tool.description}")
         appendLine("  参数：${tool.parameterSchema.replace("\n", "").replace(" ", "")}")
@@ -117,6 +183,25 @@ class PromptBuilder(private val registry: ToolRegistry) {
   "missingArguments": ["缺失参数名"],
   "reasonCode": "原因说明（可选）"
 }"""
+
+        const val KNOWLEDGE_SYSTEM_PROMPT = """你是车机车载智能助手 IVI-IVAI 的本地知识问答助手。你的唯一职责是：
+根据提供的「可用知识片段」用自然语言回答用户的车辆使用/故障问题。
+约束：
+- 只依据提供的知识片段回答，不得使用片段之外的信息，不得编造。
+- 证据不足时，明确说明“无法确认/未找到相关说明”，不得猜测。
+- 片段冲突时，不得自行选择，应指出冲突并请用户转人工或云端处理。
+- 不得输出任何 Tool Call、JSON 或 Markdown 代码块，直接输出纯文本回答。
+- 回答可携带来源（文档标题与版本）供 UI 展示。"""
+
+        val KNOWLEDGE_FEW_SHOT_EXAMPLES: List<ChatMessage> = listOf(
+            ChatMessage("user", "胎压报警是什么意思"),
+            ChatMessage(
+                "assistant",
+                "胎压报警指车辆检测到某个轮胎气压明显低于标准值时，仪表盘会点亮胎压报警灯。\n" +
+                    "【警告】报警灯亮起时请勿继续高速行驶，应立即安全靠边停车检查轮胎。\n" +
+                    "处理步骤：1. 安全停车后检查四轮外观；2. 用随车气泵补气至标准胎压；3. 若补气后仍不熄灭，请前往授权维修店检查。（来源：故障·胎压报警说明 v1.0）"
+            )
+        )
 
         val FEW_SHOT_EXAMPLES: List<ChatMessage> = listOf(
             ChatMessage("user", "打开空调"),

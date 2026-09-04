@@ -22,6 +22,14 @@ class Session(val sessionId: String = UUID.randomUUID().toString()) {
     var lastRoute: AgentRoute? = null
         private set
 
+    /** Last turn's execution path (CR-005), kept for snapshot reconciliation. */
+    var lastExecutionPath: net.hwyz.iov.vehicle.ivi.ivai.agent.event.AgentExecutionPath? = null
+        private set
+
+    fun setExecutionPath(path: net.hwyz.iov.vehicle.ivi.ivai.agent.event.AgentExecutionPath?) {
+        lastExecutionPath = path
+    }
+
     fun appendUser(text: String) {
         history += ChatMessage("user", text)
     }
@@ -43,7 +51,8 @@ class Session(val sessionId: String = UUID.randomUUID().toString()) {
         confirmationId: String? = null,
         toolName: String? = null,
         requestId: String? = null,
-        turnId: String? = null
+        turnId: String? = null,
+        executionPath: net.hwyz.iov.vehicle.ivi.ivai.agent.event.AgentExecutionPath? = null
     ) {
         pendingTask = PendingTask(
             intent = intent,
@@ -53,7 +62,8 @@ class Session(val sessionId: String = UUID.randomUUID().toString()) {
             confirmationId = confirmationId,
             toolName = toolName,
             requestId = requestId,
-            turnId = turnId
+            turnId = turnId,
+            executionPath = executionPath
         )
     }
 
@@ -80,5 +90,6 @@ data class PendingTask(
     val confirmationId: String? = null,
     val toolName: String? = null,
     val requestId: String? = null,
-    val turnId: String? = null
+    val turnId: String? = null,
+    val executionPath: net.hwyz.iov.vehicle.ivi.ivai.agent.event.AgentExecutionPath? = null
 )

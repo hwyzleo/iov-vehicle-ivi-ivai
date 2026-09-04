@@ -11,6 +11,7 @@ dependencies {
     implementation(project(":model-client"))
     implementation(project(":tool-registry"))
     implementation(project(":tool-runtime"))
+    implementation(project(":retrieval"))
     implementation(project(":observability"))
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.core)

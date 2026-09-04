@@ -7,19 +7,34 @@ import net.hwyz.iov.vehicle.ivi.ivai.agent.AgentState
 import net.hwyz.iov.vehicle.ivi.ivai.agent.error.ErrorCode
 import net.hwyz.iov.vehicle.ivi.ivai.agent.event.AgentEvent
 import net.hwyz.iov.vehicle.ivi.ivai.agent.event.AgentEventListener
+import net.hwyz.iov.vehicle.ivi.ivai.agent.event.AgentExecutionPath
 import net.hwyz.iov.vehicle.ivi.ivai.agent.event.ParsedIntentSummary
 import net.hwyz.iov.vehicle.ivi.ivai.agent.event.ParsedOutputSummary
+import net.hwyz.iov.vehicle.ivi.ivai.agent.event.TierTransition
 import net.hwyz.iov.vehicle.ivi.ivai.agent.event.ToolDebugInfo
 import net.hwyz.iov.vehicle.ivi.ivai.agent.event.TurnDebugInfo
 import net.hwyz.iov.vehicle.ivi.ivai.agent.output.AgentOutput
 import net.hwyz.iov.vehicle.ivi.ivai.agent.output.AgentRoute
 import net.hwyz.iov.vehicle.ivi.ivai.agent.output.Intent
 import net.hwyz.iov.vehicle.ivi.ivai.agent.output.jsonArgsToValues
+import net.hwyz.iov.vehicle.ivi.ivai.agent.output.valuesToJsonArgs
 import net.hwyz.iov.vehicle.ivi.ivai.agent.policy.AgentPolicyEngine
 import net.hwyz.iov.vehicle.ivi.ivai.agent.policy.PolicyOutcome
 import net.hwyz.iov.vehicle.ivi.ivai.agent.prompt.PromptBuilder
-import net.hwyz.iov.vehicle.ivi.ivai.agent.router.RouteDecision
-import net.hwyz.iov.vehicle.ivi.ivai.agent.router.Router
+import net.hwyz.iov.vehicle.ivi.ivai.agent.rag.RagExecutionInfo
+import net.hwyz.iov.vehicle.ivi.ivai.agent.rag.RagExecutionSnapshot
+import net.hwyz.iov.vehicle.ivi.ivai.agent.rag.RagRuntimeManager
+import net.hwyz.iov.vehicle.ivi.ivai.agent.rag.RagRuntimeStatus
+import net.hwyz.iov.vehicle.ivi.ivai.agent.router.AgentContext
+import net.hwyz.iov.vehicle.ivi.ivai.agent.router.CandidateSource
+import net.hwyz.iov.vehicle.ivi.ivai.agent.router.IntentTier
+import net.hwyz.iov.vehicle.ivi.ivai.agent.router.RouteReasonCode
+import net.hwyz.iov.vehicle.ivi.ivai.agent.router.TieredIntentRouter
+import net.hwyz.iov.vehicle.ivi.ivai.agent.router.TieredRouteDecision
+import net.hwyz.iov.vehicle.ivi.ivai.agent.router.ToolCallCandidate
+import net.hwyz.iov.vehicle.ivi.ivai.agent.router.ToolCandidateProvider
+import net.hwyz.iov.vehicle.ivi.ivai.agent.router.ToolCandidateSet
+import net.hwyz.iov.vehicle.ivi.ivai.agent.router.TextNormalizer
 import net.hwyz.iov.vehicle.ivi.ivai.agent.session.PendingTask
 import net.hwyz.iov.vehicle.ivi.ivai.agent.session.Session
 import net.hwyz.iov.vehicle.ivi.ivai.model.AgentPerformanceMetrics
@@ -36,6 +51,13 @@ import net.hwyz.iov.vehicle.ivi.ivai.model.StreamingModelProvider
 import net.hwyz.iov.vehicle.ivi.ivai.observability.RequestTelemetry
 import net.hwyz.iov.vehicle.ivi.ivai.observability.TelemetryRecord
 import net.hwyz.iov.vehicle.ivi.ivai.observability.TelemetryRecorder
+import net.hwyz.iov.vehicle.ivi.ivai.retrieval.KnowledgeChunk
+import net.hwyz.iov.vehicle.ivi.ivai.retrieval.KnowledgeRetriever
+import net.hwyz.iov.vehicle.ivi.ivai.retrieval.KnowledgeRetrievalQuery
+import net.hwyz.iov.vehicle.ivi.ivai.retrieval.RetrievalQuery
+import net.hwyz.iov.vehicle.ivi.ivai.retrieval.ToolRetrievalQuery
+import net.hwyz.iov.vehicle.ivi.ivai.retrieval.knowledge.KnowledgeCitationMapper
+import net.hwyz.iov.vehicle.ivi.ivai.retrieval.knowledge.KnowledgeReranker
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.ToolRegistry
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.ExecutionContext
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.ExecutionStatus
@@ -79,7 +101,8 @@ data class AgentResult(
     val rawModelContent: String? = null,
     val replayed: Boolean = false,
     val performance: AgentPerformanceMetrics? = null,
-    val telemetry: RequestTelemetry
+    val telemetry: RequestTelemetry,
+    val executionPath: AgentExecutionPath? = null
 )
 
 /**
@@ -108,24 +131,70 @@ private class TurnTimings(val submittedAtNs: Long) {
 }
 
 /**
- * Agent orchestration engine: drives the state machine from RECEIVED to a terminal
- * state, enforcing the validation order (IVI-IVAI-DSN-CR-001). Any critical
- * validation failure blocks execution.
+ * Tracks the tier execution path for one turn (CR-005): initial tier, final
+ * tier, transitions and candidate source. Rendered into AgentEvents and the
+ * debug payload.
+ */
+private class ExecutionPathTracker(initialTier: IntentTier) {
+    var initialTier: IntentTier = initialTier
+        private set
+    var currentTier: IntentTier = initialTier
+        private set
+    var finalReasonCode: String = ""
+    var candidateSource: CandidateSource? = null
+    private val transitions = mutableListOf<TierTransition>()
+
+    fun transition(to: IntentTier, reasonCode: String) {
+        if (currentTier != to) {
+            transitions += TierTransition(from = currentTier, to = to, reasonCode = reasonCode)
+            currentTier = to
+        }
+    }
+
+    fun build(): AgentExecutionPath = AgentExecutionPath(
+        initialTier = initialTier,
+        finalTier = currentTier,
+        transitions = transitions.toList(),
+        finalReasonCode = finalReasonCode,
+        candidateSource = candidateSource
+    )
+}
+
+/**
+ * Agent orchestration engine: drives the state machine from RECEIVED to a
+ * terminal state, enforcing tiered intent routing (CR-005):
+ *
+ *  RECEIVED → NORMALIZED → TIER_ROUTED
+ *    ├─ L0_MATCHED → CANDIDATE_READY → unified execution chain (no RAG/LLM)
+ *    ├─ L1_RETRIEVING_TOOLS → MODEL_REQUESTED → PARSED → CANDIDATE_READY → chain
+ *    ├─ L2_RETRIEVING_KNOWLEDGE → MODEL_REQUESTED → REPLY (natural language)
+ *    ├─ L3_CLOUD_REQUIRED
+ *    └─ REJECTED
+ *
+ * Every tool candidate — L0 rule, L1 local LLM or L3 cloud — passes the SAME
+ * validation / policy / confirmation / idempotency / execution chain.
  */
 class AgentWorkflow(
     private val modelProvider: ModelProvider,
     private val registry: ToolRegistry,
-    private val router: Router,
+    private val router: net.hwyz.iov.vehicle.ivi.ivai.agent.router.Router,
     private val promptBuilder: PromptBuilder,
     private val validator: ToolValidator,
     private val agentPolicy: AgentPolicyEngine,
     private val toolExecutor: ToolExecutor,
     private val config: AgentConfig,
+    private val tieredRouter: TieredIntentRouter,
+    private val toolCandidateProvider: ToolCandidateProvider,
     private val vehicleStateProvider: VehicleStateProvider? = null,
     private val telemetryRecorder: TelemetryRecorder? = null,
     private val lifecycleListener: ToolLifecycleListener? = null,
     private val idempotencyGuard: IdempotencyGuard = IdempotencyGuard(),
-    private val eventListener: AgentEventListener? = null
+    private val eventListener: AgentEventListener? = null,
+    private val ragRuntimeManager: RagRuntimeManager? = null,
+    private val knowledgeRetriever: KnowledgeRetriever? = null,
+    private val knowledgeReranker: KnowledgeReranker? = null,
+    private val vehicleModel: String? = null,
+    private val softwareVersion: String? = null
 ) {
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -144,14 +213,129 @@ class AgentWorkflow(
         val pending = session.pendingTask
         if (pending != null && pending.needConfirmation && input.text.trim() == config.confirmationKeyword) {
             session.consumePendingTask()
-            return executeAuthorized(input, session, listOf(pending.intent), parsedOutput = null, timings)
+            val execPath = pending.executionPath?.copy(
+                finalTier = IntentTier.L1_LOCAL_TOOL_REASONING,
+                candidateSource = pending.executionPath.candidateSource ?: CandidateSource.L1_LOCAL_LLM
+            )
+            return executeAuthorized(
+                input, session, listOf(pending.intent), parsedOutput = null, timings,
+                executionPath = execPath
+            )
         }
 
-        // --- model call ---
-        record(input, session, AgentState.ROUTED)
-        record(input, session, AgentState.MODEL_REQUESTED)
+        // --- tiered routing ---
+        val ragSnapshot = ragRuntimeManager?.snapshot() ?: RagExecutionSnapshot.DEFAULT
+        record(input, session, AgentState.NORMALIZED)
+        val normalized = TextNormalizer.normalize(input.text)
+        val context = AgentContext(
+            requestId = input.requestId,
+            sessionId = session.sessionId,
+            source = input.source,
+            vehicleModel = vehicleModel,
+            softwareVersion = softwareVersion,
+            vehicleState = vehicleState()
+        )
+        record(input, session, AgentState.TIER_ROUTED)
+        val pendingMissingArgs = session.pendingTask?.takeIf { !it.needConfirmation }
+        val decision = if (pendingMissingArgs != null) {
+            // Follow-up on a missing-argument task → tool reasoning regardless of domain.
+            TieredRouteDecision(
+                tier = IntentTier.L1_LOCAL_TOOL_REASONING,
+                confidence = 0.8,
+                reasonCode = RouteReasonCode.L1_TOOL_DOMAIN,
+                retrievalQuery = RetrievalQuery.Tools(
+                    ToolRetrievalQuery(
+                        text = normalized.normalized,
+                        vehicleModel = vehicleModel,
+                        softwareVersion = softwareVersion
+                    )
+                )
+            )
+        } else {
+            tieredRouter.route(normalized, context)
+        }
+
+        return when (decision.tier) {
+            IntentTier.L0_DETERMINISTIC_TOOL ->
+                handleL0(input, session, decision, timings)
+            IntentTier.L1_LOCAL_TOOL_REASONING ->
+                handleL1(input, session, decision, normalized, context, timings, ragSnapshot)
+            IntentTier.L2_LOCAL_KNOWLEDGE ->
+                handleL2(input, session, decision, context, timings, ragSnapshot)
+            IntentTier.L3_CLOUD_AI ->
+                handleL3(input, session, decision, timings)
+            IntentTier.REJECT ->
+                handleReject(input, session, decision, timings)
+        }
+    }
+
+    // ------------------------------------------------------------------ tier branches
+
+    /** L0 deterministic path: no RAG, no LLM — straight into the unified chain. */
+    private suspend fun handleL0(
+        input: AgentInput,
+        session: Session,
+        decision: TieredRouteDecision,
+        timings: TurnTimings
+    ): AgentResult {
+        val candidate = decision.directCandidate ?: return handleReject(input, session, decision, timings)
+        record(input, session, AgentState.L0_MATCHED)
+        record(input, session, AgentState.CANDIDATE_READY)
+        val tracker = ExecutionPathTracker(IntentTier.L0_DETERMINISTIC_TOOL)
+        tracker.finalReasonCode = decision.reasonCode
+        tracker.candidateSource = CandidateSource.L0_RULE
+        return executeCandidate(input, session, candidate, tracker, timings, rawModelContent = null)
+    }
+
+    /**
+     * L1 path: Tool/Intent retrieval → local LLM → unified chain. When RAG is
+     * off (or degraded) the candidate provider returns the fixed enabled set;
+     * the LLM must select strictly within the recalled Top-K.
+     */
+    private suspend fun handleL1(
+        input: AgentInput,
+        session: Session,
+        decision: TieredRouteDecision,
+        normalized: net.hwyz.iov.vehicle.ivi.ivai.agent.router.NormalizedInput,
+        context: AgentContext,
+        timings: TurnTimings,
+        ragSnapshot: RagExecutionSnapshot
+    ): AgentResult {
+        val initialTier = if (decision.reasonCode == RouteReasonCode.L0_RULE_AMBIGUOUS ||
+            decision.reasonCode == RouteReasonCode.L0_MISSING_ARGUMENTS
+        ) {
+            IntentTier.L0_DETERMINISTIC_TOOL
+        } else {
+            IntentTier.L1_LOCAL_TOOL_REASONING
+        }
+        val tracker = ExecutionPathTracker(initialTier)
+        if (initialTier == IntentTier.L0_DETERMINISTIC_TOOL) {
+            tracker.transition(IntentTier.L1_LOCAL_TOOL_REASONING, decision.reasonCode)
+        }
+        tracker.finalReasonCode = decision.reasonCode
+
+        // L0 missing-argument fast path: no model call, ask directly.
+        if (decision.missingToolId != null && decision.missingArguments.isNotEmpty()) {
+            return handleMissingArgumentsDialogue(
+                input, session, decision.missingToolId, decision.missingArguments, tracker, timings
+            )
+        }
+
+        record(input, session, AgentState.L1_RETRIEVING_TOOLS)
+        val retrievalStartNs = System.nanoTime()
+        val candidateSet = toolCandidateProvider.candidates(normalized, context, ragSnapshot)
+        timings.addRouteAndPolicy(msSince(retrievalStartNs))
+        val candidateToolIds = candidateSet.candidates.map { it.toolId }.toSet()
+        val ragInfo = RagExecutionInfo(
+            configuredEnabled = ragSnapshot.enabled,
+            runtimeStatus = ragRuntimeManager?.status() ?: RagRuntimeStatus.DISABLED,
+            retrievalExecuted = candidateSet.source == net.hwyz.iov.vehicle.ivi.ivai.agent.router.CandidateSetSource.RETRIEVED,
+            retrievalType = candidateSet.retrieverType,
+            fallbackReason = candidateSet.fallbackReason
+        )
+
         val contextStartNs = System.nanoTime()
-        val composedMessages = promptBuilder.build(session, input, vehicleState())
+        val composedMessages = promptBuilder.buildWithCandidates(session, input, context.vehicleState, candidateSet.candidates)
         timings.contextAndPromptMs = msSince(contextStartNs)
 
         val modelStartNs = System.nanoTime()
@@ -160,34 +344,19 @@ class AgentWorkflow(
         } catch (e: ModelClientException) {
             timings.modelCallTotalMs = msSince(modelStartNs)
             val code = mapModelError(e.kind)
-            emit(
-                AgentEvent.TurnFailed(
-                    session.sessionId, input.turnId, input.requestId,
-                    message = "模型服务暂不可用，请稍后重试", errorCode = code.code, retryable = true
-                )
-            )
-            return finish(
-                input, session, AgentState.FAILED, null, null, emptyList(), null,
-                code.code, "模型服务暂不可用，请稍后重试", null, false, timings,
-                validJson = false, schemaPassed = false, toolExecuted = false,
-                errorDetail = "模型调用失败：${e.message}"
+            tracker.candidateSource = CandidateSource.L1_LOCAL_LLM
+            return turnFailed(
+                input, session, timings, code.code, "模型服务暂不可用，请稍后重试", true,
+                tracker, ragInfo, "模型调用失败：${e.message}"
             )
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             timings.modelCallTotalMs = msSince(modelStartNs)
-            emit(
-                AgentEvent.TurnFailed(
-                    session.sessionId, input.turnId, input.requestId,
-                    message = "模型服务暂不可用，请稍后重试",
-                    errorCode = ErrorCode.MODEL_UNAVAILABLE.code, retryable = true
-                )
-            )
-            return finish(
-                input, session, AgentState.FAILED, null, null, emptyList(), null,
-                ErrorCode.MODEL_UNAVAILABLE.code, "模型服务暂不可用，请稍后重试", null, false, timings,
-                validJson = false, schemaPassed = false, toolExecuted = false,
-                errorDetail = "模型调用异常：${e.message}"
+            tracker.candidateSource = CandidateSource.L1_LOCAL_LLM
+            return turnFailed(
+                input, session, timings, ErrorCode.MODEL_UNAVAILABLE.code, "模型服务暂不可用，请稍后重试", true,
+                tracker, ragInfo, "模型调用异常：${e.message}"
             )
         }
         timings.modelCallTotalMs = msSince(modelStartNs)
@@ -196,100 +365,334 @@ class AgentWorkflow(
         timings.timeToFirstTokenMs = modelResponse.timeToFirstTokenMs
         record(input, session, AgentState.MODEL_RESPONDED, latencyMs = modelResponse.latencyMs)
 
-        // --- second-level JSON parse ---
+        // --- parse structured output ---
         val parseStartNs = System.nanoTime()
         val contentJson = modelResponse.contentJson
         if (contentJson == null) {
             timings.parseAndSchemaMs = msSince(parseStartNs)
-            emit(
-                AgentEvent.TurnFailed(
-                    session.sessionId, input.turnId, input.requestId,
-                    message = "暂时无法理解你的请求，请稍后再试",
-                    errorCode = ErrorCode.MODEL_RESPONSE_PARSE.code, retryable = true
-                )
-            )
-            return finish(
-                input, session, AgentState.FAILED, null, null, emptyList(), null,
-                ErrorCode.MODEL_RESPONSE_PARSE.code, "模型响应无法解析为 JSON", modelResponse.content,
-                false, timings, validJson = false, schemaPassed = false, toolExecuted = false
+            return turnFailed(
+                input, session, timings, ErrorCode.MODEL_RESPONSE_PARSE.code,
+                "暂时无法理解你的请求，请稍后再试", true, tracker, ragInfo, null
             )
         }
         record(input, session, AgentState.PARSED)
-
-        // --- top-level output schema check ---
         val output: AgentOutput = try {
             json.decodeFromJsonElement(AgentOutput.serializer(), contentJson)
         } catch (e: Exception) {
             timings.parseAndSchemaMs = msSince(parseStartNs)
-            emit(
-                AgentEvent.TurnFailed(
-                    session.sessionId, input.turnId, input.requestId,
-                    message = "暂时无法安全理解该请求，请换一种说法",
-                    errorCode = ErrorCode.OUTPUT_SCHEMA.code, retryable = false
-                )
-            )
-            return finish(
-                input, session, AgentState.FAILED, null, null, emptyList(), null,
-                ErrorCode.OUTPUT_SCHEMA.code, "结构化输出不符合 Schema：${e.message}", modelResponse.content,
-                false, timings, validJson = true, schemaPassed = false, toolExecuted = false
+            return turnFailed(
+                input, session, timings, ErrorCode.OUTPUT_SCHEMA.code,
+                "暂时无法安全理解该请求，请换一种说法", false, tracker, ragInfo,
+                "结构化输出不符合 Schema：${e.message}"
             )
         }
         timings.parseAndSchemaMs = msSince(parseStartNs)
 
-        // --- route decision ---
+        // --- route decision (model-proposed route) ---
         val routeStartNs = System.nanoTime()
         val routeDecision = router.resolve(output)
-        if (routeDecision is RouteDecision.Unsafe) {
+        if (routeDecision is net.hwyz.iov.vehicle.ivi.ivai.agent.router.RouteDecision.Unsafe) {
             timings.addRouteAndPolicy(msSince(routeStartNs))
-            emit(
-                AgentEvent.TurnFailed(
-                    session.sessionId, input.turnId, input.requestId,
-                    message = "暂时无法安全处理该请求",
-                    errorCode = ErrorCode.ROUTE_UNSAFE.code, retryable = false
-                )
-            )
-            return finish(
-                input, session, AgentState.REJECTED, null, output, emptyList(), null,
-                ErrorCode.ROUTE_UNSAFE.code, routeDecision.message, modelResponse.content,
-                false, timings, validJson = true, schemaPassed = true, toolExecuted = false
+            return turnFailed(
+                input, session, timings, ErrorCode.ROUTE_UNSAFE.code,
+                "暂时无法安全处理该请求", false, tracker, ragInfo, routeDecision.message,
+                state = AgentState.REJECTED
             )
         }
-        val route = (routeDecision as RouteDecision.Safe).route
+        val route = (routeDecision as net.hwyz.iov.vehicle.ivi.ivai.agent.router.RouteDecision.Safe).route
         session.setRoute(route)
+        tracker.candidateSource = CandidateSource.L1_LOCAL_LLM
 
         return when (route) {
-            AgentRoute.LOCAL_DIALOGUE -> handleDialogue(input, session, output, timings, modelResponse)
+            AgentRoute.LOCAL_DIALOGUE -> handleDialogue(input, session, output, timings, modelResponse, tracker, ragInfo)
             AgentRoute.CLOUD_AI -> {
                 timings.addRouteAndPolicy(msSince(routeStartNs))
-                emit(
-                    AgentEvent.Reply(
-                        session.sessionId, input.turnId, input.requestId,
-                        text = "该请求需要云端 AI 处理（预留功能，暂不执行）。"
-                    )
-                )
+                tracker.transition(IntentTier.L3_CLOUD_AI, RouteReasonCode.L3_OPEN_DOMAIN)
+                tracker.finalReasonCode = RouteReasonCode.L3_OPEN_DOMAIN
+                val text = "该请求需要云端 AI 处理（预留功能，暂不执行）。"
+                emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build()))
                 finish(
                     input, session, AgentState.CLOUD_REQUIRED, route, output, emptyList(), null, null,
-                    "该请求需要云端 AI 处理（预留功能，暂不执行）。", modelResponse.content, false, timings,
-                    validJson = true, schemaPassed = true, toolExecuted = false
+                    text, modelResponse.content, false, timings,
+                    validJson = true, schemaPassed = true, toolExecuted = false,
+                    executionPath = tracker.build(), ragInfo = ragInfo
                 )
             }
             AgentRoute.REJECT -> {
                 timings.addRouteAndPolicy(msSince(routeStartNs))
-                emit(
-                    AgentEvent.Reply(
-                        session.sessionId, input.turnId, input.requestId,
-                        text = "已拒绝该请求。"
-                    )
-                )
+                tracker.transition(IntentTier.REJECT, RouteReasonCode.REJECT_UNSUPPORTED)
+                tracker.finalReasonCode = RouteReasonCode.REJECT_UNSUPPORTED
+                val text = "已拒绝该请求。"
+                emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build()))
                 finish(
                     input, session, AgentState.REJECTED, route, output, emptyList(), null, null,
-                    "已拒绝该请求。", modelResponse.content, false, timings,
-                    validJson = true, schemaPassed = true, toolExecuted = false
+                    text, modelResponse.content, false, timings,
+                    validJson = true, schemaPassed = true, toolExecuted = false,
+                    executionPath = tracker.build(), ragInfo = ragInfo
                 )
             }
-            AgentRoute.LOCAL_TOOL -> handleLocalTool(input, session, output, timings, modelResponse, routeStartNs)
+            AgentRoute.LOCAL_TOOL -> handleLocalTool(
+                input, session, output, timings, modelResponse, routeStartNs, tracker, ragInfo, candidateToolIds
+            )
         }
     }
+
+    /** L2 path: Knowledge retrieval → local LLM natural-language answer with sources. */
+    private suspend fun handleL2(
+        input: AgentInput,
+        session: Session,
+        decision: TieredRouteDecision,
+        context: AgentContext,
+        timings: TurnTimings,
+        ragSnapshot: RagExecutionSnapshot
+    ): AgentResult {
+        record(input, session, AgentState.L2_RETRIEVING_KNOWLEDGE)
+        val tracker = ExecutionPathTracker(IntentTier.L2_LOCAL_KNOWLEDGE)
+        tracker.finalReasonCode = decision.reasonCode
+        val query = (decision.retrievalQuery as? RetrievalQuery.Knowledge)?.query
+            ?: KnowledgeRetrievalQuery(text = input.text)
+
+        val knowledgeUnavailable = !ragSnapshot.knowledgeRagAvailable || knowledgeRetriever == null
+        val ragInfo = RagExecutionInfo(
+            configuredEnabled = ragSnapshot.enabled,
+            runtimeStatus = ragRuntimeManager?.status() ?: RagRuntimeStatus.DISABLED,
+            retrievalExecuted = !knowledgeUnavailable,
+            retrievalType = ragSnapshot.knowledgeRetrieverType
+        )
+
+        if (knowledgeUnavailable) {
+            // Knowledge RAG 不可用：不得让 LLM 凭记忆冒充说明书回答。
+            tracker.transition(IntentTier.L3_CLOUD_AI, RouteReasonCode.L2_NO_KNOWLEDGE)
+            tracker.finalReasonCode = RouteReasonCode.L2_NO_KNOWLEDGE
+            val text = "本地知识库未启用，无法在本机回答该问题。该请求需云端处理（预留功能，暂不执行）。"
+            emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build()))
+            return finish(
+                input, session, AgentState.CLOUD_REQUIRED, AgentRoute.CLOUD_AI, null, emptyList(), null, null,
+                text, null, false, timings,
+                validJson = false, schemaPassed = false, toolExecuted = false,
+                executionPath = tracker.build(), ragInfo = ragInfo.copy(fallbackReason = RouteReasonCode.L2_NO_KNOWLEDGE)
+            )
+        }
+
+        val retrievalStartNs = System.nanoTime()
+        val chunks = knowledgeRetriever!!.retrieve(query, ragSnapshot.knowledgeTopK)
+        val reranked = (knowledgeReranker?.rerank(chunks, ragSnapshot.knowledgeTopK) ?: chunks)
+        timings.addRouteAndPolicy(msSince(retrievalStartNs))
+
+        if (reranked.isEmpty()) {
+            // 检索结果为空或低于阈值：不生成确定性答案，转云。
+            tracker.transition(IntentTier.L3_CLOUD_AI, RouteReasonCode.RAG_RETRIEVAL_EMPTY)
+            tracker.finalReasonCode = RouteReasonCode.RAG_RETRIEVAL_EMPTY
+            val text = "本地知识库未找到相关说明，暂时无法确认。该请求已转云端处理（预留功能，暂不执行）。"
+            emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build()))
+            return finish(
+                input, session, AgentState.CLOUD_REQUIRED, AgentRoute.CLOUD_AI, null, emptyList(), null, null,
+                text, null, false, timings,
+                validJson = false, schemaPassed = false, toolExecuted = false,
+                executionPath = tracker.build(), ragInfo = ragInfo.copy(fallbackReason = RouteReasonCode.RAG_RETRIEVAL_EMPTY)
+            )
+        }
+
+        val contextStartNs = System.nanoTime()
+        val composedMessages = promptBuilder.buildKnowledge(session, input, context.vehicleState, reranked)
+        timings.contextAndPromptMs = msSince(contextStartNs)
+
+        val modelStartNs = System.nanoTime()
+        val modelResponse: ModelResponse = try {
+            callModel(input, session, composedMessages, timings)
+        } catch (e: ModelClientException) {
+            timings.modelCallTotalMs = msSince(modelStartNs)
+            val code = mapModelError(e.kind)
+            return turnFailed(input, session, timings, code.code, "模型服务暂不可用，请稍后重试", true, tracker, ragInfo, "模型调用失败：${e.message}")
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            timings.modelCallTotalMs = msSince(modelStartNs)
+            return turnFailed(input, session, timings, ErrorCode.MODEL_UNAVAILABLE.code, "模型服务暂不可用，请稍后重试", true, tracker, ragInfo, "模型调用异常：${e.message}")
+        }
+        timings.modelCallTotalMs = msSince(modelStartNs)
+        timings.network = modelResponse.network
+        timings.providerCompute = modelResponse.providerCompute
+        timings.timeToFirstTokenMs = modelResponse.timeToFirstTokenMs
+        record(input, session, AgentState.MODEL_RESPONDED, latencyMs = modelResponse.latencyMs)
+
+        val rawAnswer = modelResponse.content?.trim().orEmpty()
+        val citations = KnowledgeCitationMapper.citations(reranked)
+        val text = if (rawAnswer.isBlank()) {
+            "本地知识库未找到相关说明。"
+        } else {
+            rawAnswer
+        }
+        tracker.finalReasonCode = RouteReasonCode.L2_KNOWLEDGE_DOMAIN
+        emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build()))
+        return finish(
+            input, session, AgentState.REPLY_READY, AgentRoute.LOCAL_DIALOGUE, null, emptyList(), null, null,
+            text, modelResponse.content, false, timings,
+            validJson = false, schemaPassed = false, toolExecuted = false,
+            executionPath = tracker.build(), ragInfo = ragInfo
+        )
+    }
+
+    private suspend fun handleL3(
+        input: AgentInput,
+        session: Session,
+        decision: TieredRouteDecision,
+        timings: TurnTimings
+    ): AgentResult {
+        record(input, session, AgentState.CLOUD_REQUIRED)
+        val tracker = ExecutionPathTracker(IntentTier.L3_CLOUD_AI)
+        tracker.finalReasonCode = decision.reasonCode
+        val text = "该请求需要云端 AI 处理（预留功能，暂不执行）。"
+        emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build()))
+        return finish(
+            input, session, AgentState.CLOUD_REQUIRED, AgentRoute.CLOUD_AI, null, emptyList(), null, null,
+            text, null, false, timings,
+            validJson = false, schemaPassed = false, toolExecuted = false,
+            executionPath = tracker.build()
+        )
+    }
+
+    private suspend fun handleReject(
+        input: AgentInput,
+        session: Session,
+        decision: TieredRouteDecision,
+        timings: TurnTimings
+    ): AgentResult {
+        record(input, session, AgentState.REJECTED)
+        val tracker = ExecutionPathTracker(IntentTier.REJECT)
+        tracker.finalReasonCode = decision.reasonCode
+        val text = if (decision.reasonCode == RouteReasonCode.REJECT_SAFETY) {
+            "该操作涉及驾驶安全，已拒绝。"
+        } else {
+            "已拒绝该请求。"
+        }
+        emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build()))
+        return finish(
+            input, session, AgentState.REJECTED, AgentRoute.REJECT, null, emptyList(), null, null,
+            text, null, false, timings,
+            validJson = false, schemaPassed = false, toolExecuted = false,
+            executionPath = tracker.build()
+        )
+    }
+
+    /** L0 missing-argument fast path: ask for the missing slots without a model call. */
+    private suspend fun handleMissingArgumentsDialogue(
+        input: AgentInput,
+        session: Session,
+        toolId: String,
+        missing: List<String>,
+        tracker: ExecutionPathTracker,
+        timings: TurnTimings
+    ): AgentResult {
+        val intent = Intent(toolId = toolId, arguments = emptyMap())
+        session.storePendingTask(
+            intent, needConfirmation = false, missingArguments = missing,
+            executionPath = tracker.build()
+        )
+        record(input, session, AgentState.NEED_DIALOGUE)
+        record(input, session, AgentState.WAITING_USER)
+        val text = "请问需要补充：${missing.joinToString("、")}。"
+        emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build()))
+        return finish(
+            input, session, AgentState.WAITING_USER, AgentRoute.LOCAL_DIALOGUE, null, emptyList(), null, null,
+            text, null, false, timings,
+            validJson = true, schemaPassed = true, toolExecuted = false,
+            executionPath = tracker.build()
+        )
+    }
+
+    // ------------------------------------------------------------------ unified execution chain
+
+    /**
+     * Unified safe execution chain for ANY tool candidate (L0 / L1 / L3):
+     * whitelist → schema → availability → policy → confirmation → idempotency →
+     * executor → adapter. L0 only skips RAG/LLM — never an execution safety step.
+     */
+    private suspend fun executeCandidate(
+        input: AgentInput,
+        session: Session,
+        candidate: ToolCallCandidate,
+        tracker: ExecutionPathTracker,
+        timings: TurnTimings,
+        rawModelContent: String?
+    ): AgentResult {
+        val toolId = candidate.toolId
+        val tool = registry.get(toolId)
+        if (tool == null) {
+            return turnFailed(
+                input, session, timings, ErrorCode.UNKNOWN_TOOL.code,
+                "无法执行：未知工具 $toolId", false, tracker, null, null
+            )
+        }
+        val values = validator.applyDefaultsAndNormalize(tool, candidate.arguments)
+        val issues = validator.validateArguments(tool, values)
+        record(input, session, AgentState.VALIDATED)
+        if (issues.isNotEmpty()) {
+            val first = issues.first()
+            emitLifecycle(ToolLifecyclePhase.FAILED, input.requestId, toolId, first.message)
+            return turnFailed(
+                input, session, timings, ErrorCode.INVALID_ARGUMENT.code,
+                "暂时无法安全理解该请求，请换一种说法", false, tracker, null, first.message
+            )
+        }
+        val intent = Intent(toolId = toolId, arguments = valuesToJsonArgs(values))
+        val output = AgentOutput(
+            route = AgentRoute.LOCAL_TOOL.name,
+            intents = listOf(intent),
+            modelConfidence = candidate.confidence ?: 1.0,
+            riskLevel = tool.policy.riskLevel.name.lowercase(),
+            needConfirmation = false,
+            reasonCode = candidate.evidenceIds.firstOrNull()
+        )
+        val policyStartNs = System.nanoTime()
+        val outcome = agentPolicy.evaluate(
+            listOf(intent), output, vehicleState(), confirmationGranted = false
+        )
+        timings.addRouteAndPolicy(msSince(policyStartNs))
+        when (outcome) {
+            is PolicyOutcome.NeedsConfirmation -> {
+                val confirmationId = UUID.randomUUID().toString()
+                val name = registry.get(toolId)?.name ?: toolId
+                session.storePendingTask(
+                    intent, needConfirmation = true, missingArguments = emptyList(),
+                    confirmationId = confirmationId, toolName = name,
+                    requestId = input.requestId, turnId = input.turnId,
+                    executionPath = tracker.build()
+                )
+                record(input, session, AgentState.NEED_DIALOGUE)
+                record(input, session, AgentState.WAITING_USER)
+                emit(
+                    AgentEvent.ConfirmationRequired(
+                        session.sessionId, input.turnId, input.requestId,
+                        confirmationId = confirmationId, toolId = toolId, toolName = name,
+                        text = "确认执行「$name」？", currentTier = tracker.currentTier
+                    )
+                )
+                return finish(
+                    input, session, AgentState.WAITING_USER, AgentRoute.LOCAL_TOOL, output, emptyList(), null, null,
+                    "确认执行「$name」？回复「${config.confirmationKeyword}」以继续。", rawModelContent, false,
+                    timings, validJson = true, schemaPassed = true, toolExecuted = false,
+                    executionPath = tracker.build()
+                )
+            }
+            is PolicyOutcome.Denied -> {
+                emitLifecycle(ToolLifecyclePhase.FAILED, input.requestId, toolId, outcome.message)
+                return turnFailed(
+                    input, session, timings, outcome.errorCode.code,
+                    "该操作未获授权，无法执行", false, tracker, null, outcome.message
+                )
+            }
+            PolicyOutcome.Authorized -> {
+                session.clearPendingTask()
+                return executeAuthorized(
+                    input, session, listOf(intent), output, timings,
+                    executionPath = tracker.build(), rawModelContent = rawModelContent
+                )
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------ model / confirmation / cancellation
 
     /**
      * Calls the model, streaming when the provider supports it and
@@ -326,8 +729,6 @@ class AgentWorkflow(
         }
     }
 
-    // ------------------------------------------------------------------ confirmation / cancellation
-
     /**
      * Approves a pending confirmation (IVI-IVAI-DSN-CR-002). Idempotent: only the
      * pending confirmation whose id matches is executed; a missing, stale or
@@ -340,9 +741,13 @@ class AgentWorkflow(
         }
         val input = pendingInput(pending, confirmationId)
         session.consumePendingTask()
+        val execPath = pending.executionPath?.copy(
+            finalTier = IntentTier.L1_LOCAL_TOOL_REASONING,
+            candidateSource = pending.executionPath.candidateSource ?: CandidateSource.L1_LOCAL_LLM
+        )
         return executeAuthorized(
             input, session, listOf(pending.intent), parsedOutput = null,
-            timings = TurnTimings(input.submittedAtNs)
+            timings = TurnTimings(input.submittedAtNs), executionPath = execPath
         )
     }
 
@@ -369,7 +774,8 @@ class AgentWorkflow(
             state = AgentState.REJECTED,
             route = AgentRoute.LOCAL_TOOL,
             responseText = text,
-            telemetry = RequestTelemetry(requestId = input.requestId, route = AgentRoute.LOCAL_TOOL.name)
+            telemetry = RequestTelemetry(requestId = input.requestId, route = AgentRoute.LOCAL_TOOL.name),
+            executionPath = pending.executionPath
         )
     }
 
@@ -398,18 +804,45 @@ class AgentWorkflow(
         eventListener?.onAgentEvent(event)
     }
 
-    // ------------------------------------------------------------------ branches
+    private fun turnFailed(
+        input: AgentInput,
+        session: Session,
+        timings: TurnTimings,
+        errorCode: String,
+        message: String,
+        retryable: Boolean,
+        tracker: ExecutionPathTracker?,
+        ragInfo: RagExecutionInfo?,
+        errorDetail: String?,
+        state: AgentState = AgentState.FAILED
+    ): AgentResult {
+        val path = tracker?.build()
+        emit(AgentEvent.TurnFailed(session.sessionId, input.turnId, input.requestId, message, errorCode, retryable, path))
+        return finish(
+            input, session, state, null, null, emptyList(), null,
+            errorCode, message, null, false, timings,
+            validJson = false, schemaPassed = false, toolExecuted = false,
+            errorDetail = errorDetail, executionPath = path, ragInfo = ragInfo
+        )
+    }
+
+    // ------------------------------------------------------------------ branches (model-driven)
 
     private suspend fun handleDialogue(
         input: AgentInput,
         session: Session,
         output: AgentOutput,
         timings: TurnTimings,
-        modelResponse: ModelResponse
+        modelResponse: ModelResponse,
+        tracker: ExecutionPathTracker,
+        ragInfo: RagExecutionInfo?
     ): AgentResult {
         val missing = output.missingArguments
         output.intents.firstOrNull()?.let { intent ->
-            session.storePendingTask(intent, needConfirmation = false, missingArguments = missing)
+            session.storePendingTask(
+                intent, needConfirmation = false, missingArguments = missing,
+                executionPath = tracker.build()
+            )
         }
         record(input, session, AgentState.NEED_DIALOGUE)
         record(input, session, AgentState.WAITING_USER)
@@ -418,11 +851,12 @@ class AgentWorkflow(
         } else {
             "请问需要补充：${missing.joinToString("、")}。"
         }
-        emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text))
+        emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build()))
         return finish(
             input, session, AgentState.WAITING_USER, AgentRoute.LOCAL_DIALOGUE, output, emptyList(), null, null,
             text, modelResponse.content, false, timings,
-            validJson = true, schemaPassed = true, toolExecuted = false
+            validJson = true, schemaPassed = true, toolExecuted = false,
+            executionPath = tracker.build(), ragInfo = ragInfo
         )
     }
 
@@ -432,11 +866,44 @@ class AgentWorkflow(
         output: AgentOutput,
         timings: TurnTimings,
         modelResponse: ModelResponse,
-        routeStartNs: Long
+        routeStartNs: Long,
+        tracker: ExecutionPathTracker,
+        ragInfo: RagExecutionInfo?,
+        candidateToolIds: Set<String>?
     ): AgentResult {
         // Restore / merge a pending missing-argument task with the same tool.
         val merged = mergePending(session, output)
         val policyStartNs = System.nanoTime()
+
+        // CR-005: the LLM may only select within the recalled Top-K candidate set.
+        if (candidateToolIds != null) {
+            for (intent in merged.intents) {
+                if (intent.toolId in candidateToolIds) continue
+                val inRegistry = registry.get(intent.toolId) != null
+                return if (inRegistry) {
+                    timings.addRouteAndPolicy(msSince(policyStartNs))
+                    emitLifecycle(ToolLifecyclePhase.FAILED, input.requestId, intent.toolId, "tool outside candidate set")
+                    emit(
+                        AgentEvent.TurnFailed(
+                            session.sessionId, input.turnId, input.requestId,
+                            message = "暂时无法安全理解该请求，请换一种说法",
+                            errorCode = ErrorCode.CANDIDATE_SOURCE_INVALID.code, retryable = false,
+                            executionPath = tracker.build()
+                        )
+                    )
+                    finish(
+                        input, session, AgentState.REJECTED, AgentRoute.LOCAL_TOOL, merged, emptyList(), null,
+                        ErrorCode.CANDIDATE_SOURCE_INVALID.code, "工具候选不在本次召回集合内：${intent.toolId}",
+                        modelResponse.content, false, timings,
+                        validJson = true, schemaPassed = true, toolExecuted = false,
+                        executionPath = tracker.build(), ragInfo = ragInfo
+                    )
+                } else {
+                    // Not even in the registry → the existing UNKNOWN_TOOL path below.
+                    break
+                }
+            }
+        }
 
         // Whitelist + parameter schema validation.
         val issues = validateIntents(input, session, merged)
@@ -450,13 +917,15 @@ class AgentWorkflow(
                 AgentEvent.TurnFailed(
                     session.sessionId, input.turnId, input.requestId,
                     message = "暂时无法安全理解该请求，请换一种说法",
-                    errorCode = errorCode.code, retryable = false
+                    errorCode = errorCode.code, retryable = false,
+                    executionPath = tracker.build()
                 )
             )
             return finish(
                 input, session, AgentState.REJECTED, AgentRoute.LOCAL_TOOL, merged, issues, null,
                 errorCode.code, issues.first().message, modelResponse.content, false, timings,
-                validJson = true, schemaPassed = true, toolExecuted = false
+                validJson = true, schemaPassed = true, toolExecuted = false,
+                executionPath = tracker.build(), ragInfo = ragInfo
             )
         }
 
@@ -471,7 +940,8 @@ class AgentWorkflow(
                 session.storePendingTask(
                     intent, needConfirmation = true, missingArguments = emptyList(),
                     confirmationId = confirmationId, toolName = name,
-                    requestId = input.requestId, turnId = input.turnId
+                    requestId = input.requestId, turnId = input.turnId,
+                    executionPath = tracker.build()
                 )
                 record(input, session, AgentState.NEED_DIALOGUE)
                 record(input, session, AgentState.WAITING_USER)
@@ -479,13 +949,14 @@ class AgentWorkflow(
                     AgentEvent.ConfirmationRequired(
                         session.sessionId, input.turnId, input.requestId,
                         confirmationId = confirmationId, toolId = intent.toolId, toolName = name,
-                        text = "确认执行「$name」？"
+                        text = "确认执行「$name」？", currentTier = tracker.currentTier
                     )
                 )
                 return finish(
                     input, session, AgentState.WAITING_USER, AgentRoute.LOCAL_TOOL, merged, emptyList(), null, null,
                     "确认执行「$name」？回复「${config.confirmationKeyword}」以继续。", modelResponse.content, false,
-                    timings, validJson = true, schemaPassed = true, toolExecuted = false
+                    timings, validJson = true, schemaPassed = true, toolExecuted = false,
+                    executionPath = tracker.build(), ragInfo = ragInfo
                 )
             }
             is PolicyOutcome.Denied -> {
@@ -494,20 +965,23 @@ class AgentWorkflow(
                     AgentEvent.TurnFailed(
                         session.sessionId, input.turnId, input.requestId,
                         message = "该操作未获授权，无法执行",
-                        errorCode = outcome.errorCode.code, retryable = false
+                        errorCode = outcome.errorCode.code, retryable = false,
+                        executionPath = tracker.build()
                     )
                 )
                 return finish(
                     input, session, AgentState.REJECTED, AgentRoute.LOCAL_TOOL, merged, emptyList(), null,
                     outcome.errorCode.code, outcome.message, modelResponse.content, false, timings,
-                    validJson = true, schemaPassed = true, toolExecuted = false
+                    validJson = true, schemaPassed = true, toolExecuted = false,
+                    executionPath = tracker.build(), ragInfo = ragInfo
                 )
             }
             PolicyOutcome.Authorized -> {
                 session.clearPendingTask()
                 return executeAuthorized(
                     input, session, merged.intents, merged, timings,
-                    modelLatencyMs = modelResponse.latencyMs, rawModelContent = modelResponse.content
+                    modelLatencyMs = modelResponse.latencyMs, rawModelContent = modelResponse.content,
+                    executionPath = tracker.build()
                 )
             }
         }
@@ -520,7 +994,8 @@ class AgentWorkflow(
         parsedOutput: AgentOutput?,
         timings: TurnTimings,
         modelLatencyMs: Long = -1,
-        rawModelContent: String? = null
+        rawModelContent: String? = null,
+        executionPath: AgentExecutionPath? = null
     ): AgentResult {
         val intent = intents.first()
         val toolId = intent.toolId
@@ -530,13 +1005,15 @@ class AgentWorkflow(
                 AgentEvent.TurnFailed(
                     session.sessionId, input.turnId, input.requestId,
                     message = "无法执行：未知工具 $toolId",
-                    errorCode = ErrorCode.UNKNOWN_TOOL.code, retryable = false
+                    errorCode = ErrorCode.UNKNOWN_TOOL.code, retryable = false,
+                    executionPath = executionPath
                 )
             )
             return finish(
                 input, session, AgentState.REJECTED, AgentRoute.LOCAL_TOOL, parsedOutput, emptyList(), null,
                 ErrorCode.UNKNOWN_TOOL.code, "未知工具：$toolId", rawModelContent, false, timings,
-                validJson = false, schemaPassed = false, toolExecuted = false
+                validJson = false, schemaPassed = false, toolExecuted = false,
+                executionPath = executionPath
             )
         }
         val values = validator.applyDefaultsAndNormalize(tool, jsonArgsToValues(intent.arguments))
@@ -553,13 +1030,15 @@ class AgentWorkflow(
                     status = cached.status,
                     message = "${cached.message}（重复请求，已返回上次执行结果）",
                     errorCode = cached.errorCode,
-                    retryable = cached.status != ExecutionStatus.SUCCEEDED
+                    retryable = cached.status != ExecutionStatus.SUCCEEDED,
+                    executionPath = executionPath
                 )
             )
             return finish(
                 input, session, AgentState.SUCCEEDED, AgentRoute.LOCAL_TOOL, parsedOutput, emptyList(), cached,
                 null, "${cached.message}（重复请求，已返回上次执行结果）", rawModelContent, replayed = true, timings,
-                validJson = false, schemaPassed = true, toolExecuted = false
+                validJson = false, schemaPassed = true, toolExecuted = false,
+                executionPath = executionPath
             )
         }
 
@@ -599,13 +1078,15 @@ class AgentWorkflow(
                 status = exec.status,
                 message = exec.message,
                 errorCode = errorCode,
-                retryable = exec.status != ExecutionStatus.SUCCEEDED
+                retryable = exec.status != ExecutionStatus.SUCCEEDED,
+                executionPath = executionPath
             )
         )
         return finish(
             input, session, state, AgentRoute.LOCAL_TOOL, parsedOutput, emptyList(), exec,
             errorCode, exec.message, rawModelContent, false, timings,
-            validJson = false, schemaPassed = true, toolExecuted = true, toolLatencyMs = toolLatencyMs
+            validJson = false, schemaPassed = true, toolExecuted = true, toolLatencyMs = toolLatencyMs,
+            executionPath = executionPath
         )
     }
 
@@ -705,11 +1186,14 @@ class AgentWorkflow(
         schemaPassed: Boolean,
         toolExecuted: Boolean,
         toolLatencyMs: Long? = null,
-        errorDetail: String? = null
+        errorDetail: String? = null,
+        executionPath: AgentExecutionPath? = null,
+        ragInfo: RagExecutionInfo? = null
     ): AgentResult {
         if (responseText.isNotBlank()) {
             session.appendAssistant(responseText)
         }
+        session.setExecutionPath(executionPath)
         record(
             input, session, state,
             route = route?.name,
@@ -742,11 +1226,11 @@ class AgentWorkflow(
         )
 
         val dispatchStartNs = System.nanoTime()
-        emitDebugInfo(input, session, state, route, parsedOutput, executionResult, errorCode,
-            rawModelContent, replayed, performance, toolLatencyMs)
+        emitDebugInfo(
+            input, session, state, route, parsedOutput, executionResult, errorCode,
+            rawModelContent, replayed, performance, toolLatencyMs, executionPath, ragInfo
+        )
         timings.eventDispatchMs = msSince(dispatchStartNs)
-        // The emitted DebugInfo already carries the pre-dispatch performance; fold the
-        // measured dispatch time into the returned result (event dispatch is trivial in-process).
         val performanceFinal = performance.copy(eventDispatchMs = timings.eventDispatchMs)
 
         return AgentResult(
@@ -770,7 +1254,8 @@ class AgentWorkflow(
                 toolExecuted = toolExecuted,
                 validJson = validJson,
                 schemaPassed = schemaPassed
-            )
+            ),
+            executionPath = executionPath
         )
     }
 
@@ -785,7 +1270,9 @@ class AgentWorkflow(
         rawModelContent: String?,
         replayed: Boolean,
         performance: AgentPerformanceMetrics?,
-        toolLatencyMs: Long?
+        toolLatencyMs: Long?,
+        executionPath: AgentExecutionPath?,
+        ragInfo: RagExecutionInfo?
     ) {
         emit(
             AgentEvent.DebugInfo(
@@ -823,7 +1310,12 @@ class AgentWorkflow(
                     state = state.name,
                     route = route?.name,
                     errorCode = errorCode,
-                    replayed = replayed
+                    replayed = replayed,
+                    intentTier = executionPath?.initialTier?.name,
+                    finalTier = executionPath?.finalTier?.name,
+                    transitions = executionPath?.transitions ?: emptyList(),
+                    candidateSource = executionPath?.candidateSource?.name,
+                    rag = ragInfo
                 )
             )
         )

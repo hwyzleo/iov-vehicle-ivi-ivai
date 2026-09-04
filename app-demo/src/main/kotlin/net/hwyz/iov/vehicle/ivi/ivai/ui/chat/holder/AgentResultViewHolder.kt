@@ -24,6 +24,7 @@ class AgentResultViewHolder(
 ) : RecyclerView.ViewHolder(itemView) {
 
     private val card: View = itemView.findViewById(R.id.resultCard)
+    private val tierBadge: TextView? = itemView.findViewById(R.id.tierBadge)
     private val statusView: TextView = itemView.findViewById(R.id.resultStatus)
     private val textView: TextView = itemView.findViewById(R.id.resultText)
     private val retryButton: Button = itemView.findViewById(R.id.retryButton)
@@ -31,6 +32,7 @@ class AgentResultViewHolder(
 
     fun bind(message: ChatMessage, detailsExpanded: Boolean) {
         textView.text = message.text
+        AgentTextViewHolder.bindTierBadge(tierBadge, message)
 
         val isError = message.type == ChatMessageType.ERROR
         val (label, backgroundRes, colorRes) = when {

@@ -13,7 +13,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import net.hwyz.iov.vehicle.ivi.ivai.agent.event.AgentEvent
+import net.hwyz.iov.vehicle.ivi.ivai.agent.event.AgentExecutionPath
 import net.hwyz.iov.vehicle.ivi.ivai.agent.event.TurnDebugInfo
+import net.hwyz.iov.vehicle.ivi.ivai.agent.router.IntentTier
 import net.hwyz.iov.vehicle.ivi.ivai.service.AgentCommand
 import net.hwyz.iov.vehicle.ivi.ivai.service.AgentInputSource
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.ExecutionStatus
@@ -313,7 +315,9 @@ class ChatViewModel : ViewModel() {
                         type = ChatMessageType.TEXT,
                         text = event.text,
                         status = ChatMessageStatus.FINAL,
-                        confirmation = null
+                        confirmation = null,
+                        executionTierLabel = tierLabel(event.executionPath),
+                        executionPath = event.executionPath
                     )
                 }
                 val messages = if (updated === st.messages) {
@@ -324,7 +328,9 @@ class ChatViewModel : ViewModel() {
                         role = ChatRole.AGENT,
                         type = ChatMessageType.TEXT,
                         text = event.text,
-                        status = ChatMessageStatus.FINAL
+                        status = ChatMessageStatus.FINAL,
+                        executionTierLabel = tierLabel(event.executionPath),
+                        executionPath = event.executionPath
                     )
                 } else updated
                 st.copy(messages = messages, activeTurnId = null, isAgentBusy = false)
@@ -344,7 +350,8 @@ class ChatViewModel : ViewModel() {
                         toolId = event.toolId,
                         toolName = event.toolName,
                         text = event.text
-                    )
+                    ),
+                    executionTierLabel = event.currentTier?.let { IntentTier.label(it) }
                 )
                 st.copy(
                     pendingConfirmationId = event.confirmationId,
@@ -383,7 +390,9 @@ class ChatViewModel : ViewModel() {
                             text = event.message,
                             status = status,
                             retryable = event.retryable,
-                            confirmation = null
+                            confirmation = null,
+                            executionTierLabel = tierLabel(event.executionPath),
+                            executionPath = event.executionPath
                         )
                     }
                 )
@@ -399,7 +408,9 @@ class ChatViewModel : ViewModel() {
                             text = event.message,
                             status = ChatMessageStatus.FAILED,
                             retryable = event.retryable,
-                            confirmation = null
+                            confirmation = null,
+                            executionTierLabel = tierLabel(event.executionPath),
+                            executionPath = event.executionPath
                         )
                     }
                 )
@@ -504,7 +515,9 @@ class ChatViewModel : ViewModel() {
         text: String,
         status: ChatMessageStatus,
         confirmation: ConfirmationUiModel? = null,
-        retryOfRequestId: String? = null
+        retryOfRequestId: String? = null,
+        executionTierLabel: String? = null,
+        executionPath: AgentExecutionPath? = null
     ) = ChatMessage(
         messageId = UUID.randomUUID().toString(),
         sessionId = sessionId,
@@ -516,8 +529,13 @@ class ChatViewModel : ViewModel() {
         timestamp = System.currentTimeMillis(),
         status = status,
         confirmation = confirmation,
-        retryOfRequestId = retryOfRequestId
+        retryOfRequestId = retryOfRequestId,
+        executionTierLabel = executionTierLabel,
+        executionPath = executionPath
     )
+
+    private fun tierLabel(path: AgentExecutionPath?): String? =
+        path?.finalTier?.let { IntentTier.label(it) }
 
     private fun showHint(text: String) {
         _hints.tryEmit(text)

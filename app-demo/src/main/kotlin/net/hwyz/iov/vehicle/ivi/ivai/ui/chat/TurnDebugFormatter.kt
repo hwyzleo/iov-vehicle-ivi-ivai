@@ -33,6 +33,32 @@ object TurnDebugFormatter {
         body(sb, "requestId：${debug.requestId}")
         sb.append("\n")
 
+        // CR-005: 分级执行路径（初始→最终 + 轨迹）
+        val pathSegment = executionPathSegment(debug)
+        if (pathSegment.isNotBlank()) {
+            section(sb, "🧭 执行路径")
+            sb.append(pathSegment)
+            sb.append("\n")
+        }
+
+        // CR-005: RAG 运行信息
+        debug.rag?.let { rag ->
+            section(sb, "📡 RAG")
+            body(sb, "配置：${if (rag.configuredEnabled) "已打开" else "关闭"}")
+            body(sb, "运行状态：${rag.runtimeStatus.name}")
+            body(
+                sb,
+                "执行：" + when {
+                    rag.retrievalExecuted -> "已使用（${rag.retrievalType ?: "-"}）"
+                    !rag.configuredEnabled -> "未启用 · 固定候选"
+                    else -> "不可用已降级"
+                }
+            )
+            rag.indexVersion?.let { body(sb, "索引版本：$it") }
+            rag.fallbackReason?.let { body(sb, "降级原因：$it") }
+            sb.append("\n")
+        }
+
         debug.parsed?.let { parsed ->
             section(sb, "🧠 解析结果")
             body(sb, "路由：${parsed.route}")
@@ -62,6 +88,27 @@ object TurnDebugFormatter {
         }
 
         return sb
+    }
+
+    /** 渲染 初始 → 最终 层级与逐级迁移轨迹（L0→L1 原因 xxx）。 */
+    private fun executionPathSegment(debug: TurnDebugInfo): String {
+        val sb = StringBuilder()
+        val initial = debug.intentTier ?: return ""
+        val final = debug.finalTier ?: return ""
+        sb.append("层级：").append(initial)
+        if (initial != final) sb.append(" → ").append(final)
+        sb.append("\n")
+        if (debug.transitions.isNotEmpty()) {
+            debug.transitions.forEach { t ->
+                bodyPath(sb, "${t.from.name} → ${t.to.name}（${t.reasonCode}）")
+            }
+        }
+        debug.candidateSource?.let { bodyPath(sb, "候选来源：$it") }
+        return sb.toString()
+    }
+
+    private fun bodyPath(sb: StringBuilder, text: String) {
+        sb.append(text).append("\n")
     }
 
     private fun section(sb: SpannableStringBuilder, title: String) {

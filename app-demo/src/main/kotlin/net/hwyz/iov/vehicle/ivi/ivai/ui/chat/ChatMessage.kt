@@ -1,6 +1,7 @@
 package net.hwyz.iov.vehicle.ivi.ivai.ui.chat
 
 import kotlinx.serialization.Serializable
+import net.hwyz.iov.vehicle.ivi.ivai.agent.event.AgentExecutionPath
 import net.hwyz.iov.vehicle.ivi.ivai.agent.event.TurnDebugInfo
 import net.hwyz.iov.vehicle.ivi.ivai.model.AgentPerformanceMetrics
 
@@ -28,7 +29,11 @@ data class ChatMessage(
     /** Segmented performance of the final turn (CR-004), shown under the reply bubble. */
     val performance: AgentPerformanceMetrics? = null,
     /** Whether the performance detail panel is expanded (default collapsed). */
-    val isPerformanceExpanded: Boolean = false
+    val isPerformanceExpanded: Boolean = false,
+    /** CR-005: final tier badge label (L0·本地直达 … 未执行·已拒绝), bound to the bubble. */
+    val executionTierLabel: String? = null,
+    /** CR-005: structured execution path for the collapsible detail panel. */
+    val executionPath: AgentExecutionPath? = null
 )
 
 /**

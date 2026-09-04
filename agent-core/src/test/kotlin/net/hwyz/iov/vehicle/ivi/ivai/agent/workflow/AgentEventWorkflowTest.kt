@@ -27,6 +27,8 @@ class AgentEventWorkflowTest {
     private val powerOn = """{"route":"LOCAL_TOOL","intents":[{"toolId":"climate.power_on","functionId":"AC_Control_1","arguments":{"position":"driver"}}],"modelConfidence":0.98,"riskLevel":"low","needConfirmation":false,"missingArguments":[],"reasonCode":"EXPLICIT_INTENT"}"""
     private val dialogueMissingTemp = """{"route":"LOCAL_DIALOGUE","intents":[{"toolId":"climate.temperature_set","functionId":"AC_Temperature_1","arguments":{"position":"driver"}}],"modelConfidence":0.85,"riskLevel":"medium","needConfirmation":false,"missingArguments":["temperature"],"reasonCode":"MISSING_SLOT"}"""
     private val confirmPowerOn = """{"route":"LOCAL_TOOL","intents":[{"toolId":"climate.power_on","arguments":{"position":"driver"}}],"modelConfidence":0.9,"riskLevel":"low","needConfirmation":true,"missingArguments":[]}"""
+    // CR-005: 确认流程经 L1 隐式表达触发（temperature_increase 中等风险）。
+    private val confirmIncrease = """{"route":"LOCAL_TOOL","intents":[{"toolId":"climate.temperature_increase","arguments":{"position":"driver","step":1}}],"modelConfidence":0.9,"riskLevel":"medium","needConfirmation":true,"missingArguments":[]}"""
 
     // ------------------------------------------------------------------ event emission
 
@@ -86,7 +88,7 @@ class AgentEventWorkflowTest {
         val listener = CollectingAgentEventListener()
         val stub = StubModelProvider("this is { not json")
         val (workflow, adapter) = TestGraph.build(stub, eventListener = listener)
-        val result = workflow.process(input("req-3", "打开空调", turnId = "turn-3"), Session())
+        val result = workflow.process(input("req-3", "我有点冷", turnId = "turn-3"), Session())
 
         assertEquals(net.hwyz.iov.vehicle.ivi.ivai.agent.AgentState.FAILED, result.state)
         assertEquals("IVAI-MODEL-002", result.errorCode)
@@ -102,7 +104,7 @@ class AgentEventWorkflowTest {
         val listener = CollectingAgentEventListener()
         val stub = StubModelProvider("""[1,2,3]""")
         val (workflow, _) = TestGraph.build(stub, eventListener = listener)
-        workflow.process(input("req-4", "打开空调", turnId = "turn-4"), Session())
+        workflow.process(input("req-4", "我有点冷", turnId = "turn-4"), Session())
 
         val failed = listener.events.filterIsInstance<AgentEvent.TurnFailed>().single()
         assertEquals("IVAI-SCHEMA-001", failed.errorCode)
@@ -142,7 +144,8 @@ class AgentEventWorkflowTest {
         val listener = CollectingAgentEventListener()
         val stub = StubModelProvider(powerOn)
         val (workflow, adapter) = TestGraph.build(stub, eventListener = listener)
-        val result = workflow.process(input("req-d1", "打开空调", turnId = "turn-d1"), Session())
+        // CR-005: 走 L1 以包含模型调用统计；stub 返回 power_on（候选集合内）→ 仍执行空调开机。
+        val result = workflow.process(input("req-d1", "我有点冷", turnId = "turn-d1"), Session())
         assertTrue(adapter.state.powerOn)
 
         val debug = listener.events.filterIsInstance<AgentEvent.DebugInfo>().single().debug
@@ -175,6 +178,10 @@ class AgentEventWorkflowTest {
         assertNotNull(performance.unattributedMs)
         assertEquals("SUCCEEDED", debug.state)
         assertEquals("LOCAL_TOOL", debug.route)
+        // CR-005: 层级可观测
+        assertEquals("L1_LOCAL_TOOL_REASONING", debug.intentTier)
+        assertEquals("L1_LOCAL_TOOL_REASONING", debug.finalTier)
+        assertEquals("L1_LOCAL_LLM", debug.candidateSource)
     }
 
     @Test
@@ -182,7 +189,7 @@ class AgentEventWorkflowTest {
         val listener = CollectingAgentEventListener()
         val stub = StubModelProvider("this is { not json")
         val (workflow, _) = TestGraph.build(stub, eventListener = listener)
-        workflow.process(input("req-d2", "打开空调", turnId = "turn-d2"), Session())
+        workflow.process(input("req-d2", "我有点冷", turnId = "turn-d2"), Session())
 
         val debug = listener.events.filterIsInstance<AgentEvent.DebugInfo>().single().debug
         assertEquals("IVAI-MODEL-002", debug.errorCode)
@@ -198,7 +205,7 @@ class AgentEventWorkflowTest {
         val listener = CollectingAgentEventListener()
         val stub = StreamingStubModelProvider(powerOn)
         val (workflow, adapter) = TestGraph.build(stub, eventListener = listener)
-        val result = workflow.process(input("req-str-1", "打开空调", turnId = "turn-str-1"), Session())
+        val result = workflow.process(input("req-str-1", "我有点冷", turnId = "turn-str-1"), Session())
 
         assertEquals(AgentState.SUCCEEDED, result.state)
         assertTrue(adapter.state.powerOn)
@@ -219,32 +226,33 @@ class AgentEventWorkflowTest {
     @Test
     fun `需要确认时发射 ConfirmationRequired 并保存 confirmationId`() = runTest {
         val listener = CollectingAgentEventListener()
-        val stub = StubModelProvider(confirmPowerOn)
+        val stub = StubModelProvider(confirmIncrease)
         val (workflow, adapter) = TestGraph.build(stub, eventListener = listener)
         val session = Session()
-        val result = workflow.process(input("req-c1", "打开空调", turnId = "turn-c1"), session)
+        val result = workflow.process(input("req-c1", "我有点冷", turnId = "turn-c1"), session)
 
         assertEquals(net.hwyz.iov.vehicle.ivi.ivai.agent.AgentState.WAITING_USER, result.state)
-        assertFalse(adapter.state.powerOn, "确认前不得执行工具")
+        assertEquals(24.0, adapter.state.driverTemperature, "确认前不得执行工具")
 
         val confirmation = listener.events.filterIsInstance<AgentEvent.ConfirmationRequired>().single()
-        assertEquals("climate.power_on", confirmation.toolId)
+        assertEquals("climate.temperature_increase", confirmation.toolId)
         assertTrue(confirmation.confirmationId.isNotBlank())
         assertEquals(confirmation.confirmationId, session.pendingConfirmationId)
+        assertEquals("L1_LOCAL_TOOL_REASONING", confirmation.currentTier?.name)
     }
 
     @Test
     fun `confirm 执行待确认工具且重复确认不重复执行`() = runTest {
         val listener = CollectingAgentEventListener()
-        val stub = StubModelProvider(confirmPowerOn)
+        val stub = StubModelProvider(confirmIncrease)
         val (workflow, adapter) = TestGraph.build(stub, eventListener = listener)
         val session = Session()
-        workflow.process(input("req-c2", "打开空调", turnId = "turn-c2"), session)
+        workflow.process(input("req-c2", "我有点冷", turnId = "turn-c2"), session)
 
         val confirmationId = session.pendingConfirmationId!!
         val first = workflow.confirm(confirmationId, session)
         assertEquals(net.hwyz.iov.vehicle.ivi.ivai.agent.AgentState.SUCCEEDED, first.state)
-        assertTrue(adapter.state.powerOn)
+        assertEquals(25.0, adapter.state.driverTemperature)
         assertNull(session.pendingTask, "确认后 pending 应被消费")
 
         // Second confirm with the same id must be rejected and must not re-execute.
@@ -258,16 +266,16 @@ class AgentEventWorkflowTest {
     @Test
     fun `cancel 终止待确认任务并发射 TurnCancelled 且不执行`() = runTest {
         val listener = CollectingAgentEventListener()
-        val stub = StubModelProvider(confirmPowerOn)
+        val stub = StubModelProvider(confirmIncrease)
         val (workflow, adapter) = TestGraph.build(stub, eventListener = listener)
         val session = Session()
-        workflow.process(input("req-c3", "打开空调", turnId = "turn-c3"), session)
+        workflow.process(input("req-c3", "我有点冷", turnId = "turn-c3"), session)
 
         val confirmationId = session.pendingConfirmationId!!
         val result = workflow.cancel(confirmationId, session)
 
         assertEquals(net.hwyz.iov.vehicle.ivi.ivai.agent.AgentState.REJECTED, result.state)
-        assertFalse(adapter.state.powerOn, "取消后不得执行工具")
+        assertEquals(24.0, adapter.state.driverTemperature, "取消后不得执行工具")
         assertNull(session.pendingTask)
 
         val cancelled = listener.events.filterIsInstance<AgentEvent.TurnCancelled>().single()
@@ -279,14 +287,14 @@ class AgentEventWorkflowTest {
     @Test
     fun `不匹配或过期的 confirmationId 被拒绝且不触发工具执行`() = runTest {
         val listener = CollectingAgentEventListener()
-        val stub = StubModelProvider(confirmPowerOn)
+        val stub = StubModelProvider(confirmIncrease)
         val (workflow, adapter) = TestGraph.build(stub, eventListener = listener)
         val session = Session()
-        workflow.process(input("req-c4", "打开空调", turnId = "turn-c4"), session)
+        workflow.process(input("req-c4", "我有点冷", turnId = "turn-c4"), session)
 
         val result = workflow.confirm("stale-id", session)
         assertEquals(net.hwyz.iov.vehicle.ivi.ivai.agent.AgentState.REJECTED, result.state)
-        assertFalse(adapter.state.powerOn, "不匹配的 confirmationId 不得执行工具")
+        assertEquals(24.0, adapter.state.driverTemperature, "不匹配的 confirmationId 不得执行工具")
         assertNotNull(session.pendingTask, "拒绝不应消费 pending")
         assertTrue(listener.events.none { it is AgentEvent.ToolExecutionStarted })
 

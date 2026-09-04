@@ -27,7 +27,14 @@ import net.hwyz.iov.vehicle.ivi.ivai.agent.event.AgentEvent
 import net.hwyz.iov.vehicle.ivi.ivai.agent.policy.AgentPolicyEngine
 import net.hwyz.iov.vehicle.ivi.ivai.agent.prompt.PromptBuilder
 import net.hwyz.iov.vehicle.ivi.ivai.agent.prompt.PromptSnapshot
+import net.hwyz.iov.vehicle.ivi.ivai.agent.rag.RagConfigRepository
+import net.hwyz.iov.vehicle.ivi.ivai.agent.rag.RagRuntimeManager
+import net.hwyz.iov.vehicle.ivi.ivai.agent.rag.RagRuntimeStatus
+import net.hwyz.iov.vehicle.ivi.ivai.agent.router.DefaultFastIntentMatcher
+import net.hwyz.iov.vehicle.ivi.ivai.agent.router.DomainClassifier
+import net.hwyz.iov.vehicle.ivi.ivai.agent.router.RagToolCandidateProvider
 import net.hwyz.iov.vehicle.ivi.ivai.agent.router.Router
+import net.hwyz.iov.vehicle.ivi.ivai.agent.router.TieredIntentRouter
 import net.hwyz.iov.vehicle.ivi.ivai.agent.session.Session
 import net.hwyz.iov.vehicle.ivi.ivai.agent.workflow.AgentConfig
 import net.hwyz.iov.vehicle.ivi.ivai.agent.workflow.AgentInput
@@ -42,9 +49,16 @@ import net.hwyz.iov.vehicle.ivi.ivai.model.config.ModelRuntimeConfig
 import net.hwyz.iov.vehicle.ivi.ivai.model.provider.ModelProviderFactory
 import net.hwyz.iov.vehicle.ivi.ivai.service.config.AndroidKeystoreSecretStore
 import net.hwyz.iov.vehicle.ivi.ivai.service.config.DataStorePublicConfigStore
+import net.hwyz.iov.vehicle.ivi.ivai.service.config.DataStoreRagConfigRepository
 import net.hwyz.iov.vehicle.ivi.ivai.service.config.MaskingLoggingInterceptor
 import net.hwyz.iov.vehicle.ivi.ivai.observability.LoggingTelemetryRecorder
 import net.hwyz.iov.vehicle.ivi.ivai.observability.ToolLifecycleLogger
+import net.hwyz.iov.vehicle.ivi.ivai.retrieval.KnowledgeRetriever
+import net.hwyz.iov.vehicle.ivi.ivai.retrieval.embedding.LocalEmbeddingProvider
+import net.hwyz.iov.vehicle.ivi.ivai.retrieval.knowledge.KnowledgeReranker
+import net.hwyz.iov.vehicle.ivi.ivai.retrieval.knowledge.KnowledgeRetrieverImpl
+import net.hwyz.iov.vehicle.ivi.ivai.retrieval.knowledge.SampleKnowledgeDocs
+import net.hwyz.iov.vehicle.ivi.ivai.retrieval.tool.HybridRuleToolRetriever
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.ToolRegistry
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.ClimateToolDefinitions
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.AdapterRegistry
@@ -91,6 +105,13 @@ class AgentService : Service(), AiAgentClient {
     lateinit var configRepository: ModelConfigRepository
         private set
 
+    /** Single shared RAG runtime config repository (IVI-IVAI-DSN-CR-005). */
+    lateinit var ragConfigRepository: RagConfigRepository
+        private set
+
+    /** RAG runtime health (status for the settings page). */
+    private var ragRuntimeManager: RagRuntimeManager? = null
+
     /** Single shared OkHttpClient (interceptor masks Authorization/api-key). */
     private lateinit var okHttpClient: OkHttpClient
     private lateinit var providerFactory: ModelProviderFactory
@@ -101,6 +122,7 @@ class AgentService : Service(), AiAgentClient {
     override fun onCreate() {
         super.onCreate()
         configRepository = buildConfigRepository()
+        ragConfigRepository = DataStoreRagConfigRepository(this, scope)
         okHttpClient = OkHttpClient.Builder()
             .addInterceptor(MaskingLoggingInterceptor())
             .build()
@@ -146,7 +168,8 @@ class AgentService : Service(), AiAgentClient {
             sessionId = current,
             history = session.history().map { AgentSessionSnapshot.HistoryEntry(it.role, it.content) },
             pendingConfirmationId = session.pendingConfirmationId,
-            activeTurnId = null
+            activeTurnId = null,
+            lastExecutionPath = session.lastExecutionPath
         )
     }
 
@@ -305,6 +328,23 @@ class AgentService : Service(), AiAgentClient {
             adapterRegistry = AdapterRegistry().register(adapter),
             lifecycleListener = ToolLifecycleLogger { log(it) }
         )
+
+        // CR-005: tiered routing + Tool/Knowledge RAG runtime.
+        val fastMatcher = DefaultFastIntentMatcher(registry)
+        val domainClassifier = DomainClassifier(registry)
+        val tieredRouter = TieredIntentRouter(fastMatcher, domainClassifier)
+        val toolRetriever = HybridRuleToolRetriever(registry)
+        val toolCandidateProvider = RagToolCandidateProvider(registry, toolRetriever)
+        val knowledgeRetriever: KnowledgeRetriever = KnowledgeRetrieverImpl(SampleKnowledgeDocs.chunks)
+        val embeddingProvider = LocalEmbeddingProvider()
+        val ragManager = RagRuntimeManager(
+            repository = ragConfigRepository,
+            toolRetriever = toolRetriever,
+            knowledgeRetriever = knowledgeRetriever,
+            embeddingProvider = embeddingProvider
+        )
+        ragRuntimeManager = ragManager
+
         val workflow = AgentWorkflow(
             modelProvider = provider,
             registry = registry,
@@ -314,15 +354,25 @@ class AgentService : Service(), AiAgentClient {
             agentPolicy = AgentPolicyEngine(registry, ToolPolicyEngine()),
             toolExecutor = executor,
             config = AgentConfig(model = BuildConfig.OLLAMA_MODEL, ollamaBaseUrl = initialBaseUrl),
+            tieredRouter = tieredRouter,
+            toolCandidateProvider = toolCandidateProvider,
             vehicleStateProvider = VehicleStateProvider { adapter.snapshot() },
             telemetryRecorder = LoggingTelemetryRecorder { log(it) },
             lifecycleListener = ToolLifecycleLogger { log(it) },
-            eventListener = { event -> _events.tryEmit(event) }
+            eventListener = { event -> _events.tryEmit(event) },
+            ragRuntimeManager = ragManager,
+            knowledgeRetriever = knowledgeRetriever,
+            knowledgeReranker = KnowledgeReranker(),
+            vehicleModel = VEHICLE_MODEL,
+            softwareVersion = SOFTWARE_VERSION
         )
         promptBuilderRef = promptBuilder
         mockAdapterRef.set(adapter)
         agentRef.set(workflow)
     }
+
+    /** RAG runtime health for the settings page (CR-005). */
+    fun ragRuntimeStatus(): RagRuntimeStatus = ragRuntimeManager?.status() ?: RagRuntimeStatus.DISABLED
 
     private fun buildConfigRepository(): ModelConfigRepository =
         DefaultModelConfigRepository(
@@ -341,5 +391,9 @@ class AgentService : Service(), AiAgentClient {
 
     private companion object {
         const val TAG = "IVI-IVAI"
+
+        /** Mock vehicle deployment metadata (CR-005 availability filtering). */
+        val VEHICLE_MODEL: String? = null
+        const val SOFTWARE_VERSION = "0.1.0"
     }
 }

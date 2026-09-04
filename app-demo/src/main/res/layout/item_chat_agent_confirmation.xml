@@ -21,9 +21,23 @@
         app:layout_constraintWidth_percent="0.8">
 
         <TextView
+            android:id="@+id/tierBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_tier_badge"
+            android:paddingStart="6dp"
+            android:paddingTop="1dp"
+            android:paddingEnd="6dp"
+            android:paddingBottom="1dp"
+            android:textColor="@color/tier_badge_text"
+            android:textSize="11sp"
+            android:visibility="gone" />
+
+        <TextView
             android:id="@+id/confirmationText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
             android:textColor="@color/text_primary"
             android:textSize="16sp" />
 

@@ -1,6 +1,7 @@
 package net.hwyz.iov.vehicle.ivi.ivai.agent.event
 
 import kotlinx.serialization.Serializable
+import net.hwyz.iov.vehicle.ivi.ivai.agent.rag.RagExecutionInfo
 import net.hwyz.iov.vehicle.ivi.ivai.model.AgentPerformanceMetrics
 
 /**
@@ -58,5 +59,11 @@ data class TurnDebugInfo(
     val state: String? = null,
     val route: String? = null,
     val errorCode: String? = null,
-    val replayed: Boolean = false
+    val replayed: Boolean = false,
+    // CR-005: tier routing observability
+    val intentTier: String? = null,
+    val finalTier: String? = null,
+    val transitions: List<TierTransition> = emptyList(),
+    val candidateSource: String? = null,
+    val rag: RagExecutionInfo? = null
 )

@@ -62,7 +62,8 @@ class AgentOpenAiCompatibleIntegrationTest {
         )
         val (workflow, adapter) = TestGraph.build(provider)
 
-        val result = workflow.process(AgentInput("req-oai-1", "打开空调", turnId = "turn-oai-1"), Session())
+        // CR-005: “我有点冷”走 L1 触发模型调用（“打开空调”已是 L0 直达，不再调模型）。
+        val result = workflow.process(AgentInput("req-oai-1", "我有点冷", turnId = "turn-oai-1"), Session())
 
         assertEquals(AgentState.SUCCEEDED, result.state)
         assertTrue(adapter.state.powerOn, "Mock 空调应已打开")
@@ -97,7 +98,7 @@ class AgentOpenAiCompatibleIntegrationTest {
         )
         val (workflow, adapter) = TestGraph.build(provider)
 
-        val result = workflow.process(AgentInput("req-oai-2", "打开空调", turnId = "turn-oai-2"), Session())
+        val result = workflow.process(AgentInput("req-oai-2", "我有点冷", turnId = "turn-oai-2"), Session())
 
         assertEquals(AgentState.FAILED, result.state)
         assertTrue(!adapter.state.powerOn, "无效响应不得执行工具")

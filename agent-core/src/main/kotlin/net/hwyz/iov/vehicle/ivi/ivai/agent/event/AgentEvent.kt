@@ -1,5 +1,6 @@
 package net.hwyz.iov.vehicle.ivi.ivai.agent.event
 
+import net.hwyz.iov.vehicle.ivi.ivai.agent.router.IntentTier
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.ExecutionStatus
 
 /**
@@ -46,7 +47,8 @@ sealed interface AgentEvent {
         override val sessionId: String,
         override val turnId: String,
         override val requestId: String,
-        val text: String
+        val text: String,
+        val executionPath: AgentExecutionPath? = null
     ) : AgentEvent
 
     /** A tool needs user confirmation before it may run (left-side confirmation card). */
@@ -57,7 +59,8 @@ sealed interface AgentEvent {
         val confirmationId: String,
         val toolId: String,
         val toolName: String,
-        val text: String
+        val text: String,
+        val currentTier: IntentTier? = null
     ) : AgentEvent
 
     /** Tool execution started; the UI may update the processing text. */
@@ -78,7 +81,8 @@ sealed interface AgentEvent {
         val status: ExecutionStatus,
         val message: String,
         val errorCode: String? = null,
-        val retryable: Boolean = false
+        val retryable: Boolean = false,
+        val executionPath: AgentExecutionPath? = null
     ) : AgentEvent
 
     /** The whole turn failed (model, parse, schema or validation). */
@@ -88,7 +92,8 @@ sealed interface AgentEvent {
         override val requestId: String,
         val message: String,
         val errorCode: String? = null,
-        val retryable: Boolean = false
+        val retryable: Boolean = false,
+        val executionPath: AgentExecutionPath? = null
     ) : AgentEvent
 
     /** A pending confirmation (or in-flight task) was cancelled by the user. */
