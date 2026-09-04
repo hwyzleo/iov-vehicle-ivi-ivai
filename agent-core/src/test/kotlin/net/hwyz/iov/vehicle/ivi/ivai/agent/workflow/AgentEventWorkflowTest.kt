@@ -1,9 +1,11 @@
 package net.hwyz.iov.vehicle.ivi.ivai.agent.workflow
 
 import kotlinx.coroutines.test.runTest
+import net.hwyz.iov.vehicle.ivi.ivai.agent.AgentState
 import net.hwyz.iov.vehicle.ivi.ivai.agent.event.AgentEvent
 import net.hwyz.iov.vehicle.ivi.ivai.agent.session.Session
 import net.hwyz.iov.vehicle.ivi.ivai.agent.testutil.CollectingAgentEventListener
+import net.hwyz.iov.vehicle.ivi.ivai.agent.testutil.StreamingStubModelProvider
 import net.hwyz.iov.vehicle.ivi.ivai.agent.testutil.StubModelProvider
 import net.hwyz.iov.vehicle.ivi.ivai.agent.testutil.TestGraph
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.ExecutionContext
@@ -147,10 +149,8 @@ class AgentEventWorkflowTest {
         assertEquals("turn-d1", debug.turnId)
         assertEquals("req-d1", debug.requestId)
 
-        // 编排：system 提示词 + few-shot + 本次用户输入
-        assertEquals("system", debug.composedMessages.first().role)
-        assertTrue(debug.composedMessages.any { it.role == "user" && it.content.contains("打开空调") })
-        assertTrue(debug.composedMessages.size > 2)
+        // 隐私边界（CR-004）：Agent Event 不暴露 System Prompt / 完整请求编排
+        // （composedMessages 已从 DebugInfo 移除），提示词只读入口在设置页。
 
         // 解析结果
         val parsed = debug.parsed
@@ -165,16 +165,20 @@ class AgentEventWorkflowTest {
         assertEquals("SUCCEEDED", tool.status)
         assertTrue(tool.latencyMs != null && tool.latencyMs >= 0)
 
-        // 统计
-        assertTrue(debug.modelLatencyMs >= 0)
-        assertTrue(debug.totalLatencyMs >= 0)
+        // 分段性能（CR-004）：端到端、模型调用与未归因均可用，网络为诊断子指标
+        val performance = debug.performance
+        assertNotNull(performance)
+        assertTrue(performance!!.endToEndMs >= 0)
+        val modelTotal = performance.modelCallTotalMs
+        assertNotNull(modelTotal)
+        assertTrue(requireNotNull(modelTotal) >= 0)
+        assertNotNull(performance.unattributedMs)
         assertEquals("SUCCEEDED", debug.state)
         assertEquals("LOCAL_TOOL", debug.route)
-        assertNotNull(debug.rawModelContent)
     }
 
     @Test
-    fun `模型失败时 DebugInfo 仍携带编排与错误码`() = runTest {
+    fun `模型失败时 DebugInfo 仍携带性能与错误码`() = runTest {
         val listener = CollectingAgentEventListener()
         val stub = StubModelProvider("this is { not json")
         val (workflow, _) = TestGraph.build(stub, eventListener = listener)
@@ -183,8 +187,31 @@ class AgentEventWorkflowTest {
         val debug = listener.events.filterIsInstance<AgentEvent.DebugInfo>().single().debug
         assertEquals("IVAI-MODEL-002", debug.errorCode)
         assertEquals("FAILED", debug.state)
-        assertTrue(debug.composedMessages.isNotEmpty())
+        assertNotNull(debug.performance)
+        val modelTotal = debug.performance?.modelCallTotalMs
+        assertNotNull(modelTotal)
         assertNull(debug.tool)
+    }
+
+    @Test
+    fun `流式 Provider 逐块发射 StreamingDelta 且最终结果一致`() = runTest {
+        val listener = CollectingAgentEventListener()
+        val stub = StreamingStubModelProvider(powerOn)
+        val (workflow, adapter) = TestGraph.build(stub, eventListener = listener)
+        val result = workflow.process(input("req-str-1", "打开空调", turnId = "turn-str-1"), Session())
+
+        assertEquals(AgentState.SUCCEEDED, result.state)
+        assertTrue(adapter.state.powerOn)
+
+        val deltas = listener.events.filterIsInstance<AgentEvent.StreamingDelta>()
+        assertTrue(deltas.isNotEmpty(), "流式 Provider 应发射增量事件")
+        // 增量按顺序累计，最后一条为完整内容
+        assertEquals(powerOn, deltas.last().text)
+        assertTrue(deltas.first().text.length < powerOn.length)
+        // 真·首字延迟进入性能指标
+        val ttft = result.performance?.timeToFirstTokenMs
+        assertNotNull(ttft)
+        assertEquals(true, result.performance?.streamingUsed)
     }
 
     // ------------------------------------------------------------------ confirmation / cancellation

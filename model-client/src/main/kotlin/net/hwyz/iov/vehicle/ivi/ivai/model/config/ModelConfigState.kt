@@ -29,4 +29,10 @@ object ModelConfigErrorCode {
     const val DECRYPTION_FAILED = "IVAI-CONFIG-006"
     const val TEST_TIMEOUT = "IVAI-CONFIG-007"
     const val TEST_UNAUTHORIZED = "IVAI-CONFIG-008"
+
+    /** Provider requires fields that are missing in the draft (CR-004). */
+    const val PROVIDER_MISMATCH = "IVAI-CONFIG-009"
+
+    /** Endpoint Path is illegal or conflicts with Base URL (CR-004). */
+    const val INVALID_ENDPOINT_PATH = "IVAI-CONFIG-010"
 }

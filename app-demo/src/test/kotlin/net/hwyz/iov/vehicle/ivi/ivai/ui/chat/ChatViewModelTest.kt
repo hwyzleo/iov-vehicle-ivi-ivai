@@ -10,9 +10,11 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import net.hwyz.iov.vehicle.ivi.ivai.agent.event.AgentEvent
-import net.hwyz.iov.vehicle.ivi.ivai.agent.event.ComposedMessage
 import net.hwyz.iov.vehicle.ivi.ivai.agent.event.TurnDebugInfo
-import net.hwyz.iov.vehicle.ivi.ivai.service.SessionSnapshot
+import net.hwyz.iov.vehicle.ivi.ivai.agent.prompt.PromptSnapshot
+import net.hwyz.iov.vehicle.ivi.ivai.model.AgentPerformanceMetrics
+import net.hwyz.iov.vehicle.ivi.ivai.service.AgentCommand
+import net.hwyz.iov.vehicle.ivi.ivai.service.AgentSessionSnapshot
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.ExecutionStatus
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -324,7 +326,7 @@ class ChatViewModelTest {
     }
 
     @Test
-    fun `DebugInfo 事件附加到当前轮次的消息且保留编排与统计`() = runTest(dispatcher) {
+    fun `DebugInfo 事件附加到当前轮次的消息且携带分段性能`() = runTest(dispatcher) {
         val viewModel = ChatViewModel()
         val gateway = FakeGateway()
         viewModel.attach(gateway)
@@ -345,13 +347,12 @@ class ChatViewModelTest {
                 TurnDebugInfo(
                     turnId = "turn-1",
                     requestId = requestId,
-                    composedMessages = listOf(
-                        ComposedMessage("system", "你是车控助手…"),
-                        ComposedMessage("user", "打开空调")
+                    performance = AgentPerformanceMetrics(
+                        requestId = requestId,
+                        modelCallTotalMs = 120,
+                        endToEndMs = 140,
+                        unattributedMs = 20
                     ),
-                    rawModelContent = """{"route":"LOCAL_TOOL"}""",
-                    modelLatencyMs = 120,
-                    totalLatencyMs = 140,
                     state = "SUCCEEDED",
                     route = "LOCAL_TOOL"
                 )
@@ -363,40 +364,122 @@ class ChatViewModelTest {
         assertEquals(ChatMessageType.TOOL_RESULT, result.type)
         val details = result.details
         assertNotNull(details)
-        assertEquals(2, details!!.composedMessages.size)
-        assertEquals("system", details.composedMessages.first().role)
-        assertEquals(120, details.modelLatencyMs)
-        assertEquals(140, details.totalLatencyMs)
-        assertEquals("LOCAL_TOOL", details.route)
+        assertEquals("LOCAL_TOOL", details!!.route)
+        assertEquals(120L, details.performance?.modelCallTotalMs)
+        // CR-004：System Prompt 不进入聊天区；性能挂到消息但不拼接进 text，默认收起
+        assertTrue(result.text.isNotBlank())
+        assertFalse(result.text.contains("你是车控助手"))
+        assertEquals(140L, result.performance?.endToEndMs)
+        assertFalse(result.isPerformanceExpanded, "性能详情默认收起")
+    }
+
+    @Test
+    fun `性能详情按 messageId 展开与收起`() = runTest(dispatcher) {
+        val viewModel = ChatViewModel()
+        val gateway = FakeGateway()
+        viewModel.attach(gateway)
+        runCurrent()
+
+        viewModel.onAction(ChatUiAction.InputChanged("打开空调"))
+        viewModel.onAction(ChatUiAction.SendClicked)
+        runCurrent()
+        val requestId = viewModel.state.value.messages.first().requestId!!
+
+        gateway.emit(
+            AgentEvent.UserSubmitted("sess", "turn-1", requestId, "打开空调"),
+            AgentEvent.ProcessingStarted("sess", "turn-1", requestId),
+            AgentEvent.DebugInfo(
+                "sess", "turn-1", requestId,
+                TurnDebugInfo(
+                    turnId = "turn-1",
+                    requestId = requestId,
+                    performance = AgentPerformanceMetrics(requestId = requestId, endToEndMs = 100)
+                )
+            )
+        )
+        runCurrent()
+
+        val message = viewModel.state.value.messages.last()
+        assertEquals(ChatMessageType.PROCESSING, message.type)
+        assertFalse(message.isPerformanceExpanded)
+
+        viewModel.onAction(ChatUiAction.TogglePerformanceDetails(message.messageId))
+        runCurrent()
+        assertTrue(viewModel.state.value.messages.last().isPerformanceExpanded)
+
+        // 再次点击收起；不影响其他消息
+        viewModel.onAction(ChatUiAction.TogglePerformanceDetails(message.messageId))
+        runCurrent()
+        assertFalse(viewModel.state.value.messages.last().isPerformanceExpanded)
+    }
+
+    @Test
+    fun `流式增量逐字更新处理中气泡，最终结果替换`() = runTest(dispatcher) {
+        val viewModel = ChatViewModel()
+        val gateway = FakeGateway()
+        viewModel.attach(gateway)
+        runCurrent()
+
+        viewModel.onAction(ChatUiAction.InputChanged("打开空调"))
+        viewModel.onAction(ChatUiAction.SendClicked)
+        runCurrent()
+        val requestId = viewModel.state.value.messages.first().requestId!!
+
+        gateway.emit(
+            AgentEvent.UserSubmitted("sess", "turn-1", requestId, "打开空调"),
+            AgentEvent.ProcessingStarted("sess", "turn-1", requestId)
+        )
+        runCurrent()
+
+        gateway.emit(AgentEvent.StreamingDelta("sess", "turn-1", requestId, "{\"route\":"))
+        runCurrent()
+        assertEquals("{\"route\":", viewModel.state.value.messages.last().text)
+        assertEquals(ChatMessageType.PROCESSING, viewModel.state.value.messages.last().type)
+
+        gateway.emit(AgentEvent.StreamingDelta("sess", "turn-1", requestId, "{\"route\":\"LOCAL_TOOL\",\"intents\":[]}"))
+        gateway.emit(AgentEvent.ToolExecutionFinished("sess", "turn-1", requestId, "climate.power_on", ExecutionStatus.SUCCEEDED, "已打开空调", retryable = false))
+        runCurrent()
+
+        val last = viewModel.state.value.messages.last()
+        assertEquals(ChatMessageType.TOOL_RESULT, last.type)
+        assertEquals("已打开空调", last.text)
+        assertFalse(last.text.contains("LOCAL_TOOL"), "最终气泡不残留流式 JSON")
     }
 
     private class FakeGateway : ChatAgentGateway {
         val eventFlow = MutableSharedFlow<AgentEvent>(extraBufferCapacity = 100)
-        override val events: Flow<AgentEvent> get() = eventFlow
+        override fun observeEvents(sessionId: String): Flow<AgentEvent> = eventFlow
 
         val submitted = mutableListOf<Pair<String, String>>()
         val confirms = mutableListOf<String>()
         val cancels = mutableListOf<String>()
 
-        override fun submit(text: String, turnId: String, requestId: String): String? {
-            submitted += text to turnId
-            return requestId
+        override suspend fun submit(command: AgentCommand): Boolean = when (command) {
+            is AgentCommand.HandleText -> {
+                submitted += command.text to command.turnId
+                true
+            }
+            is AgentCommand.Confirm -> {
+                confirms += command.confirmationId
+                true
+            }
+            is AgentCommand.Cancel -> {
+                cancels += command.confirmationId
+                true
+            }
         }
 
-        override fun confirm(confirmationId: String): Boolean {
-            confirms += confirmationId
-            return true
-        }
-
-        override fun cancel(confirmationId: String): Boolean {
-            cancels += confirmationId
-            return true
-        }
-
-        override fun sessionSnapshot(): SessionSnapshot =
-            SessionSnapshot(sessionId = "sess", history = emptyList(), pendingConfirmationId = null)
+        override suspend fun getSessionSnapshot(sessionId: String): AgentSessionSnapshot =
+            AgentSessionSnapshot(
+                sessionId = sessionId,
+                history = emptyList(),
+                pendingConfirmationId = null,
+                activeTurnId = null
+            )
 
         override fun sessionId(): String = "sess"
+
+        override fun promptSnapshot(): PromptSnapshot? = null
 
         fun emit(vararg events: AgentEvent) {
             events.forEach { eventFlow.tryEmit(it) }

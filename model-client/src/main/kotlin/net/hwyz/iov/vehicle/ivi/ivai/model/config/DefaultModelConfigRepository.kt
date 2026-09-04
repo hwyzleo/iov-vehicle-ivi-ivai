@@ -10,12 +10,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import net.hwyz.iov.vehicle.ivi.ivai.model.ModelProviderType
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 /**
- * Default repository implementation (IVI-IVAI-DSN-CR-003). Pure JVM: all
- * Android-specific persistence is injected through [PublicConfigStore] /
+ * Default repository implementation (IVI-IVAI-DSN-CR-003, provider schema v2 per CR-004).
+ * Pure JVM: all Android-specific persistence is injected through [PublicConfigStore] /
  * [SecretStore], so the whole save / load / rollback logic is unit-testable.
  *
  * Save ordering (design):
@@ -25,11 +26,16 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
  *  4. on public-write failure, roll the secret back so the previously effective
  *     configuration is never left in a half-migrated state
  *  5. only then publish the new Valid state
+ *
+ * Migration: a persisted v1 config (baseUrl only) is upgraded in memory to v2
+ * with providerType = OLLAMA, the original baseUrl preserved and modelName
+ * defaulted to [defaultModelName]; the migrated fields are written back.
  */
 class DefaultModelConfigRepository(
     private val publicStore: PublicConfigStore,
     private val secretStore: SecretStore,
     private val defaultBaseUrl: String,
+    private val defaultModelName: String = DEFAULT_MODEL_NAME,
     private val validator: ModelConfigValidator = ModelConfigValidator(),
     private val connectionTester: ModelConnectionTester = ModelConnectionTester(),
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -89,6 +95,10 @@ class DefaultModelConfigRepository(
         val newPublic = ModelPublicConfig(
             schemaVersion = ModelPublicConfig.CURRENT_SCHEMA_VERSION,
             baseUrl = normalizedUrl,
+            providerType = draft.providerType,
+            endpointPath = draft.endpointPath?.trim()?.takeIf { it.isNotEmpty() },
+            modelName = draft.modelName?.trim()?.takeIf { it.isNotEmpty() }
+                ?: if (draft.providerType == ModelProviderType.OLLAMA) defaultModelName else null,
             updatedAt = System.currentTimeMillis(),
             configVersion = newVersion
         )
@@ -124,6 +134,8 @@ class DefaultModelConfigRepository(
         val newPublic = ModelPublicConfig(
             schemaVersion = ModelPublicConfig.CURRENT_SCHEMA_VERSION,
             baseUrl = normalizedDefault,
+            providerType = ModelProviderType.OLLAMA,
+            modelName = defaultModelName,
             updatedAt = System.currentTimeMillis(),
             configVersion = newVersion
         )
@@ -172,14 +184,42 @@ class DefaultModelConfigRepository(
                 "配置版本 ${public.schemaVersion} 不兼容，请重新配置或恢复默认"
             )
         }
-        // schemaVersion < CURRENT: migration hooks would run here; v1 is the only version today.
+        val effective = if (public.schemaVersion < ModelPublicConfig.CURRENT_SCHEMA_VERSION) {
+            migrate(public)
+        } else {
+            public
+        }
+        return buildSnapshot(effective)
+    }
 
-        return buildSnapshot(public)
+    /**
+     * v1 → v2 migration (CR-004): default to OLLAMA, keep the original baseUrl,
+     * fill the model name with the current Ollama default when missing, and
+     * persist the migrated config so the upgrade happens exactly once.
+     */
+    private suspend fun migrate(public: ModelPublicConfig): ModelPublicConfig {
+        val migrated = ModelPublicConfig(
+            schemaVersion = ModelPublicConfig.CURRENT_SCHEMA_VERSION,
+            baseUrl = public.baseUrl,
+            providerType = ModelProviderType.OLLAMA,
+            modelName = public.modelName?.takeIf { it.isNotBlank() } ?: defaultModelName,
+            updatedAt = public.updatedAt,
+            configVersion = public.configVersion
+        )
+        runCatching { publicStore.write(migrated) }
+        return migrated
     }
 
     private suspend fun buildSnapshot(public: ModelPublicConfig): ModelRuntimeConfig {
         val baseUrl = public.baseUrl.toHttpUrlOrNull()
             ?: throw ModelConfigException(ModelConfigErrorCode.INVALID_URL, "持久化地址非法")
+        val providerType = public.providerType
+        if (providerType != ModelProviderType.OLLAMA && providerType != ModelProviderType.OPENAI_COMPATIBLE) {
+            throw ModelConfigException(
+                ModelConfigErrorCode.PROVIDER_MISMATCH,
+                "不支持的 Provider 类型：$providerType"
+            )
+        }
 
         val apiKey = when (secretStore.status()) {
             KeyStatus.NOT_SET -> null
@@ -193,7 +233,14 @@ class DefaultModelConfigRepository(
                 "密钥解密失败或 Keystore 失效，请重新配置"
             )
         }
-        return ModelRuntimeConfig(baseUrl = baseUrl, apiKey = apiKey, version = public.configVersion)
+        return ModelRuntimeConfig(
+            baseUrl = baseUrl,
+            providerType = providerType,
+            endpointPath = public.endpointPath,
+            modelName = public.modelName ?: if (providerType == ModelProviderType.OLLAMA) defaultModelName else null,
+            apiKey = apiKey,
+            version = public.configVersion
+        )
     }
 
     /** Best-effort rollback of the secret after a failed public-config write. */
@@ -204,5 +251,9 @@ class DefaultModelConfigRepository(
         } catch (_: Exception) {
             // Best effort only — the next valid save overwrites the secret anyway.
         }
+    }
+
+    private companion object {
+        const val DEFAULT_MODEL_NAME = "qwen3.5:4b"
     }
 }

@@ -13,6 +13,7 @@ import android.view.View
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -23,8 +24,10 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.launch
 import net.hwyz.iov.vehicle.ivi.ivai.demo.R
+import net.hwyz.iov.vehicle.ivi.ivai.model.ModelProviderType
 import net.hwyz.iov.vehicle.ivi.ivai.model.config.KeyStatus
 import net.hwyz.iov.vehicle.ivi.ivai.service.AgentService
+import android.widget.ArrayAdapter
 
 /**
  * LLM model config screen (IVI-IVAI-DSN-CR-003 / IVAI-REQ-023~029).
@@ -37,6 +40,11 @@ class ModelConfigActivity : ComponentActivity() {
     private val viewModel: ModelConfigViewModel by viewModels()
 
     private lateinit var baseUrlInput: EditText
+    private lateinit var providerSpinner: Spinner
+    private lateinit var modelNameInput: EditText
+    private lateinit var advancedToggleButton: Button
+    private lateinit var endpointRow: View
+    private lateinit var endpointPathInput: EditText
     private lateinit var apiKeyInput: EditText
     private lateinit var backButton: Button
     private lateinit var toggleKeyButton: Button
@@ -69,6 +77,11 @@ class ModelConfigActivity : ComponentActivity() {
         setContentView(R.layout.activity_model_config)
 
         baseUrlInput = findViewById(R.id.baseUrlInput)
+        providerSpinner = findViewById(R.id.providerSpinner)
+        modelNameInput = findViewById(R.id.modelNameInput)
+        advancedToggleButton = findViewById(R.id.advancedToggleButton)
+        endpointRow = findViewById(R.id.endpointRow)
+        endpointPathInput = findViewById(R.id.endpointPathInput)
         apiKeyInput = findViewById(R.id.apiKeyInput)
         backButton = findViewById(R.id.backButton)
         toggleKeyButton = findViewById(R.id.toggleKeyButton)
@@ -84,6 +97,36 @@ class ModelConfigActivity : ComponentActivity() {
             val value = text?.toString() ?: ""
             if (value != viewModel.state.value.baseUrl) {
                 viewModel.onAction(ModelConfigUiAction.BaseUrlChanged(value))
+            }
+        }
+        providerSpinner.adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_dropdown_item,
+            ModelProviderType.entries.map { it.name }
+        )
+        providerSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val selected = ModelProviderType.entries[position]
+                if (selected != viewModel.state.value.providerType) {
+                    viewModel.onAction(ModelConfigUiAction.ProviderTypeChanged(selected))
+                }
+            }
+
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) = Unit
+        }
+        modelNameInput.doAfterTextChanged { text ->
+            val value = text?.toString() ?: ""
+            if (value != viewModel.state.value.modelName) {
+                viewModel.onAction(ModelConfigUiAction.ModelNameChanged(value))
+            }
+        }
+        advancedToggleButton.setOnClickListener {
+            viewModel.onAction(ModelConfigUiAction.ToggleAdvancedOptions)
+        }
+        endpointPathInput.doAfterTextChanged { text ->
+            val value = text?.toString() ?: ""
+            if (value != viewModel.state.value.endpointPath) {
+                viewModel.onAction(ModelConfigUiAction.EndpointPathChanged(value))
             }
         }
         backButton.setOnClickListener { handleBack() }
@@ -157,6 +200,18 @@ class ModelConfigActivity : ComponentActivity() {
     private fun render(state: ModelConfigUiState) {
         if (baseUrlInput.text.toString() != state.baseUrl) {
             baseUrlInput.setText(state.baseUrl)
+        }
+        if (providerSpinner.selectedItemPosition != ModelProviderType.entries.indexOf(state.providerType)) {
+            providerSpinner.setSelection(ModelProviderType.entries.indexOf(state.providerType))
+        }
+        if (modelNameInput.text.toString() != state.modelName) {
+            modelNameInput.setText(state.modelName)
+        }
+        advancedToggleButton.text =
+            if (state.showAdvancedOptions) "收起高级选项" else "高级选项（Endpoint Path）"
+        endpointRow.visibility = if (state.showAdvancedOptions) View.VISIBLE else View.GONE
+        if (endpointPathInput.text.toString() != state.endpointPath) {
+            endpointPathInput.setText(state.endpointPath)
         }
         if (apiKeyInput.text.toString() != state.apiKeyDraft) {
             apiKeyInput.setText(state.apiKeyDraft)

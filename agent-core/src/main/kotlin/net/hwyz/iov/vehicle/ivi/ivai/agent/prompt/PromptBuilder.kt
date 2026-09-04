@@ -17,6 +17,23 @@ import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.VehicleStateSnapshot
  */
 class PromptBuilder(private val registry: ToolRegistry) {
 
+    /**
+     * Read-only template snapshot for the settings / debug page (CR-004): the
+     * static system prompt, candidate tools and output schema — no runtime context.
+     */
+    fun snapshot(): PromptSnapshot = PromptSnapshot(
+        promptVersion = PROMPT_VERSION,
+        content = buildString {
+            appendLine(SYSTEM_PROMPT)
+            appendLine()
+            appendLine("## 候选工具（只能使用以下 toolId）")
+            registry.all().sortedByDescending { it.selectionPriority }.forEach { appendLine(renderTool(it)) }
+            appendLine()
+            appendLine("## 输出 Schema")
+            appendLine(OUTPUT_SCHEMA)
+        }.trim()
+    )
+
     fun build(
         session: Session,
         input: AgentInput,
@@ -63,6 +80,9 @@ class PromptBuilder(private val registry: ToolRegistry) {
 
     private companion object {
         const val MAX_HISTORY_TURNS = 6
+
+        /** Bump when the prompt template changes; shown in the read-only PromptInfo page. */
+        const val PROMPT_VERSION = "1"
 
         const val SYSTEM_PROMPT = """你是车机车载智能助手 IVI-IVAI 的车控意图解析器。你的唯一职责是：
 1. 将用户输入映射到候选工具，并决定安全路由：LOCAL_TOOL / LOCAL_DIALOGUE / CLOUD_AI / REJECT。

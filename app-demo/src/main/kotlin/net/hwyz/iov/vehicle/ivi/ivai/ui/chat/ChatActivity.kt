@@ -22,6 +22,7 @@ import kotlinx.coroutines.launch
 import net.hwyz.iov.vehicle.ivi.ivai.demo.R
 import net.hwyz.iov.vehicle.ivi.ivai.service.AgentService
 import net.hwyz.iov.vehicle.ivi.ivai.ui.config.ModelConfigActivity
+import net.hwyz.iov.vehicle.ivi.ivai.ui.settings.SettingsActivity
 
 /**
  * Classic Android-View chatbot screen (IVI-IVAI-DSN-CR-002).
@@ -63,7 +64,8 @@ class ChatActivity : ComponentActivity() {
         adapter = ChatMessageAdapter(
             onConfirm = { id -> viewModel.onAction(ChatUiAction.ConfirmClicked(id)) },
             onCancel = { id -> viewModel.onAction(ChatUiAction.CancelClicked(id)) },
-            onRetry = { id -> viewModel.onAction(ChatUiAction.RetryClicked(id)) }
+            onRetry = { id -> viewModel.onAction(ChatUiAction.RetryClicked(id)) },
+            onToggleDetail = { id -> viewModel.onAction(ChatUiAction.TogglePerformanceDetails(id)) }
         )
         messageList.layoutManager = LinearLayoutManager(this)
         messageList.adapter = adapter
@@ -71,6 +73,9 @@ class ChatActivity : ComponentActivity() {
         sendButton.setOnClickListener { sendFromInput() }
         findViewById<Button>(R.id.configButton).setOnClickListener {
             startActivity(Intent(this, ModelConfigActivity::class.java))
+        }
+        findViewById<Button>(R.id.debugButton).setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
         }
         inputEdit.doAfterTextChanged { editable ->
             viewModel.onAction(ChatUiAction.InputChanged(editable?.toString() ?: ""))

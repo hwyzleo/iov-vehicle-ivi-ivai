@@ -14,11 +14,18 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import net.hwyz.iov.vehicle.ivi.ivai.agent.event.AgentEvent
 import net.hwyz.iov.vehicle.ivi.ivai.agent.event.TurnDebugInfo
+import net.hwyz.iov.vehicle.ivi.ivai.service.AgentCommand
+import net.hwyz.iov.vehicle.ivi.ivai.service.AgentInputSource
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.ExecutionStatus
 
 /**
- * Chatbot ViewModel (IVI-IVAI-DSN-CR-002): projects [AgentEvent]s into
- * [ChatUiState] and keeps the conversation across configuration changes.
+ * Chatbot ViewModel (IVI-IVAI-DSN-CR-002 + CR-004).
+ *
+ * Depends ONLY on [ChatAgentGateway], which extends the stable [AiAgentClient]
+ * service contract — it never touches ModelProvider, ToolExecutor or a vehicle
+ * Adapter. It projects [AgentEvent]s into [ChatUiState], keeps the conversation
+ * across configuration changes and owns the per-message performance-panel
+ * expansion state (default collapsed, toggled by messageId).
  *
  * Business state (Session, PendingTask, PendingConfirmation) lives in
  * agent-core / service-ai-agent; this class only maps events and enforces the
@@ -57,7 +64,7 @@ class ChatViewModel : ViewModel() {
         gateway = newGateway
         if (eventJob == null) {
             eventJob = viewModelScope.launch {
-                newGateway.events.collect { onAgentEvent(it) }
+                newGateway.observeEvents(newSessionId).collect { onAgentEvent(it) }
             }
         }
     }
@@ -75,6 +82,7 @@ class ChatViewModel : ViewModel() {
             is ChatUiAction.ConfirmClicked -> confirm(action.confirmationId)
             is ChatUiAction.CancelClicked -> cancel(action.confirmationId)
             is ChatUiAction.RetryClicked -> retry(action.messageId)
+            is ChatUiAction.TogglePerformanceDetails -> togglePerformance(action.messageId)
         }
     }
 
@@ -119,18 +127,31 @@ class ChatViewModel : ViewModel() {
                 isAgentBusy = true
             )
         }
-        if (g.submit(text, turnId, requestId) == null) {
-            // Service gate rejected the turn (should not happen after the checks above).
-            _state.update {
-                it.copy(
-                    activeTurnId = null,
-                    isAgentBusy = false,
-                    messages = it.messages.map { m ->
-                        if (m.messageId == userMessage.messageId) m.copy(status = ChatMessageStatus.FAILED) else m
-                    }
+        viewModelScope.launch {
+            val accepted = g.submit(
+                AgentCommand.HandleText(
+                    sessionId = s.sessionId,
+                    requestId = requestId,
+                    inputSource = AgentInputSource.TEXT_CHAT,
+                    text = text,
+                    turnId = turnId
                 )
+            )
+            if (!accepted) {
+                // Service gate rejected the turn (should not happen after the checks above).
+                _state.update {
+                    it.copy(
+                        activeTurnId = null,
+                        isAgentBusy = false,
+                        messages = it.messages.map { m ->
+                            if (m.messageId == userMessage.messageId) {
+                                m.copy(status = ChatMessageStatus.FAILED)
+                            } else m
+                        }
+                    )
+                }
+                showHint("上一条请求正在处理，请稍候")
             }
-            showHint("上一条请求正在处理，请稍候")
         }
         return true
     }
@@ -162,7 +183,17 @@ class ChatViewModel : ViewModel() {
         _state.update {
             it.copy(messages = it.messages + retryMessage, activeTurnId = turnId, isAgentBusy = true)
         }
-        g.submit(original.text, turnId, requestId)
+        viewModelScope.launch {
+            g.submit(
+                AgentCommand.HandleText(
+                    sessionId = s.sessionId,
+                    requestId = requestId,
+                    inputSource = AgentInputSource.TEXT_CHAT,
+                    text = original.text,
+                    turnId = turnId
+                )
+            )
+        }
     }
 
     private fun confirm(confirmationId: String) {
@@ -181,7 +212,16 @@ class ChatViewModel : ViewModel() {
                 }
             )
         }
-        g.confirm(confirmationId)
+        viewModelScope.launch {
+            g.submit(
+                AgentCommand.Confirm(
+                    sessionId = s.sessionId,
+                    requestId = UUID.randomUUID().toString(),
+                    inputSource = AgentInputSource.TEXT_CHAT,
+                    confirmationId = confirmationId
+                )
+            )
+        }
     }
 
     private fun cancel(confirmationId: String) {
@@ -199,7 +239,29 @@ class ChatViewModel : ViewModel() {
                 }
             )
         }
-        g.cancel(confirmationId)
+        viewModelScope.launch {
+            g.submit(
+                AgentCommand.Cancel(
+                    sessionId = s.sessionId,
+                    requestId = UUID.randomUUID().toString(),
+                    inputSource = AgentInputSource.TEXT_CHAT,
+                    confirmationId = confirmationId
+                )
+            )
+        }
+    }
+
+    /** Toggles the performance detail panel of one final message (default collapsed). */
+    private fun togglePerformance(messageId: String) {
+        _state.update { st ->
+            st.copy(
+                messages = st.messages.map { m ->
+                    if (m.messageId == messageId) {
+                        m.copy(isPerformanceExpanded = !m.isPerformanceExpanded)
+                    } else m
+                }
+            )
+        }
     }
 
     // ------------------------------------------------------------------ event → message mapping
@@ -229,6 +291,19 @@ class ChatViewModel : ViewModel() {
                         text = event.text,
                         status = ChatMessageStatus.PROCESSING
                     )
+                )
+            }
+
+            /** 流式增量：把模型原始输出逐字渲染进当前「处理中」气泡，完成后被最终结果替换。 */
+            is AgentEvent.StreamingDelta -> _state.update { st ->
+                st.copy(
+                    messages = replaceActive(st.messages, event.turnId) { active ->
+                        active.copy(
+                            type = ChatMessageType.PROCESSING,
+                            text = event.text,
+                            status = ChatMessageStatus.PROCESSING
+                        )
+                    }
                 )
             }
 
@@ -353,7 +428,15 @@ class ChatViewModel : ViewModel() {
                 } else {
                     st.copy(
                         messages = st.messages.toMutableList().apply {
-                            this[index] = this[index].copy(details = mergeDetails(this[index].details, event.debug))
+                            this[index] = this[index].let { msg ->
+                                val merged = mergeDetails(msg.details, event.debug)
+                                // Performance is attached to the final message for the
+                                // collapsible panel; expansion stays default-collapsed.
+                                msg.copy(
+                                    details = merged,
+                                    performance = merged.performance ?: msg.performance
+                                )
+                            }
                         }
                     )
                 }
@@ -362,19 +445,16 @@ class ChatViewModel : ViewModel() {
     }
 
     /**
-     * Merges two debug payloads of the same turn: the first one (prompt
-     * orchestration) is kept, later ones (tool execution on confirm) fill in
-     * the missing pieces.
+     * Merges two debug payloads of the same turn: the first one (initial model
+     * turn) is kept, later ones (tool execution on confirm) fill in the missing
+     * pieces.
      */
     private fun mergeDetails(existing: TurnDebugInfo?, incoming: TurnDebugInfo): TurnDebugInfo {
         if (existing == null) return incoming
         return existing.copy(
-            rawModelContent = incoming.rawModelContent ?: existing.rawModelContent,
+            performance = incoming.performance ?: existing.performance,
             parsed = incoming.parsed ?: existing.parsed,
             tool = incoming.tool ?: existing.tool,
-            modelLatencyMs = if (incoming.modelLatencyMs >= 0) incoming.modelLatencyMs else existing.modelLatencyMs,
-            toolLatencyMs = incoming.toolLatencyMs ?: existing.toolLatencyMs,
-            totalLatencyMs = if (incoming.totalLatencyMs >= 0) incoming.totalLatencyMs else existing.totalLatencyMs,
             state = incoming.state ?: existing.state,
             route = incoming.route ?: existing.route,
             errorCode = incoming.errorCode ?: existing.errorCode,

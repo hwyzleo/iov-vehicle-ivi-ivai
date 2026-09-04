@@ -7,6 +7,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import net.hwyz.iov.vehicle.ivi.ivai.model.ModelProviderType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -86,7 +87,7 @@ class DefaultModelConfigRepositoryTest {
         val repo = buildRepo(public, secret, this)
         advanceUntilIdle()
 
-        val result = repo.save(ModelConfigDraft("http://192.168.1.10:11434", ApiKeyAction.Replace("sk-secret")))
+        val result = repo.save(ModelConfigDraft(baseUrl = "http://192.168.1.10:11434", apiKeyAction = ApiKeyAction.Replace("sk-secret")))
         val success = assertInstanceOf(SaveResult.Success::class.java, result)
         assertEquals(1L, success.configVersion)
 
@@ -114,8 +115,8 @@ class DefaultModelConfigRepositoryTest {
         val repo = buildRepo(public, secret, this)
         advanceUntilIdle()
 
-        repo.save(ModelConfigDraft("http://a:11434", ApiKeyAction.Replace("orig-key")))
-        val result = repo.save(ModelConfigDraft("http://b:11434", ApiKeyAction.Keep))
+        repo.save(ModelConfigDraft(baseUrl = "http://a:11434", apiKeyAction = ApiKeyAction.Replace("orig-key")))
+        val result = repo.save(ModelConfigDraft(baseUrl = "http://b:11434", apiKeyAction = ApiKeyAction.Keep))
 
         val success = assertInstanceOf(SaveResult.Success::class.java, result)
         assertEquals(2L, success.configVersion)
@@ -130,8 +131,8 @@ class DefaultModelConfigRepositoryTest {
         val repo = buildRepo(public, secret, this)
         advanceUntilIdle()
 
-        repo.save(ModelConfigDraft("http://a:11434", ApiKeyAction.Replace("orig-key")))
-        val result = repo.save(ModelConfigDraft("http://b:11434", ApiKeyAction.Clear))
+        repo.save(ModelConfigDraft(baseUrl = "http://a:11434", apiKeyAction = ApiKeyAction.Replace("orig-key")))
+        val result = repo.save(ModelConfigDraft(baseUrl = "http://b:11434", apiKeyAction = ApiKeyAction.Clear))
 
         assertInstanceOf(SaveResult.Success::class.java, result)
         assertNull(secret.key)
@@ -146,10 +147,10 @@ class DefaultModelConfigRepositoryTest {
         val repo = buildRepo(public, secret, this)
         advanceUntilIdle()
 
-        repo.save(ModelConfigDraft("http://old:11434", ApiKeyAction.Replace("old-key")))
+        repo.save(ModelConfigDraft(baseUrl = "http://old:11434", apiKeyAction = ApiKeyAction.Replace("old-key")))
 
         public.failWrites = true
-        val result = repo.save(ModelConfigDraft("http://new:11434", ApiKeyAction.Replace("new-key")))
+        val result = repo.save(ModelConfigDraft(baseUrl = "http://new:11434", apiKeyAction = ApiKeyAction.Replace("new-key")))
         val failure = assertInstanceOf(SaveResult.Failure::class.java, result)
         assertEquals(ModelConfigErrorCode.PERSISTENCE_FAILED, failure.errorCode)
 
@@ -169,8 +170,8 @@ class DefaultModelConfigRepositoryTest {
         val repo = buildRepo(public, secret, this)
         advanceUntilIdle()
 
-        repo.save(ModelConfigDraft("http://a:11434", ApiKeyAction.Replace("key")))
-        val result = repo.save(ModelConfigDraft("ftp://bad:21", ApiKeyAction.Replace("other")))
+        repo.save(ModelConfigDraft(baseUrl = "http://a:11434", apiKeyAction = ApiKeyAction.Replace("key")))
+        val result = repo.save(ModelConfigDraft(baseUrl = "ftp://bad:21", apiKeyAction = ApiKeyAction.Replace("other")))
 
         val failure = assertInstanceOf(SaveResult.Failure::class.java, result)
         assertEquals(ModelConfigErrorCode.INVALID_URL, failure.errorCode)
@@ -186,7 +187,7 @@ class DefaultModelConfigRepositoryTest {
         val repo = buildRepo(public, secret, this, defaultUrl = "http://default-host:11434")
         advanceUntilIdle()
 
-        repo.save(ModelConfigDraft("http://custom:11434", ApiKeyAction.Replace("key")))
+        repo.save(ModelConfigDraft(baseUrl = "http://custom:11434", apiKeyAction = ApiKeyAction.Replace("key")))
         val result = repo.resetToDefault()
 
         val success = assertInstanceOf(SaveResult.Success::class.java, result)
@@ -234,13 +235,81 @@ class DefaultModelConfigRepositoryTest {
         val repo = buildRepo(public, secret, this)
         advanceUntilIdle()
 
-        val r1 = async { repo.save(ModelConfigDraft("http://a:11434", ApiKeyAction.Replace("k1"))) }
-        val r2 = async { repo.save(ModelConfigDraft("http://b:11434", ApiKeyAction.Replace("k2"))) }
+        val r1 = async { repo.save(ModelConfigDraft(baseUrl = "http://a:11434", apiKeyAction = ApiKeyAction.Replace("k1"))) }
+        val r2 = async { repo.save(ModelConfigDraft(baseUrl = "http://b:11434", apiKeyAction = ApiKeyAction.Replace("k2"))) }
         val results = awaitAll(r1, r2)
 
         assertTrue(results.all { it is SaveResult.Success })
         assertEquals(2L, public.stored!!.configVersion)
         assertTrue(setOf("http://a:11434/", "http://b:11434/").contains(public.stored!!.baseUrl))
         assertTrue(setOf("k1", "k2").contains(secret.key))
+    }
+
+    @Test
+    fun `v1 config is migrated to v2 as OLLAMA keeping baseUrl and default model`() = runTest {
+        val public = InMemoryPublicStore(
+            ModelPublicConfig(schemaVersion = 1, baseUrl = "http://192.168.2.170:11434", configVersion = 3L)
+        )
+        val repo = buildRepo(public, InMemorySecretStore(), this)
+        advanceUntilIdle()
+
+        val state = repo.configState.value
+        val valid = assertInstanceOf(ModelConfigState.Valid::class.java, state)
+        assertEquals(ModelProviderType.OLLAMA, valid.config.providerType)
+        assertEquals("192.168.2.170", valid.config.baseUrl.host)
+        assertEquals("qwen3.5:4b", valid.config.modelName)
+        assertEquals(3L, valid.config.version)
+
+        // Migration is persisted once: the stored config is now v2.
+        assertEquals(ModelPublicConfig.CURRENT_SCHEMA_VERSION, public.stored!!.schemaVersion)
+        assertEquals(ModelProviderType.OLLAMA, public.stored!!.providerType)
+        assertEquals("qwen3.5:4b", public.stored!!.modelName)
+    }
+
+    @Test
+    fun `save persists provider type model name and endpoint path for OpenAI compatible`() = runTest {
+        val public = InMemoryPublicStore()
+        val repo = buildRepo(public, InMemorySecretStore(), this)
+        advanceUntilIdle()
+
+        val result = repo.save(
+            ModelConfigDraft(
+                baseUrl = "http://localhost:8000",
+                providerType = ModelProviderType.OPENAI_COMPATIBLE,
+                modelName = "qwen2.5:7b",
+                endpointPath = "/v1/chat/completions",
+                apiKeyAction = ApiKeyAction.Replace("sk-1")
+            )
+        )
+        assertInstanceOf(SaveResult.Success::class.java, result)
+
+        assertEquals(ModelProviderType.OPENAI_COMPATIBLE, public.stored!!.providerType)
+        assertEquals("qwen2.5:7b", public.stored!!.modelName)
+        assertEquals("/v1/chat/completions", public.stored!!.endpointPath)
+        assertEquals(ModelPublicConfig.CURRENT_SCHEMA_VERSION, public.stored!!.schemaVersion)
+
+        val snap = repo.loadSnapshot()
+        assertEquals(ModelProviderType.OPENAI_COMPATIBLE, snap.providerType)
+        assertEquals("qwen2.5:7b", snap.modelName)
+        assertEquals("/v1/chat/completions", snap.endpointPath)
+    }
+
+    @Test
+    fun `openai compatible save without model name fails with IVAI-CONFIG-009`() = runTest {
+        val public = InMemoryPublicStore()
+        val repo = buildRepo(public, InMemorySecretStore(), this)
+        advanceUntilIdle()
+
+        val result = repo.save(
+            ModelConfigDraft(
+                baseUrl = "http://localhost:8000",
+                providerType = ModelProviderType.OPENAI_COMPATIBLE,
+                modelName = null
+            )
+        )
+        val failure = assertInstanceOf(SaveResult.Failure::class.java, result)
+        assertEquals(ModelConfigErrorCode.PROVIDER_MISMATCH, failure.errorCode)
+        // Failed save must not corrupt the current (empty) config.
+        assertNull(public.stored)
     }
 }

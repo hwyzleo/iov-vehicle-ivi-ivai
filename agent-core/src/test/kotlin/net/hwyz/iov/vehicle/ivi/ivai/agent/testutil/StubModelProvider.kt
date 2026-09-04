@@ -6,6 +6,7 @@ import net.hwyz.iov.vehicle.ivi.ivai.model.ModelErrorKind
 import net.hwyz.iov.vehicle.ivi.ivai.model.ModelProvider
 import net.hwyz.iov.vehicle.ivi.ivai.model.ModelRequest
 import net.hwyz.iov.vehicle.ivi.ivai.model.ModelResponse
+import net.hwyz.iov.vehicle.ivi.ivai.model.StreamingModelProvider
 
 /**
  * Deterministic model provider for workflow unit tests. Consumes queued content strings;
@@ -44,5 +45,28 @@ class StubModelProvider(
 
     fun queue(vararg contents: String) {
         contents.forEach { queue.addLast(it) }
+    }
+}
+
+/**
+ * [StubModelProvider] that also streams its content in small deltas and reports
+ * a client-observed time-to-first-token (streaming enablement tests).
+ */
+class StreamingStubModelProvider(private val content: String) : StreamingModelProvider {
+
+    private val delegate = StubModelProvider(content)
+
+    override suspend fun generate(request: ModelRequest): ModelResponse = delegate.generate(request)
+
+    override suspend fun generateStreaming(
+        request: ModelRequest,
+        onDelta: suspend (String) -> Unit
+    ): ModelResponse {
+        content.chunked(DELTA_SIZE).forEach { onDelta(it) }
+        return delegate.generate(request).copy(timeToFirstTokenMs = 5L)
+    }
+
+    private companion object {
+        const val DELTA_SIZE = 8
     }
 }

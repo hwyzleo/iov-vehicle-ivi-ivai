@@ -1,4 +1,4 @@
-package net.hwyz.iov.vehicle.ivi.ivai.model
+package net.hwyz.iov.vehicle.ivi.ivai.model.provider
 
 /**
  * Configuration for the Ollama HTTP endpoint (default: Mac sidecar on localhost).

@@ -28,6 +28,19 @@ sealed interface AgentEvent {
         val text: String = "正在处理…"
     ) : AgentEvent
 
+    /**
+     * Incremental raw model output while streaming (streaming enablement).
+     * [text] is the cumulative content so far; the UI renders it into the
+     * processing bubble and replaces it with the final user-facing result once
+     * the turn completes. Never carries the System Prompt.
+     */
+    data class StreamingDelta(
+        override val sessionId: String,
+        override val turnId: String,
+        override val requestId: String,
+        val text: String
+    ) : AgentEvent
+
     /** A plain agent reply, a follow-up question (追问) or a rejected response. */
     data class Reply(
         override val sessionId: String,

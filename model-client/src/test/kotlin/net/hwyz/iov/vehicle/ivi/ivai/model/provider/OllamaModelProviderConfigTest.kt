@@ -1,7 +1,11 @@
-package net.hwyz.iov.vehicle.ivi.ivai.model
+package net.hwyz.iov.vehicle.ivi.ivai.model.provider
 
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonPrimitive
+import net.hwyz.iov.vehicle.ivi.ivai.model.ChatMessage
+import net.hwyz.iov.vehicle.ivi.ivai.model.ModelClientException
+import net.hwyz.iov.vehicle.ivi.ivai.model.ModelErrorKind
+import net.hwyz.iov.vehicle.ivi.ivai.model.ModelRequest
 import net.hwyz.iov.vehicle.ivi.ivai.model.config.ModelConfigException
 import net.hwyz.iov.vehicle.ivi.ivai.model.config.ModelConfigErrorCode
 import net.hwyz.iov.vehicle.ivi.ivai.model.config.ModelConfigSnapshotProvider

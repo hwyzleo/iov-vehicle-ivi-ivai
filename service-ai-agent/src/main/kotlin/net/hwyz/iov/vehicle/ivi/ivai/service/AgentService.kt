@@ -14,9 +14,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import net.hwyz.iov.vehicle.ivi.ivai.adapter.mock.MockClimateToolAdapter
@@ -24,15 +26,20 @@ import net.hwyz.iov.vehicle.ivi.ivai.adapter.mock.MockVehicleState
 import net.hwyz.iov.vehicle.ivi.ivai.agent.event.AgentEvent
 import net.hwyz.iov.vehicle.ivi.ivai.agent.policy.AgentPolicyEngine
 import net.hwyz.iov.vehicle.ivi.ivai.agent.prompt.PromptBuilder
+import net.hwyz.iov.vehicle.ivi.ivai.agent.prompt.PromptSnapshot
 import net.hwyz.iov.vehicle.ivi.ivai.agent.router.Router
 import net.hwyz.iov.vehicle.ivi.ivai.agent.session.Session
 import net.hwyz.iov.vehicle.ivi.ivai.agent.workflow.AgentConfig
 import net.hwyz.iov.vehicle.ivi.ivai.agent.workflow.AgentInput
 import net.hwyz.iov.vehicle.ivi.ivai.agent.workflow.AgentWorkflow
-import net.hwyz.iov.vehicle.ivi.ivai.model.OllamaModelProvider
+import net.hwyz.iov.vehicle.ivi.ivai.model.ModelProvider
+import net.hwyz.iov.vehicle.ivi.ivai.model.ModelProviderType
 import net.hwyz.iov.vehicle.ivi.ivai.model.config.DefaultModelConfigRepository
 import net.hwyz.iov.vehicle.ivi.ivai.model.config.ModelConfigRepository
+import net.hwyz.iov.vehicle.ivi.ivai.model.config.ModelConfigState
 import net.hwyz.iov.vehicle.ivi.ivai.model.config.ModelConfigValidator
+import net.hwyz.iov.vehicle.ivi.ivai.model.config.ModelRuntimeConfig
+import net.hwyz.iov.vehicle.ivi.ivai.model.provider.ModelProviderFactory
 import net.hwyz.iov.vehicle.ivi.ivai.service.config.AndroidKeystoreSecretStore
 import net.hwyz.iov.vehicle.ivi.ivai.service.config.DataStorePublicConfigStore
 import net.hwyz.iov.vehicle.ivi.ivai.service.config.MaskingLoggingInterceptor
@@ -45,32 +52,23 @@ import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.DefaultToolExecutor
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.ToolPolicyEngine
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.ToolValidator
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.VehicleStateProvider
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 /**
- * Read-only session snapshot for the chat UI to reconcile on reconnection
- * (IVI-IVAI-DSN-CR-002). History entries are role + text pairs; message-level
- * dedup stays on the ViewModel side via its local messageId/requestId index.
- */
-data class SessionSnapshot(
-    val sessionId: String,
-    val history: List<HistoryEntry>,
-    val pendingConfirmationId: String?
-) {
-    data class HistoryEntry(val role: String, val text: String)
-}
-
-/**
- * Android service boundary (IVI-IVAI-DSN-CR-001 + CR-002):
+ * Android service boundary (IVI-IVAI-DSN-CR-001 + CR-002 + CR-004):
  *  - owns the agent coroutine scope and the session
- *  - builds the full agent graph (Ollama provider + registry + validator + policy + executor + mock adapter)
- *  - exposes the [AgentEvent] stream + submit / confirm / cancel to app-demo
+ *  - builds the full agent graph via [ModelProviderFactory] and rebuilds the
+ *    provider when the runtime LLM config changes (no restart required)
+ *  - implements the stable [AiAgentClient] contract for Chatbot / future ASR /
+ *    other clients — clients never touch ModelProvider / ToolExecutor / Adapter
  *  - enforces one active turn per session (concurrency strategy of CR-002)
  *  - keeps agent-core Android-free
  */
-class AgentService : Service() {
+class AgentService : Service(), AiAgentClient {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val session = Session()
@@ -83,33 +81,35 @@ class AgentService : Service() {
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
 
-    /** Stable, user-facing agent events consumed by the chat UI. */
+    /** Stable, user-facing agent events consumed by clients. */
     val events: SharedFlow<AgentEvent> = _events.asSharedFlow()
 
-    lateinit var agent: AgentWorkflow
-        private set
+    private val agentRef = AtomicReference<AgentWorkflow?>()
+    private val mockAdapterRef = AtomicReference<MockClimateToolAdapter?>()
 
-    lateinit var mockAdapter: MockClimateToolAdapter
-        private set
-
-    /**
-     * Single shared LLM runtime config repository (IVI-IVAI-DSN-CR-003): the same
-     * instance drives both the provider (per-request snapshots) and the config UI.
-     */
+    /** Single shared LLM runtime config repository (IVI-IVAI-DSN-CR-003). */
     lateinit var configRepository: ModelConfigRepository
         private set
+
+    /** Single shared OkHttpClient (interceptor masks Authorization/api-key). */
+    private lateinit var okHttpClient: OkHttpClient
+    private lateinit var providerFactory: ModelProviderFactory
+    private var promptBuilderRef: PromptBuilder? = null
 
     private val binder = LocalBinder()
 
     override fun onCreate() {
         super.onCreate()
         configRepository = buildConfigRepository()
+        okHttpClient = OkHttpClient.Builder()
+            .addInterceptor(MaskingLoggingInterceptor())
+            .build()
+        providerFactory = ModelProviderFactory(configRepository, okHttpClient)
         val initialBaseUrl = runCatching {
             runBlocking { configRepository.loadSnapshot().baseUrl.toString() }
         }.getOrDefault(BuildConfig.OLLAMA_BASE_URL)
-        val (workflow, adapter) = buildAgentGraph(initialBaseUrl)
-        agent = workflow
-        mockAdapter = adapter
+        buildAgentGraph(initialBaseUrl)
+        observeConfigChanges()
         log("AgentService created: baseUrl=$initialBaseUrl model=${BuildConfig.OLLAMA_MODEL}")
     }
 
@@ -121,18 +121,49 @@ class AgentService : Service() {
         super.onDestroy()
     }
 
+    // ------------------------------------------------------------------ AiAgentClient
+
+    override suspend fun submit(command: AgentCommand): Boolean = when (command) {
+        is AgentCommand.HandleText -> submitText(
+            text = command.text,
+            turnId = command.turnId,
+            requestId = command.requestId,
+            source = command.inputSource.name.lowercase()
+        ) != null
+        is AgentCommand.Confirm -> confirm(command.confirmationId)
+        is AgentCommand.Cancel -> cancel(command.confirmationId)
+    }
+
+    override fun observeEvents(sessionId: String): Flow<AgentEvent> =
+        events.filter { it.sessionId == sessionId }
+
+    override suspend fun getSessionSnapshot(sessionId: String): AgentSessionSnapshot {
+        val current = session.sessionId
+        if (current.isEmpty() || current != sessionId || agentRef.get() == null) {
+            throw ServiceException(ServiceErrorCode.SNAPSHOT_UNAVAILABLE, "Session Snapshot 不可用")
+        }
+        return AgentSessionSnapshot(
+            sessionId = current,
+            history = session.history().map { AgentSessionSnapshot.HistoryEntry(it.role, it.content) },
+            pendingConfirmationId = session.pendingConfirmationId,
+            activeTurnId = null
+        )
+    }
+
+    // ------------------------------------------------------------------ legacy-friendly submit/confirm/cancel
+
     /**
      * Submits a user utterance as a new turn using the caller-provided [requestId]
-     * (the ViewModel owns requestId/turnId/messageId per IVI-IVAI-DSN-CR-002) and
-     * returns it. Returns null when another turn is already active (single-turn
-     * policy); the caller should not start a new tool task in that case.
+     * and returns it; null when another turn is already active (single-turn
+     * policy) or the service is not ready (IVAI-SERVICE-001).
      */
-    fun submit(
+    fun submitText(
         text: String,
         turnId: String = UUID.randomUUID().toString(),
         requestId: String = UUID.randomUUID().toString(),
         source: String = "app"
     ): String? {
+        val agent = agentRef.get() ?: return null
         if (!activeTurn.compareAndSet(false, true)) return null
         scope.launch {
             try {
@@ -148,7 +179,7 @@ class AgentService : Service() {
                     AgentEvent.TurnFailed(
                         session.sessionId, turnId, requestId,
                         message = "处理请求时发生错误，请重试",
-                        errorCode = "IVAI-EXEC-001", retryable = true
+                        errorCode = ServiceErrorCode.SERVICE_UNAVAILABLE, retryable = true
                     )
                 )
             } finally {
@@ -158,6 +189,14 @@ class AgentService : Service() {
         return requestId
     }
 
+    /** Alias of [submitText] kept for gateway wiring. */
+    fun submit(
+        text: String,
+        turnId: String = UUID.randomUUID().toString(),
+        requestId: String = UUID.randomUUID().toString(),
+        source: String = "app"
+    ): String? = submitText(text, turnId, requestId, source)
+
     /**
      * Approves a pending confirmation (idempotent at the workflow level).
      * Returns false when another turn is active.
@@ -166,7 +205,7 @@ class AgentService : Service() {
         if (!activeTurn.compareAndSet(false, true)) return false
         scope.launch {
             try {
-                agent.confirm(confirmationId, session)
+                agentRef.get()?.confirm(confirmationId, session)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -186,7 +225,7 @@ class AgentService : Service() {
         if (!activeTurn.compareAndSet(false, true)) return false
         scope.launch {
             try {
-                agent.cancel(confirmationId, session)
+                agentRef.get()?.cancel(confirmationId, session)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -198,14 +237,12 @@ class AgentService : Service() {
         return true
     }
 
-    /** Snapshot used by the ViewModel to reconcile after service reconnection. */
-    fun sessionSnapshot(): SessionSnapshot = SessionSnapshot(
-        sessionId = session.sessionId,
-        history = session.history().map { SessionSnapshot.HistoryEntry(role = it.role, text = it.content) },
-        pendingConfirmationId = session.pendingConfirmationId
-    )
+    // ------------------------------------------------------------------ diagnostics for the UI
 
-    fun vehicleState(): MockVehicleState = mockAdapter.state
+    /** Read-only prompt template snapshot for the settings / debug page. */
+    fun promptSnapshot(): PromptSnapshot? = promptBuilderRef?.snapshot()
+
+    fun vehicleState(): MockVehicleState? = mockAdapterRef.get()?.state
 
     fun sessionId(): String = session.sessionId
 
@@ -220,16 +257,49 @@ class AgentService : Service() {
         fun getService(): AgentService = this@AgentService
     }
 
-    private fun buildAgentGraph(initialBaseUrl: String): Pair<AgentWorkflow, MockClimateToolAdapter> {
+    // ------------------------------------------------------------------ graph wiring
+
+    /**
+     * Observes the runtime config and rebuilds the provider (and therefore the
+     * agent graph) when a new valid config is published, so a config save takes
+     * effect for the next request without restarting the app (CR-003/CR-004).
+     */
+    private fun observeConfigChanges() {
+        scope.launch {
+            var seen = false
+            configRepository.configState.collect { state ->
+                if (state is ModelConfigState.Valid) {
+                    if (seen) {
+                        buildAgentGraph(state.config.baseUrl.toString())
+                        log("Agent graph rebuilt on config change: ${state.config.baseUrl}")
+                    } else {
+                        seen = true
+                    }
+                }
+            }
+        }
+    }
+
+    private fun buildAgentGraph(initialBaseUrl: String) {
         val adapter = MockClimateToolAdapter()
         val registry = ClimateToolDefinitions.registerAll(ToolRegistry())
         val validator = ToolValidator(registry)
-        val provider = OllamaModelProvider(
-            snapshotProvider = configRepository,
-            client = OkHttpClient.Builder()
-                .addInterceptor(MaskingLoggingInterceptor())
-                .build()
-        )
+        val promptBuilder = PromptBuilder(registry)
+        val provider: ModelProvider = runCatching {
+            runBlocking { providerFactory.create(configRepository.loadSnapshot()) }
+        }.getOrElse {
+            log("provider build fallback to Ollama: ${it.message}")
+            providerFactory.create(
+                ModelRuntimeConfig(
+                    baseUrl = initialBaseUrl.toHttpUrlOrNull()
+                        ?: throw IllegalStateException("invalid base url $initialBaseUrl"),
+                    providerType = ModelProviderType.OLLAMA,
+                    modelName = BuildConfig.OLLAMA_MODEL,
+                    apiKey = null,
+                    version = 0L
+                )
+            )
+        }
         val executor = DefaultToolExecutor(
             registry = registry,
             adapterRegistry = AdapterRegistry().register(adapter),
@@ -239,7 +309,7 @@ class AgentService : Service() {
             modelProvider = provider,
             registry = registry,
             router = Router(),
-            promptBuilder = PromptBuilder(registry),
+            promptBuilder = promptBuilder,
             validator = validator,
             agentPolicy = AgentPolicyEngine(registry, ToolPolicyEngine()),
             toolExecutor = executor,
@@ -249,7 +319,9 @@ class AgentService : Service() {
             lifecycleListener = ToolLifecycleLogger { log(it) },
             eventListener = { event -> _events.tryEmit(event) }
         )
-        return workflow to adapter
+        promptBuilderRef = promptBuilder
+        mockAdapterRef.set(adapter)
+        agentRef.set(workflow)
     }
 
     private fun buildConfigRepository(): ModelConfigRepository =
@@ -257,6 +329,7 @@ class AgentService : Service() {
             publicStore = DataStorePublicConfigStore(this),
             secretStore = AndroidKeystoreSecretStore(this),
             defaultBaseUrl = BuildConfig.OLLAMA_BASE_URL,
+            defaultModelName = BuildConfig.OLLAMA_MODEL,
             // 与 network_security_config / 地址校验联动：debug 允许局域网 HTTP，release 要求 HTTPS。
             validator = ModelConfigValidator(allowInsecureHttp = BuildConfig.ALLOW_INSECURE_HTTP),
             scope = scope

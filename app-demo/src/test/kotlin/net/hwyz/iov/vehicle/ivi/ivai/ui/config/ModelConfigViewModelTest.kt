@@ -50,7 +50,7 @@ class ModelConfigViewModelTest {
     private open class FakeGateway(
         var keyStatus: KeyStatus = KeyStatus.NOT_SET,
         var savedDraft: ModelConfigDraft? = null,
-        var testResult: ConnectionTestResult = ConnectionTestResult.Success,
+        var testResult: ConnectionTestResult = ConnectionTestResult.Success(),
         var saveResult: SaveResult = SaveResult.Success(1L),
         var testCalls: Int = 0,
         var saveCalls: Int = 0

@@ -12,7 +12,8 @@ enum class ErrorCode(val code: String) {
     INVALID_ARGUMENT("IVAI-TOOL-002"),
     POLICY_DENIED("IVAI-POLICY-001"),
     EXECUTION_FAILED("IVAI-EXEC-001"),
-    ROUTE_UNSAFE("IVAI-ROUTE-001");
+    ROUTE_UNSAFE("IVAI-ROUTE-001"),
+    METRICS_INVALID("IVAI-METRICS-001");
 
     companion object {
         fun from(code: String): ErrorCode? = entries.firstOrNull { it.code == code }

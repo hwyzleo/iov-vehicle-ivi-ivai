@@ -2,6 +2,7 @@ package net.hwyz.iov.vehicle.ivi.ivai.ui.chat
 
 import kotlinx.serialization.Serializable
 import net.hwyz.iov.vehicle.ivi.ivai.agent.event.TurnDebugInfo
+import net.hwyz.iov.vehicle.ivi.ivai.model.AgentPerformanceMetrics
 
 /**
  * One chat message in the conversation stream (IVI-IVAI-DSN-CR-002).
@@ -23,7 +24,11 @@ data class ChatMessage(
     /** When set, this message is a retry of the request identified here. */
     val retryOfRequestId: String? = null,
     /** Per-turn debug details shown in the collapsible detail panel. */
-    val details: TurnDebugInfo? = null
+    val details: TurnDebugInfo? = null,
+    /** Segmented performance of the final turn (CR-004), shown under the reply bubble. */
+    val performance: AgentPerformanceMetrics? = null,
+    /** Whether the performance detail panel is expanded (default collapsed). */
+    val isPerformanceExpanded: Boolean = false
 )
 
 /**

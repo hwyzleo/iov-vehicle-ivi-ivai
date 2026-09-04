@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import net.hwyz.iov.vehicle.ivi.ivai.model.ModelProviderType
 import net.hwyz.iov.vehicle.ivi.ivai.model.config.ApiKeyAction
 import net.hwyz.iov.vehicle.ivi.ivai.model.config.ConnectionTestResult
 import net.hwyz.iov.vehicle.ivi.ivai.model.config.ModelConfigDraft
@@ -20,10 +21,12 @@ import net.hwyz.iov.vehicle.ivi.ivai.model.config.SaveResult
 import net.hwyz.iov.vehicle.ivi.ivai.model.config.ValidationResult
 
 /**
- * Model config ViewModel (IVI-IVAI-DSN-CR-003): pre-fills the current config,
- * tracks unsaved changes, blocks duplicate submit while testing/saving, maps
- * validation errors and preserves the saved key unless the user explicitly
- * replaces or clears it.
+ * Model config ViewModel (IVI-IVAI-DSN-CR-003 + CR-004): pre-fills the current
+ * config (address, provider, model name, endpoint path), tracks unsaved changes,
+ * blocks duplicate submit while testing/saving, maps validation errors and
+ * preserves the saved key unless the user explicitly replaces or clears it.
+ * Switching the provider re-validates fields but never auto-saves or clears the
+ * saved key.
  */
 class ModelConfigViewModel : ViewModel() {
 
@@ -37,8 +40,11 @@ class ModelConfigViewModel : ViewModel() {
     private var gateway: ModelConfigGateway? = null
     private var configJob: Job? = null
 
-    /** Effective baseUrl last seen from the repository (dirty-check baseline). */
+    /** Effective values last seen from the repository (dirty-check baseline). */
     private var savedBaseUrl: String? = null
+    private var savedProviderType: ModelProviderType? = null
+    private var savedModelName: String? = null
+    private var savedEndpointPath: String? = null
 
     fun attach(gateway: ModelConfigGateway) {
         this.gateway = gateway
@@ -62,6 +68,24 @@ class ModelConfigViewModel : ViewModel() {
         when (action) {
             is ModelConfigUiAction.BaseUrlChanged -> {
                 _state.update { it.copy(baseUrl = action.value, validationErrors = emptyMap()).recomputeDirty() }
+            }
+            is ModelConfigUiAction.ProviderTypeChanged -> {
+                _state.update {
+                    it.copy(providerType = action.value, validationErrors = emptyMap()).recomputeDirty()
+                }
+            }
+            is ModelConfigUiAction.ModelNameChanged -> {
+                _state.update {
+                    it.copy(modelName = action.value, validationErrors = emptyMap()).recomputeDirty()
+                }
+            }
+            is ModelConfigUiAction.EndpointPathChanged -> {
+                _state.update {
+                    it.copy(endpointPath = action.value, validationErrors = emptyMap()).recomputeDirty()
+                }
+            }
+            ModelConfigUiAction.ToggleAdvancedOptions -> {
+                _state.update { it.copy(showAdvancedOptions = !it.showAdvancedOptions) }
             }
             is ModelConfigUiAction.ApiKeyChanged -> {
                 _state.update {
@@ -102,6 +126,9 @@ class ModelConfigViewModel : ViewModel() {
                         _state.update {
                             it.copy(
                                 isSaving = false,
+                                providerType = ModelProviderType.OLLAMA,
+                                modelName = "",
+                                endpointPath = "",
                                 apiKeyDraft = "",
                                 clearKeyRequested = false,
                                 validationErrors = emptyMap(),
@@ -126,10 +153,18 @@ class ModelConfigViewModel : ViewModel() {
             is ModelConfigState.Loading -> Unit
             is ModelConfigState.Valid -> {
                 savedBaseUrl = state.config.baseUrl.toString()
+                savedProviderType = state.config.providerType
+                savedModelName = state.config.modelName
+                savedEndpointPath = state.config.endpointPath
                 // Only pre-fill once so later emissions never clobber user typing.
                 _state.update {
                     if (it.baseUrl.isEmpty()) {
-                        it.copy(baseUrl = savedBaseUrl ?: "").recomputeDirty()
+                        it.copy(
+                            baseUrl = savedBaseUrl ?: "",
+                            providerType = savedProviderType ?: ModelProviderType.OLLAMA,
+                            modelName = savedModelName ?: "",
+                            endpointPath = savedEndpointPath ?: ""
+                        ).recomputeDirty()
                     } else {
                         it.recomputeDirty()
                     }
@@ -195,6 +230,9 @@ class ModelConfigViewModel : ViewModel() {
                 when (val result = g.save(draft)) {
                     is SaveResult.Success -> {
                         savedBaseUrl = draft.baseUrl.trim()
+                        savedProviderType = draft.providerType
+                        savedModelName = draft.modelName
+                        savedEndpointPath = draft.endpointPath
                         _state.update {
                             it.copy(
                                 isSaving = false,
@@ -224,22 +262,32 @@ class ModelConfigViewModel : ViewModel() {
             s.apiKeyDraft.isNotBlank() -> ApiKeyAction.Replace(s.apiKeyDraft)
             else -> ApiKeyAction.Keep
         }
-        return ModelConfigDraft(baseUrl = s.baseUrl, apiKeyAction = action)
+        return ModelConfigDraft(
+            baseUrl = s.baseUrl,
+            providerType = s.providerType,
+            modelName = s.modelName.trim().takeIf { it.isNotEmpty() },
+            endpointPath = s.endpointPath.trim().takeIf { it.isNotEmpty() },
+            apiKeyAction = action
+        )
     }
 
     private fun describeTestResult(result: ConnectionTestResult): String = when (result) {
-        is ConnectionTestResult.Success -> "连接测试成功（未保存，点击“保存”生效）"
+        is ConnectionTestResult.Success ->
+            "连接测试成功（${result.testMethod ?: "health"}，未保存，点击“保存”生效）"
         is ConnectionTestResult.NetworkError -> "连接测试失败：网络不可达（${result.detail}）"
         is ConnectionTestResult.Timeout -> "连接测试失败：超时"
         is ConnectionTestResult.Unauthorized -> "连接测试失败：鉴权失败（401/403）"
-        is ConnectionTestResult.InvalidResponse -> "连接测试失败：${result.detail}"
+        is ConnectionTestResult.InvalidResponse ->
+            "连接测试失败：${result.detail}${result.testMethod?.let { "（$it）" } ?: ""}"
     }
 
     private fun ModelConfigUiState.recomputeDirty(): ModelConfigUiState {
-        val saved = savedBaseUrl
         // 仓库保存时会做 URL 规范化（如补尾斜杠），比较时忽略该差异，避免保存成功后误报未保存。
-        val dirty = saved == null ||
-            baseUrl.trim().trimEnd('/') != saved.trim().trimEnd('/') ||
+        val dirty = savedBaseUrl == null ||
+            baseUrl.trim().trimEnd('/') != savedBaseUrl?.trim()?.trimEnd('/') ||
+            providerType != (savedProviderType ?: ModelProviderType.OLLAMA) ||
+            modelName.trim() != (savedModelName?.trim() ?: "") ||
+            endpointPath.trim() != (savedEndpointPath?.trim() ?: "") ||
             apiKeyDraft.isNotBlank() ||
             clearKeyRequested
         return copy(hasUnsavedChanges = dirty)

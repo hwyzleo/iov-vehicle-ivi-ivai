@@ -6,8 +6,8 @@ import net.hwyz.iov.vehicle.ivi.ivai.agent.AgentState
 import net.hwyz.iov.vehicle.ivi.ivai.agent.output.AgentRoute
 import net.hwyz.iov.vehicle.ivi.ivai.agent.session.Session
 import net.hwyz.iov.vehicle.ivi.ivai.agent.testutil.TestGraph
-import net.hwyz.iov.vehicle.ivi.ivai.model.OllamaConfig
-import net.hwyz.iov.vehicle.ivi.ivai.model.OllamaModelProvider
+import net.hwyz.iov.vehicle.ivi.ivai.model.provider.OllamaConfig
+import net.hwyz.iov.vehicle.ivi.ivai.model.provider.OllamaModelProvider
 import net.hwyz.iov.vehicle.ivi.ivai.observability.CollectingTelemetryRecorder
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse

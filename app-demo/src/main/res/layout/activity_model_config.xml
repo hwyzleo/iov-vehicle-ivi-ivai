@@ -69,6 +69,75 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
+                android:text="Provider 类型"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <Spinner
+                android:id="@+id/providerSpinner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="40dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="模型名"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/modelNameInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="例如 qwen3.5:4b"
+                android:inputType="text"
+                android:importantForAutofill="no"
+                android:maxLines="1"
+                android:paddingTop="4dp" />
+
+            <Button
+                android:id="@+id/advancedToggleButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:minHeight="0dp"
+                android:minWidth="0dp"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:text="高级选项（Endpoint Path）" />
+
+            <LinearLayout
+                android:id="@+id/endpointRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Endpoint Path（可选，默认 /v1/chat/completions）"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <EditText
+                    android:id="@+id/endpointPathInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="例如 /v1/chat/completions"
+                    android:inputType="text"
+                    android:importantForAutofill="no"
+                    android:maxLines="1"
+                    android:paddingTop="4dp" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
                 android:text="访问密钥"
                 android:textSize="14sp"
                 android:textStyle="bold" />

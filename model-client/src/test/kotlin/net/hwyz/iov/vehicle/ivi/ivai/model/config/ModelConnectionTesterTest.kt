@@ -2,6 +2,7 @@ package net.hwyz.iov.vehicle.ivi.ivai.model.config
 
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.runBlocking
+import net.hwyz.iov.vehicle.ivi.ivai.model.ModelProviderType
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.jupiter.api.AfterEach
@@ -36,7 +37,7 @@ class ModelConnectionTesterTest {
     fun `2xx response is a success`() = runBlocking {
         server.enqueue(MockResponse().setResponseCode(200).setBody("""{"models":[]}"""))
         val result = tester().test(ModelConfigDraft(server.url("/").toString()))
-        assertEquals(ConnectionTestResult.Success, result)
+        assertEquals(ConnectionTestResult.Success("model-list"), result)
         val recorded = server.takeRequest()
         assertEquals("/api/tags", recorded.path)
     }
@@ -79,5 +80,49 @@ class ModelConnectionTesterTest {
     fun `invalid url draft is an invalid response and does not hit the network`() = runBlocking {
         val result = tester().test(ModelConfigDraft("not-a-url"))
         assertInstanceOf(ConnectionTestResult.InvalidResponse::class.java, result)
+    }
+
+    // ------------------------------------------------------------------ OpenAI compatible (CR-004)
+
+    private fun openAiDraft() = ModelConfigDraft(
+        baseUrl = server.url("/").toString(),
+        providerType = ModelProviderType.OPENAI_COMPATIBLE,
+        modelName = "qwen3.5:4b",
+        apiKeyAction = ApiKeyAction.Replace("sk-test")
+    )
+
+    @Test
+    fun `openai compatible prefers the model list endpoint`() = runBlocking {
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"data":[]}"""))
+        val result = tester().test(openAiDraft())
+        assertEquals(ConnectionTestResult.Success("model-list"), result)
+        val recorded = server.takeRequest()
+        assertEquals("/v1/models", recorded.path)
+        assertEquals("Bearer sk-test", recorded.getHeader("Authorization"))
+    }
+
+    @Test
+    fun `openai compatible falls back to chat completions when no model list`() = runBlocking {
+        server.enqueue(MockResponse().setResponseCode(404))
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"choices":[{"message":{"content":"ok"}}]}"""))
+
+        val result = tester().test(openAiDraft())
+        assertEquals(ConnectionTestResult.Success("chat-completions"), result)
+
+        val first = server.takeRequest()
+        assertEquals("/v1/models", first.path)
+        val second = server.takeRequest()
+        assertEquals("/v1/chat/completions", second.path)
+        assertEquals("POST", second.method)
+        assertEquals("Bearer sk-test", second.getHeader("Authorization"))
+    }
+
+    @Test
+    fun `openai compatible unauthorized stays unauthorized without fallback`() = runBlocking {
+        server.enqueue(MockResponse().setResponseCode(401))
+        val result = tester().test(openAiDraft())
+        assertEquals(ConnectionTestResult.Unauthorized, result)
+        // Only the model list request is made; no chat fallback on auth failure.
+        assertEquals("/v1/models", server.takeRequest().path)
     }
 }

@@ -2,26 +2,28 @@ package net.hwyz.iov.vehicle.ivi.ivai.ui.chat
 
 import kotlinx.coroutines.flow.Flow
 import net.hwyz.iov.vehicle.ivi.ivai.agent.event.AgentEvent
+import net.hwyz.iov.vehicle.ivi.ivai.agent.prompt.PromptSnapshot
+import net.hwyz.iov.vehicle.ivi.ivai.service.AgentCommand
+import net.hwyz.iov.vehicle.ivi.ivai.service.AgentInputSource
 import net.hwyz.iov.vehicle.ivi.ivai.service.AgentService
-import net.hwyz.iov.vehicle.ivi.ivai.service.SessionSnapshot
+import net.hwyz.iov.vehicle.ivi.ivai.service.AgentSessionSnapshot
 
 /**
- * Real [ChatAgentGateway] backed by the bound [AgentService].
+ * Real [ChatAgentGateway] backed by the bound [AgentService], which implements
+ * the [AiAgentClient] contract (IVI-IVAI-DSN-CR-004).
  */
 class ServiceChatAgentGateway(private val service: AgentService) : ChatAgentGateway {
 
-    override val events: Flow<AgentEvent> get() = service.events
+    override suspend fun submit(command: AgentCommand): Boolean =
+        service.submit(command)
 
-    override fun submit(text: String, turnId: String, requestId: String): String? =
-        service.submit(text, turnId, requestId, source = "chat")
+    override fun observeEvents(sessionId: String): Flow<AgentEvent> =
+        service.observeEvents(sessionId)
 
-    override fun confirm(confirmationId: String): Boolean =
-        service.confirm(confirmationId)
-
-    override fun cancel(confirmationId: String): Boolean =
-        service.cancel(confirmationId)
-
-    override fun sessionSnapshot(): SessionSnapshot = service.sessionSnapshot()
+    override suspend fun getSessionSnapshot(sessionId: String): AgentSessionSnapshot =
+        service.getSessionSnapshot(sessionId)
 
     override fun sessionId(): String = service.sessionId()
+
+    override fun promptSnapshot(): PromptSnapshot? = service.promptSnapshot()
 }

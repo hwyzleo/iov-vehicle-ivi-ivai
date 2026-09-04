@@ -53,4 +53,23 @@ class PromptBuilderTest {
         assertTrue(system.contains("我有点冷"))
         assertTrue(system.contains("候选工具"))
     }
+
+    @Test
+    fun `snapshot exposes read-only prompt template without runtime context`() {
+        val snapshot = builder.snapshot()
+
+        assertEquals("1", snapshot.promptVersion)
+        assertTrue(snapshot.content.contains("候选工具"))
+        assertTrue(snapshot.content.contains("输出 Schema"))
+        assertTrue(snapshot.content.contains("LOCAL_TOOL"))
+        for (toolId in registry.toolIds()) {
+            assertTrue(snapshot.content.contains(toolId), "snapshot should list $toolId")
+        }
+        // 隐私边界（CR-004）：快照不含任何运行时上下文（用户输入 / 声源 / 会话 / 车辆状态）。
+        // 注意：静态 System Prompt 本身也会出现「用户输入」等词，因此断言带前缀的运行时标记。
+        assertTrue(!snapshot.content.contains("用户输入："))
+        assertTrue(!snapshot.content.contains("声源位置："))
+        assertTrue(!snapshot.content.contains("会话状态："))
+        assertTrue(!snapshot.content.contains("车辆状态："))
+    }
 }

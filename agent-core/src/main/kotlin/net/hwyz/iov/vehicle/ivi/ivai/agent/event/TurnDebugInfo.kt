@@ -1,15 +1,7 @@
 package net.hwyz.iov.vehicle.ivi.ivai.agent.event
 
 import kotlinx.serialization.Serializable
-
-/**
- * One message as composed for the model request (role + content).
- */
-@Serializable
-data class ComposedMessage(
-    val role: String,
-    val content: String
-)
+import net.hwyz.iov.vehicle.ivi.ivai.model.AgentPerformanceMetrics
 
 /**
  * A single intent proposed by the model (before validation / execution).
@@ -48,22 +40,21 @@ data class ToolDebugInfo(
 )
 
 /**
- * Per-turn debug details shown in the chat debug panel (IVI-IVAI-DSN-CR-002):
- * prompt orchestration, raw model output, parsed result, triggered tool and
- * performance statistics. Deliberately separate from the stable interaction
- * events; the UI may hide it on release builds.
+ * Per-turn debug details shown in the chat detail panel (IVI-IVAI-DSN-CR-002,
+ * CR-004): segmented performance, parsed result, triggered tool and error info.
+ *
+ * Privacy boundary (CR-004): the System Prompt and the composed message
+ * orchestration are deliberately NOT part of this payload — Agent Events never
+ * expose the full prompt to chat consumers; the read-only PromptInfo settings
+ * page serves the prompt snapshot instead.
  */
 @Serializable
 data class TurnDebugInfo(
     val turnId: String,
     val requestId: String,
-    val composedMessages: List<ComposedMessage> = emptyList(),
-    val rawModelContent: String? = null,
+    val performance: AgentPerformanceMetrics? = null,
     val parsed: ParsedOutputSummary? = null,
     val tool: ToolDebugInfo? = null,
-    val modelLatencyMs: Long = -1,
-    val toolLatencyMs: Long? = null,
-    val totalLatencyMs: Long = -1,
     val state: String? = null,
     val route: String? = null,
     val errorCode: String? = null,

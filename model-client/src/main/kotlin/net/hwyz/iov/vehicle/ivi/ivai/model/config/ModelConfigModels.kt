@@ -2,21 +2,32 @@ package net.hwyz.iov.vehicle.ivi.ivai.model.config
 
 import kotlinx.serialization.Serializable
 import okhttp3.HttpUrl
+import net.hwyz.iov.vehicle.ivi.ivai.model.ModelProviderType
 
 /**
  * Non-sensitive LLM runtime configuration persisted in plain storage (DataStore).
  * Secrets (apiKey) are never part of this model — they live in [SecretStore].
- * (IVI-IVAI-DSN-CR-003)
+ * (IVI-IVAI-DSN-CR-003, schema v2 per CR-004)
+ *
+ * Schema history:
+ *  - v1: baseUrl + updatedAt + configVersion
+ *  - v2: + providerType, endpointPath, modelName (CR-004). v1 is migrated by the
+ *    repository: providerType = OLLAMA, original baseUrl kept, modelName defaults
+ *    to the current Ollama default model.
  */
 @Serializable
 data class ModelPublicConfig(
     val schemaVersion: Int = CURRENT_SCHEMA_VERSION,
     val baseUrl: String,
+    val providerType: ModelProviderType = ModelProviderType.OLLAMA,
+    val endpointPath: String? = null,
+    val modelName: String? = null,
     val updatedAt: Long = 0L,
     val configVersion: Long = 0L
 ) {
     companion object {
-        const val CURRENT_SCHEMA_VERSION = 1
+        const val CURRENT_SCHEMA_VERSION = 2
+        const val SCHEMA_VERSION_V1 = 1
     }
 }
 
@@ -27,6 +38,9 @@ data class ModelPublicConfig(
  */
 data class ModelRuntimeConfig(
     val baseUrl: HttpUrl,
+    val providerType: ModelProviderType = ModelProviderType.OLLAMA,
+    val endpointPath: String? = null,
+    val modelName: String? = null,
     val apiKey: SecretValue?,
     val version: Long
 )
@@ -60,6 +74,9 @@ enum class KeyStatus { SET, NOT_SET, INVALID }
  */
 data class ModelConfigDraft(
     val baseUrl: String,
+    val providerType: ModelProviderType = ModelProviderType.OLLAMA,
+    val modelName: String? = null,
+    val endpointPath: String? = null,
     val apiKeyAction: ApiKeyAction = ApiKeyAction.Keep
 )
 

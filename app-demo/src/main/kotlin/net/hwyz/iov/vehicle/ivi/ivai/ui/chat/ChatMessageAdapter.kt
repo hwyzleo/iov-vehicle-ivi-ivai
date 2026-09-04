@@ -12,25 +12,18 @@ import net.hwyz.iov.vehicle.ivi.ivai.ui.chat.holder.UserTextViewHolder
 
 /**
  * RecyclerView ListAdapter + DiffUtil for the chat message stream.
- * Manages the per-message detail-panel expansion state.
+ *
+ * The per-message performance-panel expansion state lives on [ChatMessage]
+ * (default collapsed) and is toggled through the ViewModel, so DiffUtil's
+ * content comparison (areContentsTheSame → ==) already includes it and a toggle
+ * click refreshes the row (IVI-IVAI-DSN-CR-004).
  */
 class ChatMessageAdapter(
     private val onConfirm: (String) -> Unit,
     private val onCancel: (String) -> Unit,
-    private val onRetry: (String) -> Unit
+    private val onRetry: (String) -> Unit,
+    private val onToggleDetail: (String) -> Unit
 ) : ListAdapter<ChatMessage, RecyclerView.ViewHolder>(MessageDiff) {
-
-    /** messageId → expanded. Messages carrying debug details auto-expand once. */
-    private val expandedIds = mutableSetOf<String>()
-
-    private val onToggleDetail: (String) -> Unit = { messageId ->
-        if (!expandedIds.add(messageId)) {
-            expandedIds.remove(messageId)
-        }
-        currentList.indexOfFirst { it.messageId == messageId }.takeIf { it >= 0 }?.let { position ->
-            notifyItemChanged(position)
-        }
-    }
 
     override fun getItemViewType(position: Int): Int =
         ChatMessageViewType.of(getItem(position))
@@ -48,11 +41,7 @@ class ChatMessageAdapter(
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         val message = getItem(position)
-        if (message.details != null) {
-            // Debug details are visible by default in this phase.
-            expandedIds.add(message.messageId)
-        }
-        val detailsExpanded = message.messageId in expandedIds
+        val detailsExpanded = message.isPerformanceExpanded
         when (holder) {
             is UserTextViewHolder -> holder.bind(message)
             is AgentTextViewHolder -> holder.bind(message, detailsExpanded)

@@ -1,4 +1,4 @@
-package net.hwyz.iov.vehicle.ivi.ivai.model
+package net.hwyz.iov.vehicle.ivi.ivai.model.provider
 
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
@@ -7,6 +7,10 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.double
+import net.hwyz.iov.vehicle.ivi.ivai.model.ChatMessage
+import net.hwyz.iov.vehicle.ivi.ivai.model.ModelClientException
+import net.hwyz.iov.vehicle.ivi.ivai.model.ModelErrorKind
+import net.hwyz.iov.vehicle.ivi.ivai.model.ModelRequest
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.jupiter.api.AfterEach
