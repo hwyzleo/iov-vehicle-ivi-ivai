@@ -135,9 +135,10 @@ class AgentWorkflow(
             )
             return finish(
                 input, session, AgentState.FAILED, null, null, emptyList(), null,
-                code.code, "模型调用失败：${e.message}", null, false, startMs, -1,
+                code.code, "模型服务暂不可用，请稍后重试", null, false, startMs, -1,
                 validJson = false, schemaPassed = false, toolExecuted = false,
-                composedMessages = composedMessages
+                composedMessages = composedMessages,
+                errorDetail = "模型调用失败：${e.message}"
             )
         } catch (e: CancellationException) {
             throw e
@@ -151,9 +152,10 @@ class AgentWorkflow(
             )
             return finish(
                 input, session, AgentState.FAILED, null, null, emptyList(), null,
-                ErrorCode.MODEL_UNAVAILABLE.code, "模型调用异常：${e.message}", null, false, startMs, -1,
+                ErrorCode.MODEL_UNAVAILABLE.code, "模型服务暂不可用，请稍后重试", null, false, startMs, -1,
                 validJson = false, schemaPassed = false, toolExecuted = false,
-                composedMessages = composedMessages
+                composedMessages = composedMessages,
+                errorDetail = "模型调用异常：${e.message}"
             )
         }
         record(input, session, AgentState.MODEL_RESPONDED, latencyMs = modelResponse.latencyMs)
@@ -586,7 +588,8 @@ class AgentWorkflow(
         latencyMs: Long = -1,
         errorCode: String? = null,
         toolId: String? = null,
-        toolStatus: String? = null
+        toolStatus: String? = null,
+        detail: String? = null
     ) {
         telemetryRecorder?.record(
             TelemetryRecord(
@@ -597,7 +600,8 @@ class AgentWorkflow(
                 latencyMs = latencyMs,
                 errorCode = errorCode,
                 toolId = toolId,
-                toolStatus = toolStatus
+                toolStatus = toolStatus,
+                detail = detail
             )
         )
     }
@@ -631,7 +635,8 @@ class AgentWorkflow(
         schemaPassed: Boolean,
         toolExecuted: Boolean,
         composedMessages: List<ChatMessage>? = null,
-        toolLatencyMs: Long? = null
+        toolLatencyMs: Long? = null,
+        errorDetail: String? = null
     ): AgentResult {
         if (responseText.isNotBlank()) {
             session.appendAssistant(responseText)
@@ -641,7 +646,8 @@ class AgentWorkflow(
             route = route?.name,
             errorCode = errorCode,
             toolId = executionResult?.toolId,
-            toolStatus = executionResult?.status?.name
+            toolStatus = executionResult?.status?.name,
+            detail = errorDetail
         )
         emitDebugInfo(
             input, session, state, route, parsedOutput, executionResult, errorCode,

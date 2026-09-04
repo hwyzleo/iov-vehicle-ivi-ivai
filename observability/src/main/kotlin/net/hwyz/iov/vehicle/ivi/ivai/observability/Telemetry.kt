@@ -11,7 +11,10 @@ data class TelemetryRecord(
     val latencyMs: Long = -1,
     val errorCode: String? = null,
     val toolId: String? = null,
-    val toolStatus: String? = null
+    val toolStatus: String? = null,
+
+    /** Desensitized failure detail for diagnostics — never shown in the chat UI. */
+    val detail: String? = null
 )
 
 /**
@@ -33,6 +36,7 @@ class LoggingTelemetryRecorder(
                 append("[ivai] state=").append(record.state)
                 record.route?.let { append(" route=").append(it) }
                 record.errorCode?.let { append(" error=").append(it) }
+                record.detail?.let { append(" detail=").append(it) }
                 record.toolId?.let { append(" tool=").append(it) }
                 record.toolStatus?.let { append(" toolStatus=").append(it) }
                 if (record.latencyMs >= 0) append(" latency=").append(record.latencyMs).append("ms")

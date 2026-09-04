@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import net.hwyz.iov.vehicle.ivi.ivai.adapter.mock.MockClimateToolAdapter
 import net.hwyz.iov.vehicle.ivi.ivai.adapter.mock.MockVehicleState
 import net.hwyz.iov.vehicle.ivi.ivai.agent.event.AgentEvent
@@ -28,8 +29,13 @@ import net.hwyz.iov.vehicle.ivi.ivai.agent.session.Session
 import net.hwyz.iov.vehicle.ivi.ivai.agent.workflow.AgentConfig
 import net.hwyz.iov.vehicle.ivi.ivai.agent.workflow.AgentInput
 import net.hwyz.iov.vehicle.ivi.ivai.agent.workflow.AgentWorkflow
-import net.hwyz.iov.vehicle.ivi.ivai.model.OllamaConfig
 import net.hwyz.iov.vehicle.ivi.ivai.model.OllamaModelProvider
+import net.hwyz.iov.vehicle.ivi.ivai.model.config.DefaultModelConfigRepository
+import net.hwyz.iov.vehicle.ivi.ivai.model.config.ModelConfigRepository
+import net.hwyz.iov.vehicle.ivi.ivai.model.config.ModelConfigValidator
+import net.hwyz.iov.vehicle.ivi.ivai.service.config.AndroidKeystoreSecretStore
+import net.hwyz.iov.vehicle.ivi.ivai.service.config.DataStorePublicConfigStore
+import net.hwyz.iov.vehicle.ivi.ivai.service.config.MaskingLoggingInterceptor
 import net.hwyz.iov.vehicle.ivi.ivai.observability.LoggingTelemetryRecorder
 import net.hwyz.iov.vehicle.ivi.ivai.observability.ToolLifecycleLogger
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.ToolRegistry
@@ -39,6 +45,7 @@ import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.DefaultToolExecutor
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.ToolPolicyEngine
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.ToolValidator
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.VehicleStateProvider
+import okhttp3.OkHttpClient
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -85,14 +92,25 @@ class AgentService : Service() {
     lateinit var mockAdapter: MockClimateToolAdapter
         private set
 
+    /**
+     * Single shared LLM runtime config repository (IVI-IVAI-DSN-CR-003): the same
+     * instance drives both the provider (per-request snapshots) and the config UI.
+     */
+    lateinit var configRepository: ModelConfigRepository
+        private set
+
     private val binder = LocalBinder()
 
     override fun onCreate() {
         super.onCreate()
-        val (workflow, adapter) = buildAgentGraph()
+        configRepository = buildConfigRepository()
+        val initialBaseUrl = runCatching {
+            runBlocking { configRepository.loadSnapshot().baseUrl.toString() }
+        }.getOrDefault(BuildConfig.OLLAMA_BASE_URL)
+        val (workflow, adapter) = buildAgentGraph(initialBaseUrl)
         agent = workflow
         mockAdapter = adapter
-        log("AgentService created: baseUrl=${BuildConfig.OLLAMA_BASE_URL} model=${BuildConfig.OLLAMA_MODEL}")
+        log("AgentService created: baseUrl=$initialBaseUrl model=${BuildConfig.OLLAMA_MODEL}")
     }
 
     override fun onBind(intent: Intent): IBinder = binder
@@ -202,12 +220,15 @@ class AgentService : Service() {
         fun getService(): AgentService = this@AgentService
     }
 
-    private fun buildAgentGraph(): Pair<AgentWorkflow, MockClimateToolAdapter> {
+    private fun buildAgentGraph(initialBaseUrl: String): Pair<AgentWorkflow, MockClimateToolAdapter> {
         val adapter = MockClimateToolAdapter()
         val registry = ClimateToolDefinitions.registerAll(ToolRegistry())
         val validator = ToolValidator(registry)
         val provider = OllamaModelProvider(
-            OllamaConfig(baseUrl = BuildConfig.OLLAMA_BASE_URL, model = BuildConfig.OLLAMA_MODEL)
+            snapshotProvider = configRepository,
+            client = OkHttpClient.Builder()
+                .addInterceptor(MaskingLoggingInterceptor())
+                .build()
         )
         val executor = DefaultToolExecutor(
             registry = registry,
@@ -222,7 +243,7 @@ class AgentService : Service() {
             validator = validator,
             agentPolicy = AgentPolicyEngine(registry, ToolPolicyEngine()),
             toolExecutor = executor,
-            config = AgentConfig(model = BuildConfig.OLLAMA_MODEL, ollamaBaseUrl = BuildConfig.OLLAMA_BASE_URL),
+            config = AgentConfig(model = BuildConfig.OLLAMA_MODEL, ollamaBaseUrl = initialBaseUrl),
             vehicleStateProvider = VehicleStateProvider { adapter.snapshot() },
             telemetryRecorder = LoggingTelemetryRecorder { log(it) },
             lifecycleListener = ToolLifecycleLogger { log(it) },
@@ -230,6 +251,16 @@ class AgentService : Service() {
         )
         return workflow to adapter
     }
+
+    private fun buildConfigRepository(): ModelConfigRepository =
+        DefaultModelConfigRepository(
+            publicStore = DataStorePublicConfigStore(this),
+            secretStore = AndroidKeystoreSecretStore(this),
+            defaultBaseUrl = BuildConfig.OLLAMA_BASE_URL,
+            // 与 network_security_config / 地址校验联动：debug 允许局域网 HTTP，release 要求 HTTPS。
+            validator = ModelConfigValidator(allowInsecureHttp = BuildConfig.ALLOW_INSECURE_HTTP),
+            scope = scope
+        )
 
     private fun log(message: String) {
         Log.d(TAG, message)

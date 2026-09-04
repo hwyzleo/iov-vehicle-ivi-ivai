@@ -21,6 +21,7 @@ import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.launch
 import net.hwyz.iov.vehicle.ivi.ivai.demo.R
 import net.hwyz.iov.vehicle.ivi.ivai.service.AgentService
+import net.hwyz.iov.vehicle.ivi.ivai.ui.config.ModelConfigActivity
 
 /**
  * Classic Android-View chatbot screen (IVI-IVAI-DSN-CR-002).
@@ -68,6 +69,9 @@ class ChatActivity : ComponentActivity() {
         messageList.adapter = adapter
 
         sendButton.setOnClickListener { sendFromInput() }
+        findViewById<Button>(R.id.configButton).setOnClickListener {
+            startActivity(Intent(this, ModelConfigActivity::class.java))
+        }
         inputEdit.doAfterTextChanged { editable ->
             viewModel.onAction(ChatUiAction.InputChanged(editable?.toString() ?: ""))
         }

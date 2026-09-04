@@ -19,6 +19,11 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name="net.hwyz.iov.vehicle.ivi.ivai.ui.config.ModelConfigActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
         <service
             android:name="net.hwyz.iov.vehicle.ivi.ivai.service.AgentService"
             android:exported="false" />

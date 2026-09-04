@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 开发(debug)构建：LLM 地址为运行期配置（可指向任意局域网 HTTP 主机），
+     故放开明文传输限制，与 ModelConfigValidator(allowInsecureHttp=true) 一致。 -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

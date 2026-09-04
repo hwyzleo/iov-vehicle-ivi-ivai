@@ -1,5 +1,10 @@
 package net.hwyz.iov.vehicle.ivi.ivai.model
 
+import java.io.IOException
+import java.net.SocketTimeoutException
+import java.util.concurrent.TimeUnit
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -10,41 +15,73 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
+import net.hwyz.iov.vehicle.ivi.ivai.model.config.ModelConfigException
+import net.hwyz.iov.vehicle.ivi.ivai.model.config.ModelConfigSnapshotProvider
+import net.hwyz.iov.vehicle.ivi.ivai.model.config.ModelRuntimeConfig
 import okhttp3.Call
 import okhttp3.Callback
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
-import java.io.IOException
-import java.net.SocketTimeoutException
-import java.util.concurrent.TimeUnit
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 
 /**
  * [ModelProvider] that calls a local / remote Ollama Chat API (non-streaming).
  *
- * Responsibilities (IVI-IVAI-DSN-CR-001):
- *  - base URL, model name and generation parameters
- *  - request timeout, cancellation and requestId propagation
+ * Responsibilities (IVI-IVAI-DSN-CR-001 + CR-003):
+ *  - captures an immutable runtime config snapshot at the start of each request
+ *    (baseUrl + apiKey + configVersion) so config changes never affect in-flight
+ *    requests and take effect for the next one without a restart (IVAI-REQ-025)
+ *  - writes Authorization per the provider protocol when an apiKey is set;
+ *    local Ollama (no key) simply omits it
+ *  - base URL, model name and generation parameters; request timeout, cancellation
+ *    and requestId propagation
  *  - Ollama outer response parse + second-level JSON parse of message.content
- *  - unified conversion of network / HTTP / model / parse errors
+ *  - unified conversion of network / HTTP / model / config / parse errors
  */
 class OllamaModelProvider(
-    private val config: OllamaConfig,
-    private val client: OkHttpClient = defaultClient(config)
+    private val snapshotProvider: ModelConfigSnapshotProvider,
+    private val connectTimeoutMs: Long = DEFAULT_CONNECT_TIMEOUT_MS,
+    private val readTimeoutMs: Long = DEFAULT_READ_TIMEOUT_MS,
+    client: OkHttpClient? = null
 ) : ModelProvider {
 
     private val json = Json { ignoreUnknownKeys = true }
     private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
+    private val client: OkHttpClient = client ?: defaultClient(connectTimeoutMs, readTimeoutMs)
+
+    /** Fixed-config provider for simple wiring / tests (no runtime snapshot). */
+    constructor(config: OllamaConfig) : this(
+        snapshotProvider = ModelConfigSnapshotProvider {
+            ModelRuntimeConfig(
+                baseUrl = config.baseUrl.toHttpUrlOrNull()
+                    ?: throw IllegalArgumentException("Invalid Ollama baseUrl: ${config.baseUrl}"),
+                apiKey = null,
+                version = 0L
+            )
+        },
+        connectTimeoutMs = config.connectTimeoutMs,
+        readTimeoutMs = config.readTimeoutMs
+    )
 
     override suspend fun generate(request: ModelRequest): ModelResponse {
+        // Immutable snapshot for the whole request — never swapped mid-flight.
+        val snapshot = try {
+            snapshotProvider.loadSnapshot()
+        } catch (e: ModelConfigException) {
+            throw ModelClientException(
+                kind = ModelErrorKind.CONFIGURATION_ERROR,
+                message = "模型配置无效，请先在模型配置中修复: ${e.message}",
+                cause = e
+            )
+        }
+
         val startMs = System.currentTimeMillis()
         try {
             return withTimeout(request.timeoutMs) {
-                val rawBody = callChat(request)
+                val rawBody = callChat(request, snapshot)
                 val elapsedMs = System.currentTimeMillis() - startMs
                 val envelope = parseEnvelope(rawBody)
                 val content = envelope.message?.content.orEmpty()
@@ -84,8 +121,8 @@ class OllamaModelProvider(
         }
     }
 
-    private suspend fun callChat(request: ModelRequest): String {
-        val httpRequest = buildHttpRequest(request)
+    private suspend fun callChat(request: ModelRequest, snapshot: ModelRuntimeConfig): String {
+        val httpRequest = buildHttpRequest(request, snapshot)
         return suspendCancellableCoroutine { cont ->
             val call = client.newCall(httpRequest)
             cont.invokeOnCancellation { call.cancel() }
@@ -117,7 +154,7 @@ class OllamaModelProvider(
         }
     }
 
-    private fun buildHttpRequest(request: ModelRequest): Request {
+    private fun buildHttpRequest(request: ModelRequest, snapshot: ModelRuntimeConfig): Request {
         val payload = buildJsonObject {
             put("model", request.model)
             put("stream", false)
@@ -142,11 +179,20 @@ class OllamaModelProvider(
                 }
             )
         }
-        return Request.Builder()
-            .url("${config.baseUrl.trimEnd('/')}/api/chat")
+
+        val url = snapshot.baseUrl.newBuilder()
+            .addPathSegments("api/chat")
+            .build()
+
+        val builder = Request.Builder()
+            .url(url)
             .post(payload.toString().toRequestBody(jsonMediaType))
             .header("X-IVAI-Request-Id", request.requestId)
-            .build()
+        snapshot.apiKey?.use { key ->
+            // Provider protocol header; the raw key exists only for this construction.
+            builder.header("Authorization", "Bearer $key")
+        }
+        return builder.build()
     }
 
     private fun parseEnvelope(rawBody: String): OllamaEnvelope {
@@ -178,10 +224,13 @@ class OllamaModelProvider(
     }
 
     private companion object {
-        fun defaultClient(config: OllamaConfig): OkHttpClient =
+        const val DEFAULT_CONNECT_TIMEOUT_MS = 5_000L
+        const val DEFAULT_READ_TIMEOUT_MS = 60_000L
+
+        fun defaultClient(connectTimeoutMs: Long, readTimeoutMs: Long): OkHttpClient =
             OkHttpClient.Builder()
-                .connectTimeout(config.connectTimeoutMs, TimeUnit.MILLISECONDS)
-                .readTimeout(config.readTimeoutMs, TimeUnit.MILLISECONDS)
+                .connectTimeout(connectTimeoutMs, TimeUnit.MILLISECONDS)
+                .readTimeout(readTimeoutMs, TimeUnit.MILLISECONDS)
                 .build()
     }
 }

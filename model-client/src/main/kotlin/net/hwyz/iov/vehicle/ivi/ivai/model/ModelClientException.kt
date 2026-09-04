@@ -18,7 +18,13 @@ enum class ModelErrorKind {
     HTTP_ERROR,
 
     /** Outer response or message.content could not be parsed as JSON. */
-    RESPONSE_PARSE_ERROR
+    RESPONSE_PARSE_ERROR,
+
+    /**
+     * Runtime configuration is missing / invalid / undecryptable, so no request
+     * may be issued (IVI-IVAI-DSN-CR-003). Usually wraps [net.hwyz.iov.vehicle.ivi.ivai.model.config.ModelConfigException].
+     */
+    CONFIGURATION_ERROR
 }
 
 /**
