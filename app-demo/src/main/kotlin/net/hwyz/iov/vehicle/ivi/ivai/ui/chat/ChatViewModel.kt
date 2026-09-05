@@ -18,6 +18,8 @@ import net.hwyz.iov.vehicle.ivi.ivai.agent.event.TurnDebugInfo
 import net.hwyz.iov.vehicle.ivi.ivai.agent.router.IntentTier
 import net.hwyz.iov.vehicle.ivi.ivai.service.AgentCommand
 import net.hwyz.iov.vehicle.ivi.ivai.service.AgentInputSource
+import net.hwyz.iov.vehicle.ivi.ivai.speech.api.SpeechCapability
+import net.hwyz.iov.vehicle.ivi.ivai.speech.observability.SpeechRecognitionMetricsRecorder
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.ExecutionStatus
 
 /**
@@ -45,12 +47,21 @@ class ChatViewModel : ViewModel() {
     private var gateway: ChatAgentGateway? = null
     private var eventJob: Job? = null
 
+    // --- Push-to-talk (IVI-IVAI-DSN-CR-006) ---
+
+    private var voiceGateway: VoiceInputGateway? = null
+    private var voiceController: VoiceInputController? = null
+
+    /** Voice gesture state projected for the UI (listening / finalizing / error…). */
+    private val _voiceState = MutableStateFlow<VoiceInputState>(VoiceInputState.Idle)
+    val voiceState: StateFlow<VoiceInputState> = _voiceState.asStateFlow()
+
     /**
      * Connects (or reconnects) to a gateway. Keeps the single event collection
      * job across Activity rebinds so buffered events are not re-delivered;
      * resets the projection when the service restarted with a new session.
      */
-    fun attach(newGateway: ChatAgentGateway) {
+    fun attach(newGateway: ChatAgentGateway, voiceInput: VoiceInputGateway? = null) {
         val newSessionId = newGateway.sessionId()
         val current = _state.value
         when {
@@ -64,6 +75,30 @@ class ChatViewModel : ViewModel() {
             }
         }
         gateway = newGateway
+        voiceGateway = voiceInput
+        if (voiceController == null && voiceInput != null) {
+            voiceController = VoiceInputController(
+                scope = viewModelScope,
+                deps = object : VoiceInputDeps {
+                    override suspend fun createEngine(): VoiceEngineSession? =
+                        voiceGateway?.createVoiceSession()
+
+                    override suspend fun submitText(voiceSessionId: String, text: String): Boolean =
+                        submitVoiceText(voiceSessionId, text)
+                },
+                // ASR time is an input-stage metric, never merged into Agent endToEndMs.
+                metricsRecorder = SpeechRecognitionMetricsRecorder { metrics ->
+                    android.util.Log.d("IVI-IVAI", "asr metrics voiceSession=${metrics.voiceSessionId} " +
+                        "engine=${metrics.engineType} onDevice=${metrics.onDevice} " +
+                        "prepareMs=${metrics.prepareMs} listeningMs=${metrics.listeningMs} " +
+                        "finalizingMs=${metrics.finalizingMs} resultLen=${metrics.resultLength} " +
+                        "error=${metrics.errorCode}")
+                }
+            )
+            viewModelScope.launch {
+                voiceController?.state?.collect { _voiceState.value = it }
+            }
+        }
         if (eventJob == null) {
             eventJob = viewModelScope.launch {
                 newGateway.observeEvents(newSessionId).collect { onAgentEvent(it) }
@@ -85,6 +120,9 @@ class ChatViewModel : ViewModel() {
             is ChatUiAction.CancelClicked -> cancel(action.confirmationId)
             is ChatUiAction.RetryClicked -> retry(action.messageId)
             is ChatUiAction.TogglePerformanceDetails -> togglePerformance(action.messageId)
+            ChatUiAction.VoiceButtonDown -> startVoiceInput()
+            ChatUiAction.VoiceButtonUp -> stopVoiceInput()
+            ChatUiAction.VoiceButtonCancel -> cancelVoiceInput()
         }
     }
 
@@ -264,6 +302,107 @@ class ChatViewModel : ViewModel() {
                 }
             )
         }
+    }
+
+    // ------------------------------------------------------------------ push-to-talk (CR-006)
+
+    /** Re-evaluated by the Activity after binding or a permission result. */
+    fun onVoiceCapabilityChanged(capability: SpeechCapability) {
+        _state.update { it.copy(voiceCapability = capability) }
+    }
+
+    fun startVoiceInput() {
+        val s = _state.value
+        // Reuse the existing single-turn policy: no voice session while busy or
+        // a confirmation is pending (design: “Agent 忙碌时遵循现有单活动 Turn 策略”).
+        if (s.isAgentBusy) {
+            showHint("上一条请求正在处理，请稍候")
+            return
+        }
+        if (s.pendingConfirmationId != null) {
+            showHint("请先确认或取消当前操作")
+            return
+        }
+        voiceController?.startVoiceInput()
+    }
+
+    fun stopVoiceInput() {
+        voiceController?.stopVoiceInput()
+    }
+
+    fun cancelVoiceInput() {
+        voiceController?.cancelVoiceInput()
+    }
+
+    /**
+     * Appends the recognized text as a normal user message (VOICE_ASR provenance
+     * kept for diagnostics) and submits HandleText(VOICE_ASR). Returns false when
+     * the service rejected it — the controller then silently recovers to Idle.
+     */
+    private suspend fun submitVoiceText(voiceSessionId: String, text: String): Boolean {
+        val s = _state.value
+        val g = gateway ?: run {
+            showHint("服务未连接，请稍候重试")
+            return false
+        }
+        if (s.isAgentBusy) {
+            showHint("上一条请求正在处理，请稍候")
+            return false
+        }
+        if (s.pendingConfirmationId != null) {
+            showHint("请先确认或取消当前操作")
+            return false
+        }
+
+        val turnId = UUID.randomUUID().toString()
+        val requestId = UUID.randomUUID().toString()
+        val userMessage = newMessage(
+            sessionId = s.sessionId,
+            turnId = turnId,
+            requestId = requestId,
+            role = ChatRole.USER,
+            type = ChatMessageType.TEXT,
+            text = text,
+            status = ChatMessageStatus.SENDING,
+            inputSource = AgentInputSource.VOICE_ASR
+        )
+        _state.update {
+            it.copy(
+                messages = it.messages + userMessage,
+                activeTurnId = turnId,
+                isAgentBusy = true
+            )
+        }
+        val accepted = g.submit(
+            AgentCommand.HandleText(
+                sessionId = s.sessionId,
+                requestId = requestId,
+                inputSource = AgentInputSource.VOICE_ASR,
+                text = text,
+                turnId = turnId
+            )
+        )
+        if (!accepted) {
+            _state.update {
+                it.copy(
+                    activeTurnId = null,
+                    isAgentBusy = false,
+                    messages = it.messages.map { m ->
+                        if (m.messageId == userMessage.messageId) {
+                            m.copy(status = ChatMessageStatus.FAILED)
+                        } else m
+                    }
+                )
+            }
+            showHint("上一条请求正在处理，请稍候")
+        }
+        return accepted
+    }
+
+    override fun onCleared() {
+        voiceController?.release()
+        eventJob?.cancel()
+        super.onCleared()
     }
 
     // ------------------------------------------------------------------ event → message mapping
@@ -517,7 +656,8 @@ class ChatViewModel : ViewModel() {
         confirmation: ConfirmationUiModel? = null,
         retryOfRequestId: String? = null,
         executionTierLabel: String? = null,
-        executionPath: AgentExecutionPath? = null
+        executionPath: AgentExecutionPath? = null,
+        inputSource: AgentInputSource? = null
     ) = ChatMessage(
         messageId = UUID.randomUUID().toString(),
         sessionId = sessionId,
@@ -531,7 +671,8 @@ class ChatViewModel : ViewModel() {
         confirmation = confirmation,
         retryOfRequestId = retryOfRequestId,
         executionTierLabel = executionTierLabel,
-        executionPath = executionPath
+        executionPath = executionPath,
+        inputSource = inputSource
     )
 
     private fun tierLabel(path: AgentExecutionPath?): String? =

@@ -51,6 +51,12 @@ import net.hwyz.iov.vehicle.ivi.ivai.service.config.AndroidKeystoreSecretStore
 import net.hwyz.iov.vehicle.ivi.ivai.service.config.DataStorePublicConfigStore
 import net.hwyz.iov.vehicle.ivi.ivai.service.config.DataStoreRagConfigRepository
 import net.hwyz.iov.vehicle.ivi.ivai.service.config.MaskingLoggingInterceptor
+import net.hwyz.iov.vehicle.ivi.ivai.speech.android.AndroidSpeechRecognitionEngineFactory
+import net.hwyz.iov.vehicle.ivi.ivai.speech.api.SpeechCapability
+import net.hwyz.iov.vehicle.ivi.ivai.speech.config.AndroidKeystoreAsrSecretStore
+import net.hwyz.iov.vehicle.ivi.ivai.speech.config.AsrConfigRepository
+import net.hwyz.iov.vehicle.ivi.ivai.speech.config.AsrDataStorePublicConfigStore
+import net.hwyz.iov.vehicle.ivi.ivai.speech.config.DefaultAsrConfigRepository
 import net.hwyz.iov.vehicle.ivi.ivai.observability.LoggingTelemetryRecorder
 import net.hwyz.iov.vehicle.ivi.ivai.observability.ToolLifecycleLogger
 import net.hwyz.iov.vehicle.ivi.ivai.retrieval.KnowledgeRetriever
@@ -109,6 +115,14 @@ class AgentService : Service(), AiAgentClient {
     lateinit var ragConfigRepository: RagConfigRepository
         private set
 
+    /** Single shared ASR runtime config repository (IVI-IVAI-DSN-CR-006). */
+    lateinit var asrConfigRepository: AsrConfigRepository
+        private set
+
+    /** Creates speech engines from an immutable config snapshot (CR-006). */
+    lateinit var asrEngineFactory: AndroidSpeechRecognitionEngineFactory
+        private set
+
     /** RAG runtime health (status for the settings page). */
     private var ragRuntimeManager: RagRuntimeManager? = null
 
@@ -123,6 +137,12 @@ class AgentService : Service(), AiAgentClient {
         super.onCreate()
         configRepository = buildConfigRepository()
         ragConfigRepository = DataStoreRagConfigRepository(this, scope)
+        asrConfigRepository = DefaultAsrConfigRepository(
+            publicStore = AsrDataStorePublicConfigStore(this),
+            secretStore = AndroidKeystoreAsrSecretStore(this),
+            scope = scope
+        )
+        asrEngineFactory = AndroidSpeechRecognitionEngineFactory(this)
         okHttpClient = OkHttpClient.Builder()
             .addInterceptor(MaskingLoggingInterceptor())
             .build()
@@ -268,6 +288,9 @@ class AgentService : Service(), AiAgentClient {
     fun vehicleState(): MockVehicleState? = mockAdapterRef.get()?.state
 
     fun sessionId(): String = session.sessionId
+
+    /** Device speech capability for the UI voice entry (CR-006). */
+    fun asrCapability(): SpeechCapability = asrEngineFactory.capability()
 
     fun isNetworkAvailable(): Boolean {
         val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return false

@@ -60,6 +60,7 @@ dependencies {
     api(project(":model-client"))
     implementation(project(":tool-registry"))
     implementation(project(":retrieval"))
+    implementation(project(":speech-input"))
 
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)

@@ -57,6 +57,17 @@
         android:paddingBottom="8dp"
         android:scrollbars="vertical" />
 
+    <TextView
+        android:id="@+id/voiceHint"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:paddingBottom="4dp"
+        android:textColor="@color/status_ok"
+        android:textSize="13sp"
+        android:visibility="gone" />
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -73,6 +84,14 @@
             android:imeOptions="actionSend"
             android:inputType="text"
             android:maxLines="4" />
+
+        <Button
+            android:id="@+id/voiceButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="🎤"
+            android:contentDescription="按住说话" />
 
         <Button
             android:id="@+id/sendButton"

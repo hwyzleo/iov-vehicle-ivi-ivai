@@ -14,7 +14,10 @@ import net.hwyz.iov.vehicle.ivi.ivai.agent.event.TurnDebugInfo
 import net.hwyz.iov.vehicle.ivi.ivai.agent.prompt.PromptSnapshot
 import net.hwyz.iov.vehicle.ivi.ivai.model.AgentPerformanceMetrics
 import net.hwyz.iov.vehicle.ivi.ivai.service.AgentCommand
+import net.hwyz.iov.vehicle.ivi.ivai.service.AgentInputSource
 import net.hwyz.iov.vehicle.ivi.ivai.service.AgentSessionSnapshot
+import net.hwyz.iov.vehicle.ivi.ivai.speech.api.SpeechCapability
+import net.hwyz.iov.vehicle.ivi.ivai.speech.api.SpeechRecognitionEvent
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.ExecutionStatus
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -446,17 +449,128 @@ class ChatViewModelTest {
         assertFalse(last.text.contains("LOCAL_TOOL"), "最终气泡不残留流式 JSON")
     }
 
+    @Test
+    fun `语音最终结果以 VOICE_ASR 提交并追加用户消息`() = runTest(dispatcher) {
+        val viewModel = ChatViewModel()
+        val gateway = FakeGateway()
+        val voiceEngine = StubSpeechEngine()
+        val voiceGateway = FakeVoiceGateway(voiceEngine)
+        viewModel.attach(gateway, voiceGateway)
+        runCurrent()
+
+        viewModel.onAction(ChatUiAction.VoiceButtonDown)
+        runCurrent()
+        assertEquals(1, voiceGateway.createCalls)
+
+        voiceEngine.emit(SpeechRecognitionEvent.Listening)
+        runCurrent()
+        assertEquals(VoiceInputState.Listening(""), viewModel.voiceState.value)
+        viewModel.onAction(ChatUiAction.VoiceButtonUp)
+        runCurrent()
+        assertEquals(VoiceInputState.Finalizing, viewModel.voiceState.value)
+        voiceEngine.emit(SpeechRecognitionEvent.FinalResult("打开空调"))
+        runCurrent()
+
+        assertEquals(1, gateway.submitted.size)
+        assertEquals("打开空调", gateway.submitted.first().first)
+        assertEquals(AgentInputSource.VOICE_ASR, gateway.submitted.first().third)
+
+        val userMsg = viewModel.state.value.messages.filter { it.role == ChatRole.USER }.last()
+        assertEquals("打开空调", userMsg.text)
+        assertEquals(AgentInputSource.VOICE_ASR, userMsg.inputSource)
+    }
+
+    @Test
+    fun `Agent 忙碌时语音入口不启动新会话`() = runTest(dispatcher) {
+        val viewModel = ChatViewModel()
+        val gateway = FakeGateway()
+        val voiceGateway = FakeVoiceGateway(StubSpeechEngine())
+        viewModel.attach(gateway, voiceGateway)
+        runCurrent()
+
+        // Occupy the single-turn slot with a text send (no agent event yet).
+        viewModel.onAction(ChatUiAction.InputChanged("打开空调"))
+        viewModel.onAction(ChatUiAction.SendClicked)
+        runCurrent()
+        assertTrue(viewModel.state.value.isAgentBusy)
+
+        viewModel.onAction(ChatUiAction.VoiceButtonDown)
+        runCurrent()
+
+        assertEquals(0, voiceGateway.createCalls, "忙碌时不得创建语音会话")
+    }
+
+    @Test
+    fun `语音链路到工具结果完整走通且保留 VOICE_ASR 来源`() = runTest(dispatcher) {
+        val viewModel = ChatViewModel()
+        val gateway = FakeGateway()
+        val voiceEngine = StubSpeechEngine()
+        val voiceGateway = FakeVoiceGateway(voiceEngine)
+        viewModel.attach(gateway, voiceGateway)
+        runCurrent()
+
+        // 按住说“打开空调”→ FinalResult → VOICE_ASR 提交
+        viewModel.onAction(ChatUiAction.VoiceButtonDown)
+        runCurrent()
+        voiceEngine.emit(SpeechRecognitionEvent.Listening)
+        runCurrent()
+        viewModel.onAction(ChatUiAction.VoiceButtonUp)
+        runCurrent()
+        voiceEngine.emit(SpeechRecognitionEvent.FinalResult("打开空调"))
+        runCurrent()
+
+        val voiceTurn = gateway.submitted.single()
+        assertEquals("打开空调", voiceTurn.first)
+        assertEquals(AgentInputSource.VOICE_ASR, voiceTurn.third)
+        val requestId = viewModel.state.value.messages.filter { it.role == ChatRole.USER }.last().requestId!!
+
+        // Agent 链路返回事件 → 工具结果，语音来源与文本走同一 Schema/Policy/Tool 链路
+        gateway.emit(
+            AgentEvent.UserSubmitted("sess", "turn-v", requestId, "打开空调"),
+            AgentEvent.ProcessingStarted("sess", "turn-v", requestId),
+            AgentEvent.ToolExecutionStarted("sess", "turn-v", requestId, "climate.power_on", "正在执行…"),
+            AgentEvent.ToolExecutionFinished("sess", "turn-v", requestId, "climate.power_on", ExecutionStatus.SUCCEEDED, "已打开空调", retryable = false)
+        )
+        runCurrent()
+
+        val messages = viewModel.state.value.messages
+        val user = messages.filter { it.role == ChatRole.USER }.last()
+        assertEquals(ChatMessageStatus.FINAL, user.status)
+        assertEquals(AgentInputSource.VOICE_ASR, user.inputSource)
+        assertEquals(ChatMessageType.TOOL_RESULT, messages.last().type)
+        assertEquals("已打开空调", messages.last().text)
+    }
+
+    private class FakeVoiceGateway(
+        private val engine: StubSpeechEngine
+    ) : VoiceInputGateway {
+        var createCalls = 0
+        var capabilityValue: SpeechCapability = SpeechCapability.SYSTEM_SERVICE
+
+        override suspend fun createVoiceSession(): VoiceEngineSession? {
+            createCalls++
+            return VoiceEngineSession(
+                engine = engine,
+                languageTag = "zh-CN",
+                preferOffline = true,
+                recognitionTimeoutMs = 30_000L
+            )
+        }
+
+        override fun capability(): SpeechCapability = capabilityValue
+    }
+
     private class FakeGateway : ChatAgentGateway {
         val eventFlow = MutableSharedFlow<AgentEvent>(extraBufferCapacity = 100)
         override fun observeEvents(sessionId: String): Flow<AgentEvent> = eventFlow
 
-        val submitted = mutableListOf<Pair<String, String>>()
+        val submitted = mutableListOf<Triple<String, String, AgentInputSource>>()
         val confirms = mutableListOf<String>()
         val cancels = mutableListOf<String>()
 
         override suspend fun submit(command: AgentCommand): Boolean = when (command) {
             is AgentCommand.HandleText -> {
-                submitted += command.text to command.turnId
+                submitted += Triple(command.text, command.turnId, command.inputSource)
                 true
             }
             is AgentCommand.Confirm -> {

@@ -23,6 +23,7 @@ dependencyResolutionManagement {
 rootProject.name = "iov-vehicle-ivi-ivai"
 
 include(":app-demo")
+include(":speech-input")
 include(":service-ai-agent")
 include(":agent-core")
 include(":model-client")

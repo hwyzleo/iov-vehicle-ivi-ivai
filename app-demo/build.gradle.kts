@@ -31,6 +31,14 @@ android {
     buildFeatures {
         buildConfig = true
     }
+
+    testOptions {
+        unitTests {
+            // android.util.Log and other Android stubs return defaults in local unit
+            // tests (the ASR metrics recorder logs on device via Log.d).
+            isReturnDefaultValues = true
+        }
+    }
 }
 
 kotlin {
@@ -45,6 +53,7 @@ tasks.withType<Test>().configureEach {
 
 dependencies {
     implementation(project(":service-ai-agent"))
+    implementation(project(":speech-input"))
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
 

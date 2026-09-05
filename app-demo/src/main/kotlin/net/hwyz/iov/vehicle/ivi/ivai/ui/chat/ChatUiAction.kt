@@ -12,4 +12,15 @@ sealed interface ChatUiAction {
 
     /** Toggle the collapsible performance detail panel of one final message (CR-004). */
     data class TogglePerformanceDetails(val messageId: String) : ChatUiAction
+
+    // --- Push-to-talk (IVI-IVAI-DSN-CR-006) ---
+
+    /** ACTION_DOWN on the voice button. */
+    data object VoiceButtonDown : ChatUiAction
+
+    /** ACTION_UP on the voice button (stop + finalize). */
+    data object VoiceButtonUp : ChatUiAction
+
+    /** ACTION_CANCEL / finger left the cancel area / page lost focus. */
+    data object VoiceButtonCancel : ChatUiAction
 }

@@ -11,6 +11,7 @@ import android.widget.Button
 import net.hwyz.iov.vehicle.ivi.ivai.demo.BuildConfig
 import net.hwyz.iov.vehicle.ivi.ivai.demo.R
 import net.hwyz.iov.vehicle.ivi.ivai.service.AgentService
+import net.hwyz.iov.vehicle.ivi.ivai.ui.config.asr.AsrConfigActivity
 import net.hwyz.iov.vehicle.ivi.ivai.ui.settings.prompt.PromptInfoFragment
 import net.hwyz.iov.vehicle.ivi.ivai.ui.settings.prompt.ServicePromptInfoGateway
 import net.hwyz.iov.vehicle.ivi.ivai.ui.settings.rag.RagConfigFragment
@@ -47,6 +48,9 @@ class SettingsActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
         findViewById<Button>(R.id.backButton).setOnClickListener { finish() }
+        findViewById<Button>(R.id.asrConfigButton).setOnClickListener {
+            startActivity(Intent(this, AsrConfigActivity::class.java))
+        }
         if (savedInstanceState == null) {
             promptFragment = PromptInfoFragment.newInstance().also {
                 supportFragmentManager.beginTransaction()

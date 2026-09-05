@@ -4,6 +4,7 @@ import kotlinx.serialization.Serializable
 import net.hwyz.iov.vehicle.ivi.ivai.agent.event.AgentExecutionPath
 import net.hwyz.iov.vehicle.ivi.ivai.agent.event.TurnDebugInfo
 import net.hwyz.iov.vehicle.ivi.ivai.model.AgentPerformanceMetrics
+import net.hwyz.iov.vehicle.ivi.ivai.service.AgentInputSource
 
 /**
  * One chat message in the conversation stream (IVI-IVAI-DSN-CR-002).
@@ -33,7 +34,9 @@ data class ChatMessage(
     /** CR-005: final tier badge label (L0·本地直达 … 未执行·已拒绝), bound to the bubble. */
     val executionTierLabel: String? = null,
     /** CR-005: structured execution path for the collapsible detail panel. */
-    val executionPath: AgentExecutionPath? = null
+    val executionPath: AgentExecutionPath? = null,
+    /** CR-006: input provenance (VOICE_ASR) kept for diagnostics only. */
+    val inputSource: AgentInputSource? = null
 )
 
 /**
