@@ -20,8 +20,12 @@ class VoiceInputUiBinder(
      * button stays CLICKABLE even when unavailable so a press can explain the
      * reason (or request permission) — unavailability is shown by dimming
      * (alpha) instead of disabling.
+     *
+     * [remoteOnline] marks that the active provider uploads audio to a remote
+     * ASR service (HTTP_COMPATIBLE) — the UI must make online recognition
+     * explicit (IVI-IVAI-DSN-CR-007 security/privacy).
      */
-    fun bind(state: VoiceInputState, available: Boolean) {
+    fun bind(state: VoiceInputState, available: Boolean, remoteOnline: Boolean = false) {
         // Never disable the button: disabled views swallow touches, but we want
         // a press on a dimmed entry to surface the reason / request permission.
         voiceButton.isEnabled = true
@@ -39,11 +43,12 @@ class VoiceInputUiBinder(
                 voiceHint.text = "准备中…"
             }
             is VoiceInputState.Listening -> {
-                voiceHint.text = "正在聆听，松开识别" +
+                val online = if (remoteOnline) "（在线识别）" else ""
+                voiceHint.text = "正在聆听$online，松开识别" +
                     (state.partialText.takeIf { it.isNotBlank() }?.let { "：$it" } ?: "")
             }
             is VoiceInputState.Finalizing -> {
-                voiceHint.text = "正在识别…"
+                voiceHint.text = if (remoteOnline) "正在识别（在线）…" else "正在识别…"
             }
             is VoiceInputState.Cancelled -> {
                 voiceHint.text = "已取消"

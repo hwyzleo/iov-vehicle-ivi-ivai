@@ -14,6 +14,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import net.hwyz.iov.vehicle.ivi.ivai.model.HttpNetworkMetrics
 import net.hwyz.iov.vehicle.ivi.ivai.model.ModelClientException
 import net.hwyz.iov.vehicle.ivi.ivai.model.ModelErrorKind
@@ -137,10 +138,31 @@ class OpenAiCompatibleModelProvider(
                         message = "OpenAI 兼容响应缺少有效 choices/content (requestId=${request.requestId})"
                     )
                 }
+                // JSON 契约容错（CR-007 补充）：小模型偶发把 JSON 输出成自然语言/
+                // 带格式漂移 → 需解析为 JSON 对象。纯文本会被 parseToJsonElement 解析成
+                // JsonLiteral（不抛异常），因此以“是否为 JSON 对象”为准触发修复重试；
+                // 修复成功用修正结果，失败抛 IVAI-MODEL-002。
+                var finalContent = content
+                var contentJson = parseAsJsonObject(content, request.requestId)
+                if (contentJson == null) {
+                    val repaired = runCatching {
+                        repairContentJson(request, snapshot, modelName, content)
+                    }.getOrNull()
+                    if (repaired != null) {
+                        finalContent = repaired
+                        contentJson = parseAsJsonObject(repaired, request.requestId)
+                    }
+                }
+                if (contentJson == null) {
+                    throw ModelClientException(
+                        kind = ModelErrorKind.RESPONSE_PARSE_ERROR,
+                        message = "OpenAI message.content is not a valid JSON object (requestId=${request.requestId})"
+                    )
+                }
                 ModelResponse(
                     requestId = request.requestId,
-                    content = content,
-                    contentJson = parseContentJson(content, request.requestId),
+                    content = finalContent,
+                    contentJson = contentJson,
                     model = response.model,
                     finishReason = response.choices.firstOrNull()?.finishReason,
                     latencyMs = elapsedMs,
@@ -315,9 +337,25 @@ class OpenAiCompatibleModelProvider(
         snapshot: ModelRuntimeConfig,
         modelName: String
     ): Pair<String, HttpNetworkMetrics?> {
+        val payload = OpenAiChatRequest(
+            model = modelName,
+            messages = request.messages.map { OpenAiChatMessage(it.role, it.content) },
+            stream = false,
+            temperature = request.temperature,
+            maxTokens = request.maxTokens
+        )
+        return executeChat(payload, snapshot, request.requestId)
+    }
+
+    /** Executes one non-streaming chat completion against the configured endpoint. */
+    private suspend fun executeChat(
+        payload: OpenAiChatRequest,
+        snapshot: ModelRuntimeConfig,
+        requestId: String
+    ): Pair<String, HttpNetworkMetrics?> {
         val listener = NetworkMetricsEventListener()
         val httpClient = client.newBuilder().eventListener(listener).build()
-        val httpRequest = buildHttpRequest(request, snapshot, modelName)
+        val httpRequest = buildHttpRequestFromPayload(payload, snapshot, requestId)
         val body = suspendCancellableCoroutine { cont ->
             val call = httpClient.newCall(httpRequest)
             cont.invokeOnCancellation { call.cancel() }
@@ -356,10 +394,6 @@ class OpenAiCompatibleModelProvider(
         modelName: String,
         stream: Boolean = false
     ): Request {
-        val endpoint = validator.joinEndpointPath(
-            snapshot.baseUrl.toString(),
-            snapshot.endpointPath ?: DEFAULT_ENDPOINT_PATH
-        )
         val payload = OpenAiChatRequest(
             model = modelName,
             messages = request.messages.map { OpenAiChatMessage(it.role, it.content) },
@@ -367,11 +401,23 @@ class OpenAiCompatibleModelProvider(
             temperature = request.temperature,
             maxTokens = request.maxTokens
         )
+        return buildHttpRequestFromPayload(payload, snapshot, request.requestId, stream)
+    }
 
+    private fun buildHttpRequestFromPayload(
+        payload: OpenAiChatRequest,
+        snapshot: ModelRuntimeConfig,
+        requestId: String,
+        stream: Boolean = false
+    ): Request {
+        val endpoint = validator.joinEndpointPath(
+            snapshot.baseUrl.toString(),
+            snapshot.endpointPath ?: DEFAULT_ENDPOINT_PATH
+        )
         val builder = Request.Builder()
             .url(endpoint)
             .post(json.encodeToString(OpenAiChatRequest.serializer(), payload).toRequestBody(jsonMediaType))
-            .header("X-IVAI-Request-Id", request.requestId)
+            .header("X-IVAI-Request-Id", requestId)
         snapshot.apiKey?.use { key ->
             // The raw key exists only for this header construction; logs must mask it.
             builder.header("Authorization", "Bearer $key")
@@ -405,6 +451,53 @@ class OpenAiCompatibleModelProvider(
             message = "OpenAI message.content is not valid JSON (requestId=$requestId): ${e.message}",
             cause = e
         )
+    }
+
+    /**
+     * Parses [content] as a JSON **object** (the Agent output contract is a top-level
+     * object). Returns null for parse failures, natural-language text, arrays or
+     * any other non-object JSON — the caller uses this to decide on JSON repair.
+     */
+    private fun parseAsJsonObject(content: String, requestId: String): JsonObject? {
+        val cleaned = content.trim()
+            .removePrefix("```json")
+            .removePrefix("```")
+            .removeSuffix("```")
+            .trim()
+        return runCatching { json.parseToJsonElement(cleaned) }
+            .getOrNull()
+            ?.let { it as? JsonObject }
+    }
+
+    /**
+     * JSON 修复重试（IVI-IVAI-DSN-CR-007 补充）：主请求的 message.content 不是合法
+     * JSON 时，把内容发回模型，要求仅输出修正后的 JSON（temperature=0 降低随机性）。
+     * 修复请求同样受外层 withTimeout 总时限约束，最多尝试一次；返回修复后的内容文本。
+     */
+    private suspend fun repairContentJson(
+        request: ModelRequest,
+        snapshot: ModelRuntimeConfig,
+        modelName: String,
+        badContent: String
+    ): String {
+        val repairPayload = OpenAiChatRequest(
+            model = modelName,
+            messages = listOf(
+                OpenAiChatMessage("system", REPAIR_SYSTEM_PROMPT),
+                OpenAiChatMessage("user", "待修正的内容：\n" + badContent.take(REPAIR_INPUT_CHARS))
+            ),
+            stream = false,
+            temperature = 0.0,
+            maxTokens = REPAIR_MAX_TOKENS
+        )
+        val (rawBody, _) = executeChat(repairPayload, snapshot, request.requestId)
+        val response = parseEnvelope(rawBody) // 修复响应外层也必须是合法 JSON
+        val content = response.choices.firstOrNull { it.message?.content != null }?.message?.content
+            ?: throw ModelClientException(
+                kind = ModelErrorKind.INVALID_RESPONSE,
+                message = "JSON 修复响应缺少有效 choices/content (requestId=${request.requestId})"
+            )
+        return content
     }
 
     /** Token usage is an extension metric only — never treated as compute time. */
@@ -456,6 +549,17 @@ class OpenAiCompatibleModelProvider(
         const val DEFAULT_ENDPOINT_PATH = "/v1/chat/completions"
         const val NANOS_PER_MILLI = 1_000_000L
         const val SSE_DONE_MARKER = "[DONE]"
+
+        /** 修复请求的上限输出 token（Agent JSON 契约通常远小于此）。 */
+        const val REPAIR_MAX_TOKENS = 1_024
+
+        /** 坏 JSON 内容最多回传的字符数，避免超长请求。 */
+        const val REPAIR_INPUT_CHARS = 2_000
+
+        const val REPAIR_SYSTEM_PROMPT =
+            "你是 JSON 修复助手。我会给你一段内容，它本应是合法的 JSON 对象，但可能" +
+                "夹带了自然语言、Markdown 或格式错误。请只输出修正后的合法 JSON 对象，" +
+                "不得包含任何解释、说明或代码围栏。"
 
         fun defaultClient(connectTimeoutMs: Long, readTimeoutMs: Long): OkHttpClient =
             OkHttpClient.Builder()

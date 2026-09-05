@@ -345,8 +345,14 @@ class AgentWorkflow(
             timings.modelCallTotalMs = msSince(modelStartNs)
             val code = mapModelError(e.kind)
             tracker.candidateSource = CandidateSource.L1_LOCAL_LLM
+            // IVAI-MODEL-002（响应解析失败）≠ 服务不可用：文案需区分，避免误导。
+            val message = if (e.kind == ModelErrorKind.RESPONSE_PARSE_ERROR) {
+                "模型返回格式异常，请稍后再试"
+            } else {
+                "模型服务暂不可用，请稍后重试"
+            }
             return turnFailed(
-                input, session, timings, code.code, "模型服务暂不可用，请稍后重试", true,
+                input, session, timings, code.code, message, true,
                 tracker, ragInfo, "模型调用失败：${e.message}"
             )
         } catch (e: CancellationException) {
@@ -1228,7 +1234,7 @@ class AgentWorkflow(
         val dispatchStartNs = System.nanoTime()
         emitDebugInfo(
             input, session, state, route, parsedOutput, executionResult, errorCode,
-            rawModelContent, replayed, performance, toolLatencyMs, executionPath, ragInfo
+            rawModelContent, replayed, performance, toolLatencyMs, executionPath, ragInfo, errorDetail
         )
         timings.eventDispatchMs = msSince(dispatchStartNs)
         val performanceFinal = performance.copy(eventDispatchMs = timings.eventDispatchMs)
@@ -1272,7 +1278,8 @@ class AgentWorkflow(
         performance: AgentPerformanceMetrics?,
         toolLatencyMs: Long?,
         executionPath: AgentExecutionPath?,
-        ragInfo: RagExecutionInfo?
+        ragInfo: RagExecutionInfo?,
+        errorDetail: String? = null
     ) {
         emit(
             AgentEvent.DebugInfo(
@@ -1310,6 +1317,7 @@ class AgentWorkflow(
                     state = state.name,
                     route = route?.name,
                     errorCode = errorCode,
+                    errorDetail = errorDetail,
                     replayed = replayed,
                     intentTier = executionPath?.initialTier?.name,
                     finalTier = executionPath?.finalTier?.name,

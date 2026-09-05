@@ -52,10 +52,30 @@ class AsrConnectionTesterTest {
     }
 
     @Test
-    fun `http 200 maps to success`(): Unit = runBlocking {
-        server.enqueue(MockResponse().setResponseCode(200))
+    fun `http 200 with text maps to success`(): Unit = runBlocking {
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"text":"test"}"""))
         val result = tester.test(remoteDraft())
         assertInstanceOf(ConnectionTestResult.Success::class.java, result)
+    }
+
+    @Test
+    fun `http 200 with empty text still validates connectivity`(): Unit = runBlocking {
+        // A 2xx with a blank transcription is a valid contract — the network,
+        // auth and request shape all worked, the silent probe just had no speech.
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"text":""}"""))
+        val result = tester.test(remoteDraft())
+        assertInstanceOf(ConnectionTestResult.Success::class.java, result)
+    }
+
+    @Test
+    fun `http 200 uploads a wav multipart to the configured path`(): Unit = runBlocking {
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"text":"ok"}"""))
+        tester.test(remoteDraft())
+
+        val request = server.takeRequest()
+        assertEquals("POST", request.method)
+        assertTrue(request.path!!.endsWith("/v1"))
+        assertTrue(request.body.readUtf8().contains("voice.wav"))
     }
 
     @Test
@@ -63,6 +83,26 @@ class AsrConnectionTesterTest {
         server.enqueue(MockResponse().setResponseCode(401))
         val result = tester.test(remoteDraft())
         assertEquals(ConnectionTestResult.Unauthorized, result)
+    }
+
+    @Test
+    fun `http 400 maps to success when auth already passed`(): Unit = runBlocking {
+        // SiliconFlow rejects silent test audio with HTTP 400 — a non-401/403
+        // business response proves network + auth + multipart contract are fine.
+        server.enqueue(
+            MockResponse().setResponseCode(400).setBody("""{"error":{"message":"audio empty"}}""")
+        )
+        val result = tester.test(remoteDraft())
+        assertInstanceOf(ConnectionTestResult.Success::class.java, result)
+    }
+
+    @Test
+    fun `http 404 maps to success when auth already passed`(): Unit = runBlocking {
+        server.enqueue(
+            MockResponse().setResponseCode(404).setBody("""{"error":{"message":"not found"}}""")
+        )
+        val result = tester.test(remoteDraft())
+        assertInstanceOf(ConnectionTestResult.Success::class.java, result)
     }
 
     @Test
@@ -93,7 +133,7 @@ class AsrConnectionTesterTest {
 
     @Test
     fun `typed key is sent as bearer authorization`(): Unit = runBlocking {
-        server.enqueue(MockResponse().setResponseCode(200))
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"text":"ok"}"""))
         tester.test(remoteDraft().copy(apiKeyAction = ApiKeyAction.Replace("sk-test")))
 
         val request = server.takeRequest()

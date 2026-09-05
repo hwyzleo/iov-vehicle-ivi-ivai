@@ -1,13 +1,19 @@
 package net.hwyz.iov.vehicle.ivi.ivai.model.config
 
 import java.io.IOException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import net.hwyz.iov.vehicle.ivi.ivai.model.ModelProviderType
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -311,5 +317,71 @@ class DefaultModelConfigRepositoryTest {
         assertEquals(ModelConfigErrorCode.PROVIDER_MISMATCH, failure.errorCode)
         // Failed save must not corrupt the current (empty) config.
         assertNull(public.stored)
+    }
+
+    @Test
+    fun `test connection with keep action carries the saved key`() {
+        val server = MockWebServer()
+        server.start()
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"data":[{"id":"gpt-4"}]}"""))
+        try {
+            val baseUrl = server.url("/").toString()
+            val secret = InMemorySecretStore(key = "sk-saved", status = KeyStatus.SET)
+            val repo = DefaultModelConfigRepository(
+                InMemoryPublicStore(),
+                secret,
+                defaultBaseUrl = "http://localhost:11434",
+                scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+            )
+
+            // 界面不回填明文 → Keep；连接测试必须携带已保存密钥，否则 401/403。
+            val result = runBlocking {
+                repo.testConnection(
+                    ModelConfigDraft(
+                        baseUrl = baseUrl,
+                        providerType = ModelProviderType.OPENAI_COMPATIBLE,
+                        modelName = "gpt-4",
+                        apiKeyAction = ApiKeyAction.Keep
+                    )
+                )
+            }
+            assertInstanceOf(ConnectionTestResult.Success::class.java, result)
+            val recorded = server.takeRequest()
+            assertEquals("Bearer sk-saved", recorded.getHeader("Authorization"))
+        } finally {
+            server.shutdown()
+        }
+    }
+
+    @Test
+    fun `test connection with keep action and no saved key sends no authorization`() {
+        val server = MockWebServer()
+        server.start()
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"data":[{"id":"gpt-4"}]}"""))
+        try {
+            val baseUrl = server.url("/").toString()
+            val repo = DefaultModelConfigRepository(
+                InMemoryPublicStore(),
+                InMemorySecretStore(),
+                defaultBaseUrl = "http://localhost:11434",
+                scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+            )
+
+            val result = runBlocking {
+                repo.testConnection(
+                    ModelConfigDraft(
+                        baseUrl = baseUrl,
+                        providerType = ModelProviderType.OPENAI_COMPATIBLE,
+                        modelName = "gpt-4",
+                        apiKeyAction = ApiKeyAction.Keep
+                    )
+                )
+            }
+            assertInstanceOf(ConnectionTestResult.Success::class.java, result)
+            val recorded = server.takeRequest()
+            assertNull(recorded.getHeader("Authorization"))
+        } finally {
+            server.shutdown()
+        }
     }
 }

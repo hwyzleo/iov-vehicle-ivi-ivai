@@ -61,8 +61,18 @@ class DefaultModelConfigRepository(
     override suspend fun validate(draft: ModelConfigDraft): ValidationResult =
         validator.validate(draft)
 
-    override suspend fun testConnection(draft: ModelConfigDraft): ConnectionTestResult =
-        connectionTester.test(draft)
+    override suspend fun testConnection(draft: ModelConfigDraft): ConnectionTestResult {
+        // 已保存的 API Key 不会回填明文到草稿（apiKeyAction = Keep）。连接测试必须
+        // 携带已保存的密钥，否则 OPENAI_COMPATIBLE Provider 会因缺少 Authorization
+        // 头返回 401/403（与 ASR 配置同一修复，IVI-IVAI-DSN-CR-007）。
+        val effective = if (draft.apiKeyAction is ApiKeyAction.Keep) {
+            val saved = runCatching { secretStore.read() }.getOrNull()
+            if (!saved.isNullOrBlank()) draft.copy(apiKeyAction = ApiKeyAction.Replace(saved)) else draft
+        } else {
+            draft
+        }
+        return connectionTester.test(effective)
+    }
 
     override suspend fun save(draft: ModelConfigDraft): SaveResult = mutex.withLock {
         val validation = validator.validate(draft)

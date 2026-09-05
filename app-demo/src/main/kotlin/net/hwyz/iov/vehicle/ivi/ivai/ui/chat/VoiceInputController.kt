@@ -105,10 +105,11 @@ class VoiceInputController(
             }
 
             engine = session.engine
-            engineType = if (session.engine.capability() == SpeechCapability.ON_DEVICE) {
-                "android-on-device"
-            } else {
-                "android-system"
+            engineType = when (session.engine.capability()) {
+                SpeechCapability.ON_DEVICE -> "android-on-device"
+                SpeechCapability.REMOTE -> "http-compatible"
+                SpeechCapability.SYSTEM_SERVICE -> "android-system"
+                SpeechCapability.UNAVAILABLE -> "unavailable"
             }
             onDevice = session.engine.capability() == SpeechCapability.ON_DEVICE
 
@@ -309,6 +310,9 @@ class VoiceInputController(
         AsrErrorCode.NETWORK_ERROR -> "网络错误，请检查网络或切换识别引擎"
         AsrErrorCode.RECOGNIZER_BUSY -> "识别服务忙，请稍后再试"
         AsrErrorCode.RECOGNIZER_INTERNAL -> "识别器出错，请重试"
+        AsrErrorCode.REMOTE_UNAUTHORIZED -> "远程识别服务鉴权失败，请检查 API Key"
+        AsrErrorCode.REMOTE_INVALID_RESPONSE -> "远程识别服务响应异常，请稍后重试"
+        AsrErrorCode.REMOTE_SERVICE_ERROR -> "远程识别服务暂不可用，请稍后重试"
         else -> error.message.ifEmpty { "语音识别失败" }
     }
 

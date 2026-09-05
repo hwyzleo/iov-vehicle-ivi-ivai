@@ -1,12 +1,19 @@
 package net.hwyz.iov.vehicle.ivi.ivai.speech.config
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import net.hwyz.iov.vehicle.ivi.ivai.model.config.ApiKeyAction
+import net.hwyz.iov.vehicle.ivi.ivai.model.config.ConnectionTestResult
 import net.hwyz.iov.vehicle.ivi.ivai.model.config.KeyStatus
 import net.hwyz.iov.vehicle.ivi.ivai.model.config.SaveResult
 import net.hwyz.iov.vehicle.ivi.ivai.model.config.ValidationResult
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertNull
@@ -229,5 +236,83 @@ class DefaultAsrConfigRepositoryTest {
         advanceUntilIdle()
         val result = repo.validate(AsrConfigDraft(providerType = AsrProviderType.ANDROID_ON_DEVICE))
         assertEquals(ValidationResult.Valid, result)
+    }
+
+    @Test
+    fun `test connection with keep action carries the saved key`() {
+        val server = MockWebServer()
+        server.start()
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"text":"ok"}"""))
+        try {
+            val url = server.url("/v1/audio/transcriptions").toString()
+            val publicStore = InMemoryPublicStore().apply {
+                config = AsrPublicConfig(
+                    providerType = AsrProviderType.HTTP_COMPATIBLE,
+                    baseUrl = url,
+                    modelName = "FunAudioLLM/SenseVoiceSmall"
+                )
+            }
+            val secretStore = InMemorySecretStore().apply { key = "sk-saved" }
+            val repo = DefaultAsrConfigRepository(
+                publicStore,
+                secretStore,
+                scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+            )
+
+            // 界面不回填明文 → Keep；连接测试必须携带已保存密钥，否则 401/403。
+            val result = runBlocking {
+                repo.testConnection(
+                    AsrConfigDraft(
+                        providerType = AsrProviderType.HTTP_COMPATIBLE,
+                        baseUrl = url,
+                        modelName = "FunAudioLLM/SenseVoiceSmall",
+                        apiKeyAction = ApiKeyAction.Keep
+                    )
+                )
+            }
+            assertInstanceOf(ConnectionTestResult.Success::class.java, result)
+            val recorded = server.takeRequest()
+            assertEquals("Bearer sk-saved", recorded.getHeader("Authorization"))
+        } finally {
+            server.shutdown()
+        }
+    }
+
+    @Test
+    fun `test connection with keep action and no saved key sends no authorization`() {
+        val server = MockWebServer()
+        server.start()
+        server.enqueue(MockResponse().setResponseCode(200).setBody("""{"text":"ok"}"""))
+        try {
+            val url = server.url("/v1/audio/transcriptions").toString()
+            val publicStore = InMemoryPublicStore().apply {
+                config = AsrPublicConfig(
+                    providerType = AsrProviderType.HTTP_COMPATIBLE,
+                    baseUrl = url,
+                    modelName = "FunAudioLLM/SenseVoiceSmall"
+                )
+            }
+            val repo = DefaultAsrConfigRepository(
+                publicStore,
+                InMemorySecretStore(),
+                scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+            )
+
+            val result = runBlocking {
+                repo.testConnection(
+                    AsrConfigDraft(
+                        providerType = AsrProviderType.HTTP_COMPATIBLE,
+                        baseUrl = url,
+                        modelName = "FunAudioLLM/SenseVoiceSmall",
+                        apiKeyAction = ApiKeyAction.Keep
+                    )
+                )
+            }
+            assertInstanceOf(ConnectionTestResult.Success::class.java, result)
+            val recorded = server.takeRequest()
+            assertNull(recorded.getHeader("Authorization"))
+        } finally {
+            server.shutdown()
+        }
     }
 }

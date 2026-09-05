@@ -39,15 +39,32 @@ class AndroidSpeechRecognitionEngineFactoryTest {
         system: Boolean = true
     ) {
         val created = mutableListOf<Boolean>()
+        val httpCreated = mutableListOf<Boolean>()
         private val checker = AndroidSpeechCapabilityChecker(
             hasPermission = { permission },
             onDeviceAvailable = { onDevice },
             systemAvailable = { system }
         )
-        val factory = AndroidSpeechRecognitionEngineFactory(checker) { od, _ ->
-            created += od
-            RecordingEngine(od)
-        }
+        val factory = AndroidSpeechRecognitionEngineFactory(
+            checker,
+            { od, _ ->
+                created += od
+                RecordingEngine(od)
+            },
+            { config ->
+                httpCreated += true
+                HttpRecordingEngine(config.public.providerType)
+            }
+        )
+    }
+
+    private class HttpRecordingEngine(val provider: AsrProviderType) : SpeechRecognitionEngine {
+        override suspend fun capability(): SpeechCapability = SpeechCapability.REMOTE
+        override fun events(): Flow<SpeechRecognitionEvent> = MutableSharedFlow()
+        override fun start(config: SpeechRecognitionConfig): Result<Unit> = Result.success(Unit)
+        override fun stop() = Unit
+        override fun cancel() = Unit
+        override fun release() = Unit
     }
 
     private fun config(
@@ -108,10 +125,19 @@ class AndroidSpeechRecognitionEngineFactoryTest {
     }
 
     @Test
-    fun `remote providers are not yet implemented`() {
+    fun `http compatible provider creates the remote engine`() {
         val h = Harness()
-        assertNull(h.factory.create(config(AsrProviderType.HTTP_COMPATIBLE)))
+        val engine = h.factory.create(config(AsrProviderType.HTTP_COMPATIBLE))
+        assertSame(HttpRecordingEngine::class.java, engine!!::class.java)
+        assertEquals(1, h.httpCreated.size)
+        assertEquals(AsrProviderType.HTTP_COMPATIBLE, (engine as HttpRecordingEngine).provider)
+    }
+
+    @Test
+    fun `vendor provider remains not implemented`() {
+        val h = Harness()
         assertNull(h.factory.create(config(AsrProviderType.VENDOR)))
+        assertEquals(0, h.httpCreated.size)
     }
 
     @Test

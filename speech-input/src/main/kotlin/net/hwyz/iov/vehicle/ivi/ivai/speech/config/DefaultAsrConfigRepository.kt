@@ -59,8 +59,17 @@ class DefaultAsrConfigRepository(
     override suspend fun validate(draft: AsrConfigDraft): ValidationResult =
         validator.validate(draft)
 
-    override suspend fun testConnection(draft: AsrConfigDraft): net.hwyz.iov.vehicle.ivi.ivai.model.config.ConnectionTestResult =
-        connectionTester.test(draft)
+    override suspend fun testConnection(draft: AsrConfigDraft): net.hwyz.iov.vehicle.ivi.ivai.model.config.ConnectionTestResult {
+        // 已保存的 API Key 不会回填明文到草稿（apiKeyAction = Keep）。连接测试必须
+        // 带上已保存的密钥，否则远程 Provider 会因缺少 Authorization 头返回 401/403。
+        val effective = if (draft.apiKeyAction is ApiKeyAction.Keep) {
+            val saved = runCatching { secretStore.read() }.getOrNull()
+            if (!saved.isNullOrBlank()) draft.copy(apiKeyAction = ApiKeyAction.Replace(saved)) else draft
+        } else {
+            draft
+        }
+        return connectionTester.test(effective)
+    }
 
     override suspend fun save(draft: AsrConfigDraft): SaveResult = mutex.withLock {
         val validation = validator.validate(draft)

@@ -28,7 +28,6 @@ import kotlinx.coroutines.launch
 import net.hwyz.iov.vehicle.ivi.ivai.demo.R
 import net.hwyz.iov.vehicle.ivi.ivai.service.AgentService
 import net.hwyz.iov.vehicle.ivi.ivai.speech.api.SpeechCapability
-import net.hwyz.iov.vehicle.ivi.ivai.ui.config.ModelConfigActivity
 import net.hwyz.iov.vehicle.ivi.ivai.ui.settings.SettingsActivity
 
 /**
@@ -57,6 +56,9 @@ class ChatActivity : ComponentActivity() {
 
     /** Voice entry enabled only when permission + a usable Recognition Service exist. */
     private var voiceAvailable = false
+
+    /** True when the active provider uploads audio to a remote ASR service (CR-007). */
+    private var voiceOnline = false
     private var pendingVoiceStart = false
 
     private val serviceConnection = object : ServiceConnection {
@@ -111,10 +113,8 @@ class ChatActivity : ComponentActivity() {
         messageList.adapter = adapter
 
         sendButton.setOnClickListener { sendFromInput() }
-        findViewById<Button>(R.id.configButton).setOnClickListener {
-            startActivity(Intent(this, ModelConfigActivity::class.java))
-        }
-        findViewById<Button>(R.id.debugButton).setOnClickListener {
+        // 统一设置入口：模型配置 / 语音识别配置 / 调试信息 都从设置中心进入。
+        findViewById<Button>(R.id.settingsButton).setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
         inputEdit.doAfterTextChanged { editable ->
@@ -160,7 +160,7 @@ class ChatActivity : ComponentActivity() {
                 }
                 launch {
                     viewModel.voiceState.collect { voiceState ->
-                        voiceBinder.bind(voiceState, voiceAvailable)
+                        voiceBinder.bind(voiceState, voiceAvailable, voiceOnline)
                     }
                 }
                 launch {
@@ -174,16 +174,32 @@ class ChatActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
+        // Start the service explicitly so a plain onStop() (rotation / app switch)
+        // does not destroy it: the Session (history + pending confirmation) inside
+        // AgentService must survive configuration changes and backgrounding. The
+        // service is stopped only in onDestroy() when the activity truly finishes.
+        startService(Intent(this, AgentService::class.java))
         bindService(Intent(this, AgentService::class.java), serviceConnection, Context.BIND_AUTO_CREATE)
     }
 
     override fun onStop() {
         // Release the mic when the page goes to background (CR-006 lifecycle).
         viewModel.cancelVoiceInput()
+        // Only unbind here; the started service keeps the Session alive so the
+        // conversation survives rotation / app switching (see onStart/onDestroy).
         unbindService(serviceConnection)
         agentService = null
         viewModel.detach()
         super.onStop()
+    }
+
+    override fun onDestroy() {
+        // isFinishing() is false on configuration change (rotation), so the
+        // service stays alive there; true only when the user truly exits.
+        if (isFinishing) {
+            stopService(Intent(this, AgentService::class.java))
+        }
+        super.onDestroy()
     }
 
     private fun handleVoiceDown() {
@@ -213,8 +229,9 @@ class ChatActivity : ComponentActivity() {
             SpeechCapability.UNAVAILABLE
         }
         voiceAvailable = capability != SpeechCapability.UNAVAILABLE
+        voiceOnline = capability == SpeechCapability.REMOTE
         viewModel.onVoiceCapabilityChanged(capability)
-        voiceBinder.bind(viewModel.voiceState.value, voiceAvailable)
+        voiceBinder.bind(viewModel.voiceState.value, voiceAvailable, voiceOnline)
     }
 
     private fun hasMicPermission(): Boolean =

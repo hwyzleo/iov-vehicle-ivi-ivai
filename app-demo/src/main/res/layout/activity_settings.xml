@@ -31,7 +31,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:gravity="center"
-            android:text="设置 / 调试"
+            android:text="设置"
             android:textSize="16sp"
             android:textStyle="bold" />
     </LinearLayout>
@@ -47,6 +47,15 @@
             android:orientation="vertical">
 
             <Button
+                android:id="@+id/modelConfigButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginEnd="16dp"
+                android:layout_marginTop="8dp"
+                android:text="模型配置" />
+
+            <Button
                 android:id="@+id/asrConfigButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -54,6 +63,15 @@
                 android:layout_marginEnd="16dp"
                 android:layout_marginTop="8dp"
                 android:text="语音识别配置" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginEnd="16dp"
+                android:layout_marginTop="16dp"
+                android:text="调试信息"
+                android:textStyle="bold" />
 
             <androidx.fragment.app.FragmentContainerView
                 android:id="@+id/settingsPromptContainer"

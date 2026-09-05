@@ -56,6 +56,7 @@ import net.hwyz.iov.vehicle.ivi.ivai.speech.api.SpeechCapability
 import net.hwyz.iov.vehicle.ivi.ivai.speech.config.AndroidKeystoreAsrSecretStore
 import net.hwyz.iov.vehicle.ivi.ivai.speech.config.AsrConfigRepository
 import net.hwyz.iov.vehicle.ivi.ivai.speech.config.AsrDataStorePublicConfigStore
+import net.hwyz.iov.vehicle.ivi.ivai.speech.config.AsrProviderType
 import net.hwyz.iov.vehicle.ivi.ivai.speech.config.DefaultAsrConfigRepository
 import net.hwyz.iov.vehicle.ivi.ivai.observability.LoggingTelemetryRecorder
 import net.hwyz.iov.vehicle.ivi.ivai.observability.ToolLifecycleLogger
@@ -156,6 +157,14 @@ class AgentService : Service(), AiAgentClient {
     }
 
     override fun onBind(intent: Intent): IBinder = binder
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // Explicit start is only used to keep the Session alive across Activity
+        // lifecycle (ChatActivity.onStart). Never auto-restart after a process
+        // kill: a freshly recreated service would own a brand-new empty Session,
+        // silently wiping the conversation the user already had.
+        return START_NOT_STICKY
+    }
 
     override fun onDestroy() {
         scope.cancel()
@@ -289,8 +298,22 @@ class AgentService : Service(), AiAgentClient {
 
     fun sessionId(): String = session.sessionId
 
-    /** Device speech capability for the UI voice entry (CR-006). */
-    fun asrCapability(): SpeechCapability = asrEngineFactory.capability()
+    /**
+     * Speech capability for the UI voice entry (CR-006 + CR-007). When the
+     * configured provider is HTTP_COMPATIBLE the entry stays enabled even on
+     * devices without a Recognition Service (remote engine); VENDOR is not yet
+     * implemented so the entry is disabled until a future CR lands.
+     */
+    fun asrCapability(): SpeechCapability {
+        val provider = runBlocking {
+            runCatching { asrConfigRepository.loadSnapshot().public.providerType }.getOrNull()
+        }
+        return when (provider) {
+            AsrProviderType.HTTP_COMPATIBLE -> SpeechCapability.REMOTE
+            AsrProviderType.VENDOR -> SpeechCapability.UNAVAILABLE
+            else -> asrEngineFactory.capability()
+        }
+    }
 
     fun isNetworkAvailable(): Boolean {
         val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return false

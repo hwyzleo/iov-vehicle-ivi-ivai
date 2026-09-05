@@ -26,21 +26,10 @@
             android:textStyle="bold" />
 
         <Button
-            android:id="@+id/configButton"
+            android:id="@+id/settingsButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="模型配置"
-            android:minHeight="0dp"
-            android:minWidth="0dp"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp" />
-
-        <Button
-            android:id="@+id/debugButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="4dp"
-            android:text="调试"
+            android:text="设置"
             android:minHeight="0dp"
             android:minWidth="0dp"
             android:paddingStart="12dp"

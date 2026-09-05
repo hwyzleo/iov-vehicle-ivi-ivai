@@ -47,7 +47,9 @@ data class ToolDebugInfo(
  * Privacy boundary (CR-004): the System Prompt and the composed message
  * orchestration are deliberately NOT part of this payload — Agent Events never
  * expose the full prompt to chat consumers; the read-only PromptInfo settings
- * page serves the prompt snapshot instead.
+ * page serves the prompt snapshot instead. [errorDetail] is a sanitized,
+ * truncated diagnostic reason (e.g. model-output-parse failure) shown only in
+ * the debug panel — never raw secrets or full model output.
  */
 @Serializable
 data class TurnDebugInfo(
@@ -59,6 +61,7 @@ data class TurnDebugInfo(
     val state: String? = null,
     val route: String? = null,
     val errorCode: String? = null,
+    val errorDetail: String? = null,
     val replayed: Boolean = false,
     // CR-005: tier routing observability
     val intentTier: String? = null,

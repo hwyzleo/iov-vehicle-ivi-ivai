@@ -209,11 +209,36 @@ class OpenAiCompatibleModelProviderContractTest {
     }
 
     @Test
-    fun `content that is not valid json maps to response parse error`() = runBlocking {
+    fun `content that is not valid json maps to response parse error after repair attempt`() = runBlocking {
+        // 主请求非 JSON → 触发修复重试；修复后仍非 JSON → 002。
         server.enqueue(chatResponse("this is { not json"))
+        server.enqueue(chatResponse("still not json either"))
         val e = runCatching { provider.generate(request()) }.exceptionOrNull()
         assertTrue(e is ModelClientException)
         assertEquals(ModelErrorKind.RESPONSE_PARSE_ERROR, (e as ModelClientException).kind)
+        assertEquals(2, server.requestCount)
+    }
+
+    @Test
+    fun `non json content is repaired by a follow up model request`() = runBlocking {
+        val goodJson = """{"route":"LOCAL_TOOL","intents":[{"toolId":"climate.temperature_increase"}]}"""
+        // 主请求返回自然语言（非 JSON），修复请求返回合法 JSON。
+        server.enqueue(chatResponse("好的，我帮您把温度调高一点。"))
+        server.enqueue(chatResponse(goodJson))
+
+        val response = provider.generate(request())
+
+        assertEquals(
+            "LOCAL_TOOL",
+            response.contentJson!!.jsonObject["route"]!!.jsonPrimitive.content
+        )
+        assertEquals(2, server.requestCount)
+        // 第一个请求是主请求；第二个是修复请求（messages 含 system 修复指令）。
+        server.takeRequest()
+        val repaired = server.takeRequest()
+        assertEquals("POST", repaired.method)
+        val repairedBody = Json.decodeFromString(OpenAiChatRequest.serializer(), repaired.body.readUtf8())
+        assertTrue(repairedBody.messages.any { it.role == "system" })
     }
 
     @Test

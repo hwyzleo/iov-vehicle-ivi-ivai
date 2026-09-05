@@ -23,12 +23,16 @@ object TurnDebugFormatter {
     private val SECTION_COLOR = 0xFF1565C0.toInt()
     private val CODE_COLOR = 0xFF37474F.toInt()
 
+    /** 失败详情只展示截断后的诊断原因，避免原始模型输出/敏感信息进入 UI。 */
+    private const val MAX_DETAIL_CHARS = 200
+
     fun format(debug: TurnDebugInfo): CharSequence {
         val sb = SpannableStringBuilder()
 
         section(sb, "⚡ 执行状态")
         body(sb, "状态：${debug.state ?: "-"}    路由：${debug.route ?: "-"}")
         debug.errorCode?.let { body(sb, "错误码：$it") }
+        debug.errorDetail?.let { body(sb, "失败详情：${it.take(MAX_DETAIL_CHARS)}") }
         if (debug.replayed) body(sb, "（命中幂等缓存，未重复执行）")
         body(sb, "requestId：${debug.requestId}")
         sb.append("\n")

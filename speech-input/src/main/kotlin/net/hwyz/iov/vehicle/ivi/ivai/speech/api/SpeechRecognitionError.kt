@@ -15,7 +15,7 @@ data class SpeechRecognitionError(
     val cause: Throwable? = null
 )
 
-/** IVAI-ASR-* error codes (IVI-IVAI-DSN-CR-006). */
+/** IVAI-ASR-* error codes (IVI-IVAI-DSN-CR-006 + IVI-IVAI-DSN-CR-007). */
 object AsrErrorCode {
     /** Mic permission not granted. */
     const val PERMISSION_DENIED = "IVAI-ASR-001"
@@ -35,7 +35,7 @@ object AsrErrorCode {
     /** Recognition network error. */
     const val NETWORK_ERROR = "IVAI-ASR-006"
 
-    /** Recognition service is busy. */
+    /** Recognition service is busy (incl. audio buffer reaching its cap). */
     const val RECOGNIZER_BUSY = "IVAI-ASR-007"
 
     /** Recognizer internal error. */
@@ -46,4 +46,13 @@ object AsrErrorCode {
 
     /** Final result was empty — never submitted to the Agent. */
     const val EMPTY_RESULT = "IVAI-ASR-010"
+
+    /** Remote ASR authentication failed (HTTP 401/403). */
+    const val REMOTE_UNAUTHORIZED = "IVAI-ASR-011"
+
+    /** Remote ASR response was invalid (bad JSON / missing text / wrong type). */
+    const val REMOTE_INVALID_RESPONSE = "IVAI-ASR-012"
+
+    /** Remote ASR service error (HTTP 5xx). */
+    const val REMOTE_SERVICE_ERROR = "IVAI-ASR-013"
 }

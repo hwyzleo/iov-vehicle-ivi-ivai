@@ -308,7 +308,8 @@ class AsrConfigViewModel : ViewModel() {
             "连接测试成功（${result.testMethod ?: "health"}，未保存，点击“保存”生效）"
         is ConnectionTestResult.NetworkError -> "连接测试失败：网络不可达（${result.detail}）"
         is ConnectionTestResult.Timeout -> "连接测试失败：超时"
-        is ConnectionTestResult.Unauthorized -> "连接测试失败：鉴权失败（401/403）"
+        is ConnectionTestResult.Unauthorized ->
+            "连接测试失败：鉴权失败（401/403）。请确认 API Key 正确——若已保存过密钥，请重新输入后点“保存”再测试"
         is ConnectionTestResult.InvalidResponse ->
             "连接测试失败：${result.detail}${result.testMethod?.let { "（$it）" } ?: ""}"
     }

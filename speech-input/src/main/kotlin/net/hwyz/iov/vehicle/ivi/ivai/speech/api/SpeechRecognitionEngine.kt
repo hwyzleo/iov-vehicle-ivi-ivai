@@ -11,12 +11,17 @@ import kotlinx.coroutines.flow.Flow
  * - [SYSTEM_SERVICE] means only a standard Recognition Service exists; whether
  *   it is online is decided by the actual service — it must never be advertised
  *   as deterministically offline.
+ * - [REMOTE] means recognition is served by a remote engine explicitly chosen
+ *   in the ASR config (HTTP_COMPATIBLE). It is never an on-device recognizer
+ *   and audio is uploaded only because the user opted into online recognition
+ *   (IVI-IVAI-DSN-CR-007).
  * - [UNAVAILABLE] means no usable Recognition Service / recognizer on this
  *   device; the voice entry must not enter a fake listening state.
  */
 enum class SpeechCapability {
     ON_DEVICE,
     SYSTEM_SERVICE,
+    REMOTE,
     UNAVAILABLE
 }
 
