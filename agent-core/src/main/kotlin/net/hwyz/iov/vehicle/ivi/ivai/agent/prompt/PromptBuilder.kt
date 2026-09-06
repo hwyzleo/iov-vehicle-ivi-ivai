@@ -100,7 +100,7 @@ class PromptBuilder(private val registry: ToolRegistry) {
                 appendLine()
                 appendLine("## 可用知识片段（只依据以下片段回答）")
                 chunks.forEachIndexed { index, chunk ->
-                    appendLine("### [${index + 1}] ${chunk.title}（${chunk.documentId} · ${chunk.documentVersion}）")
+                    appendLine("### [${index + 1}] ${chunk.title}（${chunk.sourceId} · ${chunk.sourceVersion}）")
                     appendLine(chunk.content)
                     appendLine()
                 }

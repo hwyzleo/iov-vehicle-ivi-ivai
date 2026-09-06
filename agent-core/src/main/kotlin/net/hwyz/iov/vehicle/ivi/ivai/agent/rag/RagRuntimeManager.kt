@@ -7,6 +7,7 @@ import net.hwyz.iov.vehicle.ivi.ivai.retrieval.index.IndexManifest
 import net.hwyz.iov.vehicle.ivi.ivai.retrieval.index.IndexPackageManager
 import net.hwyz.iov.vehicle.ivi.ivai.retrieval.index.IndexValidationResult
 import net.hwyz.iov.vehicle.ivi.ivai.retrieval.index.VectorIndex
+import net.hwyz.iov.vehicle.ivi.ivai.retrieval.rag.RagConfig
 
 /**
  * RAG runtime health manager (CR-005). Starting with the persisted config it
@@ -39,6 +40,9 @@ class RagRuntimeManager(
 
     fun currentConfig(): RagRuntimeConfig =
         (repository.configState.value as? RagConfigState.Valid)?.config ?: RagRuntimeConfig()
+
+    /** CR-011 生效 RAG 配置（UI 开关镜像进 RagConfig）。 */
+    fun ragConfig(): RagConfig = currentConfig().effectiveRagConfig()
 
     /** Immutable per-request snapshot; in-flight requests keep the one they got. */
     fun snapshot(): RagExecutionSnapshot {

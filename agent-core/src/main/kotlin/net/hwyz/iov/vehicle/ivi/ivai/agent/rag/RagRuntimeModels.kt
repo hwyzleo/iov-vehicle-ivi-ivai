@@ -44,8 +44,15 @@ data class RagExecutionSnapshot(
 }
 
 /**
- * Per-turn RAG execution info attached to observability / UI details (CR-005).
- * [retrievalExecuted] is set only when a retriever actually ran.
+ * Per-turn RAG execution info attached to observability / UI details (CR-005,
+ * extended CR-011). [retrievalExecuted] is set only when a retriever actually
+ * ran.
+ *
+ * CR-011 可观测性记录项：ragEnabled、indexId、indexVersion、modelId、
+ * modelVersion、documentCount、eligibleCandidateCount、filteredCandidateCount、
+ * topK、topScores、selectedCanonicalIds、embeddingLatencyMs、searchLatencyMs、
+ * fallbackReason。不得记录 API Key、完整 Authorization Header、未脱敏请求体或
+ * 不必要的用户原文。
  */
 @Serializable
 data class RagExecutionInfo(
@@ -54,5 +61,18 @@ data class RagExecutionInfo(
     val retrievalExecuted: Boolean,
     val retrievalType: String? = null,
     val indexVersion: String? = null,
-    val fallbackReason: String? = null
+    val fallbackReason: String? = null,
+    // ---- CR-011 可观测性 ----
+    val ragEnabled: Boolean = configuredEnabled,
+    val indexId: String? = null,
+    val modelId: String? = null,
+    val modelVersion: String? = null,
+    val documentCount: Int? = null,
+    val eligibleCandidateCount: Int? = null,
+    val filteredCandidateCount: Int? = null,
+    val topK: Int? = null,
+    val topScores: List<Double> = emptyList(),
+    val selectedCanonicalIds: List<String> = emptyList(),
+    val embeddingLatencyMs: Long? = null,
+    val searchLatencyMs: Long? = null
 )

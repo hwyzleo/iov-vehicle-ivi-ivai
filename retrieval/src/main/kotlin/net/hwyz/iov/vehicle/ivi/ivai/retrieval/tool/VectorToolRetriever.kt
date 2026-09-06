@@ -5,6 +5,7 @@ import net.hwyz.iov.vehicle.ivi.ivai.retrieval.ToolDefinitionSummary
 import net.hwyz.iov.vehicle.ivi.ivai.retrieval.ToolRetrievalQuery
 import net.hwyz.iov.vehicle.ivi.ivai.retrieval.ToolRetriever
 import net.hwyz.iov.vehicle.ivi.ivai.retrieval.embedding.EmbeddingProvider
+import net.hwyz.iov.vehicle.ivi.ivai.retrieval.embedding.EmbeddingRequest
 import net.hwyz.iov.vehicle.ivi.ivai.retrieval.index.VectorIndex
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.ToolRegistry
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.ToolAvailabilityCheck
@@ -24,9 +25,9 @@ class VectorToolRetriever(
 
     override suspend fun retrieve(query: ToolRetrievalQuery, topK: Int): List<ToolCandidate> {
         if (!embeddingProvider.available) return emptyList()
-        val vectors = embeddingProvider.embed(listOf(query.text))
-        if (vectors.isEmpty()) return emptyList()
-        val hits = vectorIndex.search(vectors.first(), topK)
+        val response = embeddingProvider.embed(EmbeddingRequest(listOf(query.text)))
+        if (response.vectors.isEmpty()) return emptyList()
+        val hits = vectorIndex.search(response.vectors.first(), topK)
         return hits.mapNotNull { hit ->
             val toolId = idToToolId[hit.id] ?: return@mapNotNull null
             val tool = registry.get(toolId) ?: return@mapNotNull null

@@ -2,6 +2,7 @@ package net.hwyz.iov.vehicle.ivi.ivai.service
 
 import android.app.Service
 import android.content.Context
+import java.io.File
 import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
@@ -75,12 +76,24 @@ import net.hwyz.iov.vehicle.ivi.ivai.retrieval.embedding.LocalEmbeddingProvider
 import net.hwyz.iov.vehicle.ivi.ivai.retrieval.knowledge.KnowledgeReranker
 import net.hwyz.iov.vehicle.ivi.ivai.retrieval.knowledge.KnowledgeRetrieverImpl
 import net.hwyz.iov.vehicle.ivi.ivai.retrieval.knowledge.SampleKnowledgeDocs
+import net.hwyz.iov.vehicle.ivi.ivai.retrieval.rag.KnowledgeRagRetriever
+import net.hwyz.iov.vehicle.ivi.ivai.retrieval.rag.ToolRagRetriever
+import net.hwyz.iov.vehicle.ivi.ivai.retrieval.rag.ToolRetrievalDocumentBuilder
+import net.hwyz.iov.vehicle.ivi.ivai.retrieval.rag.toIndexedDocument
+import net.hwyz.iov.vehicle.ivi.ivai.retrieval.vectorstore.DistanceMetric
+import net.hwyz.iov.vehicle.ivi.ivai.retrieval.vectorstore.FileVectorPersistence
+import net.hwyz.iov.vehicle.ivi.ivai.retrieval.vectorstore.IndexBuildRequest
+import net.hwyz.iov.vehicle.ivi.ivai.retrieval.vectorstore.IndexLifecycle
+import net.hwyz.iov.vehicle.ivi.ivai.retrieval.vectorstore.LocalExactVectorStore
 import net.hwyz.iov.vehicle.ivi.ivai.retrieval.tool.HybridRuleToolRetriever
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.ToolRegistry
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.BusinessDomainId
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.DefaultRuntimeCapabilityAssembler
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.GovernanceRuntimeMode
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.GovernanceWorkspace
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.RuntimeEnvironment
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.ToolAliasCatalog
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.workflows.WorkflowRegistry
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.AdapterRegistry
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.DefaultToolExecutor
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.ToolPolicyEngine
@@ -468,10 +481,15 @@ class AgentService : Service(), AiAgentClient {
             workflowValidator = WorkflowValidator(registry),
             vehicleStateProvider = VehicleStateProvider { adapter.snapshot() }
         )
-        val toolRetriever = HybridRuleToolRetriever(registry)
+        // CR-011: 端侧双路径 RAG（LOCAL_EXACT VectorStore + EmbeddingProvider + Reranker NONE）。
+        // 索引构建失败时回退 CR-005 规则/关键字检索，保证服务可用。
+        val ragStack = runCatching { buildCr011RagStack(registry, runtimeEnvironment) }.getOrNull()
+        if (ragStack == null) log("RAG 向量栈构建失败，回退 CR-005 规则检索")
+        val toolRetriever = ragStack?.toolRetriever ?: HybridRuleToolRetriever(registry)
         val toolCandidateProvider = RagToolCandidateProvider(registry, toolRetriever)
-        val knowledgeRetriever: KnowledgeRetriever = KnowledgeRetrieverImpl(SampleKnowledgeDocs.chunks)
-        val embeddingProvider = LocalEmbeddingProvider()
+        val knowledgeRetriever: KnowledgeRetriever = ragStack?.knowledgeRetriever
+            ?: KnowledgeRetrieverImpl(SampleKnowledgeDocs.chunks)
+        val embeddingProvider = ragStack?.embedding ?: LocalEmbeddingProvider()
         val ragManager = RagRuntimeManager(
             repository = ragConfigRepository,
             toolRetriever = toolRetriever,
@@ -510,6 +528,73 @@ class AgentService : Service(), AiAgentClient {
     /** RAG runtime health for the settings page (CR-005). */
     fun ragRuntimeStatus(): RagRuntimeStatus = ragRuntimeManager?.status() ?: RagRuntimeStatus.DISABLED
 
+    /**
+     * CR-011 端侧双路径 RAG 栈：LOCAL_EXACT VectorStore + EmbeddingProvider +
+     * Reranker NONE。tool-intent 与 knowledge 使用独立命名空间/文档集/开关。
+     * 首期 Embedding 使用哈希桩（在线 HTTP Embedding 接入由 RagConfig 配置驱动，
+     * 后续 CR 接入配置 UI 后切换）。索引构建失败抛异常，由调用方回退。
+     */
+    private fun buildCr011RagStack(
+        registry: ToolRegistry,
+        environment: RuntimeEnvironment
+    ): Cr011RagStack = runBlocking {
+        val embedding = LocalEmbeddingProvider()
+        val indexDir = File(getDir("rag_index", MODE_PRIVATE), "v1")
+        val persistence = FileVectorPersistence(indexDir)
+        val store = LocalExactVectorStore(persistence)
+        val lifecycle = IndexLifecycle(store, persistence, embedding)
+
+        // L1: 从治理目录 + 统一候选集构建 tool-intent 索引。
+        val assembler = DefaultRuntimeCapabilityAssembler()
+        val runtimeSet = assembler.assemble(
+            catalog = GovernanceWorkspace.catalog,
+            aliases = ToolAliasCatalog,
+            environment = environment.copy(
+                selectedPackIds = GovernanceWorkspace.runtimePacks().map { it.packId }.toSet()
+            )
+        )
+        val toolDocs = ToolRetrievalDocumentBuilder(registry, WorkflowRegistry)
+            .buildAll(GovernanceWorkspace.catalog, runtimeSet, sourceVersion = SOFTWARE_VERSION)
+        lifecycle.ensureIndex(
+            IndexBuildRequest(
+                namespace = ToolRagRetriever.DEFAULT_NAMESPACE,
+                documents = toolDocs.map { it.toIndexedDocument() },
+                providerType = embedding.descriptor.providerType,
+                modelId = embedding.descriptor.modelId,
+                modelVersion = embedding.descriptor.modelVersion,
+                dimension = embedding.descriptor.dimension,
+                distanceMetric = DistanceMetric.COSINE,
+                documentBuilderVersion = "tool-builder-1",
+                governanceVersion = runtimeSet.governanceVersion,
+                indexVersion = "v1"
+            )
+        )
+
+        // L2: 从批准知识语料构建 knowledge 索引（首期内置样例）。
+        val knowledgeChunks = SampleKnowledgeDocs.chunks
+        lifecycle.ensureIndex(
+            IndexBuildRequest(
+                namespace = KnowledgeRagRetriever.DEFAULT_NAMESPACE,
+                documents = knowledgeChunks.map { it.toIndexedDocument() },
+                providerType = embedding.descriptor.providerType,
+                modelId = embedding.descriptor.modelId,
+                modelVersion = embedding.descriptor.modelVersion,
+                dimension = embedding.descriptor.dimension,
+                distanceMetric = DistanceMetric.COSINE,
+                documentBuilderVersion = "knowledge-builder-1",
+                governanceVersion = "ivai-governance-v1",
+                indexVersion = "v1"
+            )
+        )
+
+        val byChunkId = knowledgeChunks.associateBy { it.chunkId }
+        Cr011RagStack(
+            embedding = embedding,
+            toolRetriever = ToolRagRetriever(registry, store, embedding),
+            knowledgeRetriever = KnowledgeRagRetriever(store, embedding, chunkResolver = { byChunkId[it] })
+        )
+    }
+
     private fun buildConfigRepository(): ModelConfigRepository =
         DefaultModelConfigRepository(
             publicStore = DataStorePublicConfigStore(this),
@@ -533,3 +618,10 @@ class AgentService : Service(), AiAgentClient {
         const val SOFTWARE_VERSION = "0.1.0"
     }
 }
+
+/** CR-011 双路径 RAG 栈装配结果（索引构建失败时由调用方回退 CR-005 检索）。 */
+private data class Cr011RagStack(
+    val embedding: net.hwyz.iov.vehicle.ivi.ivai.retrieval.embedding.EmbeddingProvider,
+    val toolRetriever: net.hwyz.iov.vehicle.ivi.ivai.retrieval.ToolRetriever,
+    val knowledgeRetriever: net.hwyz.iov.vehicle.ivi.ivai.retrieval.KnowledgeRetriever
+)

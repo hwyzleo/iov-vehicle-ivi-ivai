@@ -1,5 +1,6 @@
 package net.hwyz.iov.vehicle.ivi.ivai.agent.router
 
+import net.hwyz.iov.vehicle.ivi.ivai.agent.capability.CapabilitySnapshot
 import net.hwyz.iov.vehicle.ivi.ivai.agent.rag.RagExecutionSnapshot
 import net.hwyz.iov.vehicle.ivi.ivai.retrieval.ToolCandidate
 import net.hwyz.iov.vehicle.ivi.ivai.retrieval.ToolRetriever
@@ -13,12 +14,17 @@ import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.ToolAvailabilityC
  * SAME [ToolCandidateSet] whether RAG is on (retrieved Top-K) or off (all
  * enabled controlled tools), so Prompt Builder and the local LLM flow are
  * unchanged.
+ *
+ * CR-011: [capabilitySnapshot]（统一运行时候选集，可为 null）传入 L1 检索器，
+ * 使 Domain / Capability Pack / Runtime Capability 过滤在检索前生效
+ * （先过滤再检索）；RAG 只能检索其合法子集。
  */
 interface ToolCandidateProvider {
     suspend fun candidates(
         input: NormalizedInput,
         context: AgentContext,
-        ragSnapshot: RagExecutionSnapshot
+        ragSnapshot: RagExecutionSnapshot,
+        capabilitySnapshot: CapabilitySnapshot? = null
     ): ToolCandidateSet
 }
 
@@ -45,7 +51,8 @@ class AllEnabledToolsProvider(
     override suspend fun candidates(
         input: NormalizedInput,
         context: AgentContext,
-        ragSnapshot: RagExecutionSnapshot
+        ragSnapshot: RagExecutionSnapshot,
+        capabilitySnapshot: CapabilitySnapshot?
     ): ToolCandidateSet {
         val candidates = registry.all()
             .filter { ToolAvailabilityCheck.isAvailable(it, context.vehicleModel, context.softwareVersion) }
@@ -75,21 +82,27 @@ class RagToolCandidateProvider(
     override suspend fun candidates(
         input: NormalizedInput,
         context: AgentContext,
-        ragSnapshot: RagExecutionSnapshot
+        ragSnapshot: RagExecutionSnapshot,
+        capabilitySnapshot: CapabilitySnapshot?
     ): ToolCandidateSet {
         // RAG 关闭/不可用时：固定受控候选，绝不触碰 Embedding/VectorIndex/Retriever。
         if (!ragSnapshot.toolRagAvailable) {
-            return AllEnabledToolsProvider(registry).candidates(input, context, ragSnapshot)
+            return AllEnabledToolsProvider(registry).candidates(input, context, ragSnapshot, capabilitySnapshot)
         }
+        // CR-011：统一运行时候选集约束进入检索查询（先过滤再检索），
+        // RAG 只能检索该集合的合法子集。
         val query = ToolRetrievalQuery(
             text = input.normalized,
             vehicleModel = context.vehicleModel,
-            softwareVersion = context.softwareVersion
+            softwareVersion = context.softwareVersion,
+            domainIds = capabilitySnapshot?.packs?.map { it.domainId }?.distinct().orEmpty(),
+            capabilityPackIds = capabilitySnapshot?.selectedPackIds?.toList().orEmpty(),
+            runtimeCapabilityToolIds = capabilitySnapshot?.runtimeCandidateToolIds.orEmpty()
         )
         val retrieved = toolRetriever.retrieve(query, ragSnapshot.toolTopK)
             .filter { registry.get(it.toolId) != null }
         if (retrieved.isEmpty()) {
-            return AllEnabledToolsProvider(registry).candidates(input, context, ragSnapshot)
+            return AllEnabledToolsProvider(registry).candidates(input, context, ragSnapshot, capabilitySnapshot)
                 .copy(fallbackReason = "retrieval_empty_fallback")
         }
         return ToolCandidateSet(

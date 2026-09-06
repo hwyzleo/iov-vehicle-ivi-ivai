@@ -5,18 +5,18 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 /**
- * CR-009 + CR-010 验证设计 · Contract Test Catalog v1：
- *  - 总量 1,500 = 50 Domain + 1280 Tool + 144 Workflow + 26 Governance。
- *  - 各层数量与公式一致（10×5 / 160×8 / 18×8 / 26）。
+ * CR-009 + CR-010 + CR-011 验证设计 · Contract Test Catalog v1：
+ *  - 总量 1,506 = 50 Domain + 1280 Tool + 144 Workflow + 32 Governance。
+ *  - 各层数量与公式一致（10×5 / 160×8 / 18×8 / 32）。
  *  - 每条可追溯（Test ID、对象、reasonCode）。
- *  - 代表性 reasonCode（TC-GOV-001～026、Domain 路由、Workflow 成功）。
+ *  - 代表性 reasonCode（TC-GOV-001～032、Domain 路由、Workflow 成功）。
  */
 class ContractTestCatalogTest {
 
     @Test
-    fun `契约测试总量为 1500`() {
-        assertEquals(1500, ContractTestCatalog.ALL.size)
-        assertEquals(1500, ContractTestCatalog.expectedTotal)
+    fun `契约测试总量为 1506`() {
+        assertEquals(1506, ContractTestCatalog.ALL.size)
+        assertEquals(1506, ContractTestCatalog.expectedTotal)
     }
 
     @Test
@@ -25,7 +25,7 @@ class ContractTestCatalogTest {
         assertEquals(50, counts[ContractTestType.DOMAIN])      // 10 × 5
         assertEquals(1280, counts[ContractTestType.TOOL])      // 160 × 8（CR-010 增 DET_L0 / DET_AMBIGUOUS）
         assertEquals(144, counts[ContractTestType.WORKFLOW])   // 18 × 8
-        assertEquals(26, counts[ContractTestType.GOVERNANCE])  // 20 + CR-010 6
+        assertEquals(32, counts[ContractTestType.GOVERNANCE])  // 20 + CR-010 6 + CR-011 6
     }
 
     @Test
@@ -38,11 +38,11 @@ class ContractTestCatalogTest {
     }
 
     @Test
-    fun `Governance 测试覆盖 TC-GOV-001 至 TC-GOV-026`() {
+    fun `Governance 测试覆盖 TC-GOV-001 至 TC-GOV-032`() {
         val gov = ContractTestCatalog.governanceTests
-        assertEquals(26, gov.size)
+        assertEquals(32, gov.size)
         assertEquals("TC-GOV-001", gov.first().testId)
-        assertEquals("TC-GOV-026", gov.last().testId)
+        assertEquals("TC-GOV-032", gov.last().testId)
         assertEquals("GOV_STATUS_REJECTED", gov[0].expectedReasonCode)
         assertEquals("AUDIT_TRACE_MISSING", gov[19].expectedReasonCode)
         // CR-010 新错误码（TC-GOV-021～026）。
@@ -52,6 +52,13 @@ class ContractTestCatalogTest {
         assertEquals("IVAI-GOV-003", gov[23].expectedReasonCode)
         assertEquals("IVAI-GOV-004", gov[24].expectedReasonCode)
         assertEquals("IVAI-ALIAS-001", gov[25].expectedReasonCode)
+        // CR-011 RAG 错误码（TC-GOV-027～032）。
+        assertEquals("IVAI-RAG-001", gov[26].expectedReasonCode)
+        assertEquals("IVAI-RAG-002", gov[27].expectedReasonCode)
+        assertEquals("IVAI-RAG-003", gov[28].expectedReasonCode)
+        assertEquals("IVAI-RAG-004", gov[29].expectedReasonCode)
+        assertEquals("IVAI-RAG-005", gov[30].expectedReasonCode)
+        assertEquals("IVAI-RAG-006", gov[31].expectedReasonCode)
     }
 
     @Test

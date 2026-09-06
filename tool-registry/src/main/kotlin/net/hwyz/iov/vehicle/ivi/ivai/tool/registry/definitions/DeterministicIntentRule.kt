@@ -1,5 +1,7 @@
 package net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions
 
+import kotlinx.serialization.Serializable
+
 /**
  * DeterministicMatchProfile（IVI-IVAI-DSN-CR-010）——Tool 的请求级确定性匹配元数据。
  * CR-005 时期名为 DeterministicIntentRule；CR-010 将其推广为所有可执行 Tool 都可
@@ -58,7 +60,9 @@ enum class SlotType {
     NUMERIC
 }
 
-/** Version range constraint for rule applicability (nullable bound = unbounded). */
+/** Version range constraint for rule applicability (nullable bound = unbounded).
+ * CR-011: 亦作为 L2 KnowledgeChunk 的软件版本适用范围（可序列化）。 */
+@Serializable
 data class VersionConstraint(
     val min: String? = null,
     val max: String? = null

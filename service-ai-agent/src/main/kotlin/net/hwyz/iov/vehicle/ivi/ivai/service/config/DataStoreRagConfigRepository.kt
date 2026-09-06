@@ -62,7 +62,8 @@ class DataStoreRagConfigRepository(
             knowledgeRagEnabled = draft.knowledgeRagEnabled,
             toolTopK = draft.toolTopK,
             knowledgeTopK = draft.knowledgeTopK,
-            version = newVersion
+            version = newVersion,
+            rag = draft.rag
         )
         return try {
             writeStore(newConfig)

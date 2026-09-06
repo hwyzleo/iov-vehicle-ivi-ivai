@@ -2,11 +2,13 @@ package net.hwyz.iov.vehicle.ivi.ivai.retrieval
 
 import kotlinx.serialization.Serializable
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.ToolDefinition
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.VersionConstraint
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.BusinessDomainId
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.OperationType
 
 /**
  * Query payloads, candidates and shared models for Tool/Intent RAG and
- * Knowledge RAG (IVI-IVAI-DSN-CR-005 + CR-008).
+ * Knowledge RAG (IVI-IVAI-DSN-CR-005 + CR-008 + CR-011).
  */
 
 /** Query passed to a [ToolRetriever]. */
@@ -19,7 +21,11 @@ data class ToolRetrievalQuery(
     /** CR-008: 非空时只允许这些业务领域的 Tool 进入召回（先过滤再检索）。 */
     val domainIds: List<BusinessDomainId> = emptyList(),
     /** CR-008: 非空时只允许这些 Capability Pack 内的 Tool 进入召回。 */
-    val capabilityPackIds: List<String> = emptyList()
+    val capabilityPackIds: List<String> = emptyList(),
+    /** CR-011: 非空时只允许这些 OperationType 的 Tool 进入召回。 */
+    val operationTypes: List<OperationType> = emptyList(),
+    /** CR-011: 统一运行时能力集（RuntimeCapabilityAssembler 输出）过滤。 */
+    val runtimeCapabilityToolIds: Set<String> = emptySet()
 )
 
 /** Query passed to a [KnowledgeRetriever]. */
@@ -27,7 +33,9 @@ data class KnowledgeRetrievalQuery(
     val text: String,
     val vehicleModel: String? = null,
     val softwareVersion: String? = null,
-    val language: String = "zh-CN"
+    val language: String = "zh-CN",
+    /** CR-011: 非空时只允许这些已批准来源进入召回。 */
+    val sourceIds: Set<String> = emptySet()
 )
 
 /** Either a tool or a knowledge retrieval request, carried by a tier decision. */
@@ -76,20 +84,45 @@ data class ToolCandidate(
 )
 
 /**
- * A knowledge chunk recalled by a [KnowledgeRetriever] (CR-005). Slicing must
- * preserve title / warning / step / table context and never split a safety
- * warning from its corresponding operation steps.
+ * L2 知识片段模型（IVI-IVAI-DSN-CR-011）。
+ *
+ * 只允许来自批准的车辆说明书、功能解释、故障帮助及其他端侧可用资料；切分必须
+ * 保留标题层级、章节位置、车型/软件版本和来源版本。Tool 文档与 KnowledgeChunk
+ * 不得写入同一逻辑索引或互相作为另一条路径的检索结果。
  */
 @Serializable
 data class KnowledgeChunk(
     val chunkId: String,
-    val documentId: String,
+    val sourceId: String,
+    val sourceType: KnowledgeSourceType,
     val title: String,
-    val sectionPath: List<String>,
+    /** 章节路径（"故障/胎压报警"），切分时保留标题层级。 */
+    val sectionPath: String,
     val content: String,
-    val vehicleModels: List<String> = listOf("*"),
-    val softwareRange: String? = null,
+    val vehicleModels: Set<String> = setOf("*"),
+    val softwareVersions: VersionConstraint = VersionConstraint(),
     val language: String = "zh-CN",
-    val documentVersion: String = "1.0",
-    val score: Double = 0.0
+    val sourceVersion: String = "1.0",
+    val contentHash: String = ""
+)
+
+/**
+ * L2 知识来源类型（CR-011）。KnowledgeChunk 只允许来自批准的车辆说明书、功能
+ * 解释、故障帮助及其他端侧可用资料。
+ */
+enum class KnowledgeSourceType {
+    MANUAL,
+    FEATURE_EXPLANATION,
+    FAULT_HELP,
+    OTHER_APPROVED
+}
+
+/**
+ * L2 检索结果（CR-011）。[chunk] 为命中片段，[score] 为相似度/相关性分数，
+ * [matchedFields] 记录命中来源（vector/keyword/...）供可观测性与评测。
+ */
+data class KnowledgeEvidence(
+    val chunk: KnowledgeChunk,
+    val score: Double,
+    val matchedFields: List<String> = emptyList()
 )

@@ -128,7 +128,8 @@ class AgentWorkflowCr008Test {
             override suspend fun candidates(
                 input: net.hwyz.iov.vehicle.ivi.ivai.agent.router.NormalizedInput,
                 context: net.hwyz.iov.vehicle.ivi.ivai.agent.router.AgentContext,
-                ragSnapshot: net.hwyz.iov.vehicle.ivi.ivai.agent.rag.RagExecutionSnapshot
+                ragSnapshot: net.hwyz.iov.vehicle.ivi.ivai.agent.rag.RagExecutionSnapshot,
+                capabilitySnapshot: net.hwyz.iov.vehicle.ivi.ivai.agent.capability.CapabilitySnapshot?
             ): net.hwyz.iov.vehicle.ivi.ivai.agent.router.ToolCandidateSet {
                 val summary = net.hwyz.iov.vehicle.ivi.ivai.retrieval.ToolDefinitionSummary(
                     toolId = "seat.heat", name = "座椅加热", description = "test",

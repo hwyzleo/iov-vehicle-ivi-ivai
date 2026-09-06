@@ -1,5 +1,6 @@
 package net.hwyz.iov.vehicle.ivi.ivai.retrieval.index
 
+import net.hwyz.iov.vehicle.ivi.ivai.retrieval.embedding.EmbeddingModelDescriptor
 import net.hwyz.iov.vehicle.ivi.ivai.retrieval.embedding.LocalEmbeddingProvider
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertInstanceOf
@@ -12,7 +13,9 @@ import org.junit.jupiter.api.Test
  */
 class IndexPackageManagerTest {
 
-    private val embedding = LocalEmbeddingProvider(modelId = "embed-a", dimension = 64)
+    private val embedding = LocalEmbeddingProvider(
+        EmbeddingModelDescriptor(providerType = "LOCAL", modelId = "embed-a", dimension = 64)
+    )
 
     private fun manifest(
         embeddingModelId: String = "embed-a",

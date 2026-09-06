@@ -337,7 +337,7 @@ class AgentWorkflow(
 
         record(input, session, AgentState.L1_RETRIEVING_TOOLS)
         val retrievalStartNs = System.nanoTime()
-        val candidateSet = toolCandidateProvider.candidates(normalized, context, ragSnapshot)
+        val candidateSet = toolCandidateProvider.candidates(normalized, context, ragSnapshot, decision.capabilitySnapshot)
         // CR-008: 候选受控——即使检索器返回了包外 Tool，Prompt 与 LLM 也只能看到
         // 选中 Capability Pack 收敛后的候选（REQ-069 / REQ-070：先过滤再检索、候选受控）。
         val packAllowed = decision.capabilitySnapshot?.filteredToolIds
@@ -534,7 +534,7 @@ class AgentWorkflow(
         }
 
         val contextStartNs = System.nanoTime()
-        val composedMessages = promptBuilder.buildKnowledge(session, input, context.vehicleState, reranked)
+        val composedMessages = promptBuilder.buildKnowledge(session, input, context.vehicleState, reranked.map { it.chunk })
         timings.contextAndPromptMs = msSince(contextStartNs)
 
         val modelStartNs = System.nanoTime()
@@ -557,7 +557,7 @@ class AgentWorkflow(
         record(input, session, AgentState.MODEL_RESPONDED, latencyMs = modelResponse.latencyMs)
 
         val rawAnswer = modelResponse.content?.trim().orEmpty()
-        val citations = KnowledgeCitationMapper.citations(reranked)
+        val citations = KnowledgeCitationMapper.citations(reranked.map { it.chunk })
         val text = if (rawAnswer.isBlank()) {
             "本地知识库未找到相关说明。"
         } else {
