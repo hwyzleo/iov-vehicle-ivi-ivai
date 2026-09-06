@@ -84,6 +84,73 @@ class AgentEventWorkflowTest {
     }
 
     @Test
+    fun `模型编造的缺参名不透传-真实缺参以 Schema 为准`() = runTest {
+        // 模型声称缺 air_volume_support（编造字段），但真实 Tool schema 缺的是 temperature。
+        val fabricated = """{"route":"LOCAL_DIALOGUE","intents":[{"toolId":"climate.temperature_set","arguments":{"position":"driver"}}],"modelConfidence":0.85,"riskLevel":"medium","needConfirmation":false,"missingArguments":["air_volume_support"],"reasonCode":"MISSING_SLOT"}"""
+        val listener = CollectingAgentEventListener()
+        val (workflow, adapter) = TestGraph.build(StubModelProvider(fabricated), eventListener = listener)
+        val session = Session()
+        val result = workflow.process(input("req-2b", "空调风量调高一档", turnId = "turn-2b"), session)
+
+        assertEquals(net.hwyz.iov.vehicle.ivi.ivai.agent.AgentState.WAITING_USER, result.state)
+        assertNull(adapter.state.lastExecution)
+        val reply = listener.events.filterIsInstance<AgentEvent.Reply>().single()
+        // 不透传编造字段 air_volume_support；追问真实必填参数 temperature。
+        assertFalse(reply.text.contains("air_volume_support"))
+        assertTrue(reply.text.contains("temperature"))
+        assertEquals(listOf("temperature"), session.pendingTask!!.missingArguments)
+    }
+
+    @Test
+    fun `REJECT 分支不展示模型编造的缺参`() = runTest {
+        // 模型判定 REJECT 并编造缺参 blower_mode（该字段非任何真实工具参数）。
+        val rejectWithFakeMissing = """{"route":"REJECT","intents":[{"toolId":"climate.defrost.set","arguments":{}}],"modelConfidence":0.99,"riskLevel":"high","needConfirmation":false,"missingArguments":["blower_mode"],"reasonCode":"TOOL_NOT_AVAILABLE"}"""
+        val listener = CollectingAgentEventListener()
+        val (workflow, adapter) = TestGraph.build(StubModelProvider(rejectWithFakeMissing), eventListener = listener)
+        val result = workflow.process(input("req-2e", "空调设置成除霜", turnId = "turn-2e"), Session())
+
+        assertEquals(net.hwyz.iov.vehicle.ivi.ivai.agent.AgentState.REJECTED, result.state)
+        assertNull(adapter.state.lastExecution)
+        assertTrue(listener.events.filterIsInstance<AgentEvent.Reply>().any { it.text.contains("已拒绝") })
+        // 细节面板（DebugInfo）中不得把 blower_mode 展示为缺参。
+        val debug = listener.events.filterIsInstance<AgentEvent.DebugInfo>().lastOrNull()
+        assertTrue(debug == null || debug.debug.parsed?.missingArguments?.isEmpty() != false,
+            "REJECT 不得展示编造缺参: ${debug?.debug?.parsed?.missingArguments}")
+    }
+
+    @Test
+    fun `模型引用未知工具时拒绝而非追问编造字段`() = runTest {
+        // 模型对不存在的座椅按摩工具输出 LOCAL_DIALOGUE，且缺参列表是 toolID。
+        val unknownTool = """{"route":"LOCAL_DIALOGUE","intents":[{"toolId":"seat.massage.set","arguments":{}}],"modelConfidence":0.85,"riskLevel":"medium","needConfirmation":false,"missingArguments":["toolID"],"reasonCode":"MISSING_SLOT"}"""
+        val listener = CollectingAgentEventListener()
+        val (workflow, adapter) = TestGraph.build(StubModelProvider(unknownTool), eventListener = listener)
+        val result = workflow.process(input("req-2c", "打开座椅按摩", turnId = "turn-2c"), Session())
+
+        assertEquals(net.hwyz.iov.vehicle.ivi.ivai.agent.AgentState.REJECTED, result.state)
+        assertEquals("IVAI-TOOL-001", result.errorCode)
+        assertNull(adapter.state.lastExecution)
+        assertTrue(listener.events.none { it is AgentEvent.Reply }, "未知工具不应追问")
+        assertTrue(listener.events.filterIsInstance<AgentEvent.TurnFailed>().any { it.errorCode == "IVAI-TOOL-001" })
+    }
+
+    @Test
+    fun `模型误报缺参而参数已足时改用通用澄清不执行`() = runTest {
+        // 参数已足（temperature_set 带 temperature），模型仍 LOCAL_DIALOGUE 并编造缺参。
+        val completeArgs = """{"route":"LOCAL_DIALOGUE","intents":[{"toolId":"climate.temperature_set","arguments":{"position":"driver","temperature":26}}],"modelConfidence":0.85,"riskLevel":"medium","needConfirmation":false,"missingArguments":["air_volume_support"],"reasonCode":"MISSING_SLOT"}"""
+        val listener = CollectingAgentEventListener()
+        val (workflow, adapter) = TestGraph.build(StubModelProvider(completeArgs), eventListener = listener)
+        val result = workflow.process(input("req-2d", "空调风量调高一档", turnId = "turn-2d"), Session())
+
+        assertEquals(net.hwyz.iov.vehicle.ivi.ivai.agent.AgentState.WAITING_USER, result.state)
+        val reply = listener.events.filterIsInstance<AgentEvent.Reply>().single()
+        assertFalse(reply.text.contains("air_volume_support"))
+        assertFalse(reply.text.contains("temperature"), "参数已足不应追问具体字段")
+        // 不因误报而执行工具（可能映射到错误工具）。
+        assertNull(adapter.state.lastExecution)
+        assertTrue(listener.events.none { it is AgentEvent.ToolExecutionStarted })
+    }
+
+    @Test
     fun `模型失败发射 TurnFailed 且允许重试`() = runTest {
         val listener = CollectingAgentEventListener()
         val stub = StubModelProvider("this is { not json")

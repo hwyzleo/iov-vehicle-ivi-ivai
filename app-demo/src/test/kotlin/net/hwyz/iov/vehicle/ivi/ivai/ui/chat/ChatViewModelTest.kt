@@ -377,6 +377,69 @@ class ChatViewModelTest {
     }
 
     @Test
+    fun `CR-009 DebugInfo 附带领域能力包工具且合并时保留`() = runTest(dispatcher) {
+        val viewModel = ChatViewModel()
+        val gateway = FakeGateway()
+        viewModel.attach(gateway)
+        runCurrent()
+
+        viewModel.onAction(ChatUiAction.InputChanged("打开空调"))
+        viewModel.onAction(ChatUiAction.SendClicked)
+        runCurrent()
+        val requestId = viewModel.state.value.messages.first().requestId!!
+
+        gateway.emit(
+            AgentEvent.UserSubmitted("sess", "turn-1", requestId, "打开空调"),
+            AgentEvent.ProcessingStarted("sess", "turn-1", requestId),
+            AgentEvent.ToolExecutionStarted("sess", "turn-1", requestId, "climate.power_on", "正在执行…"),
+            AgentEvent.ToolExecutionFinished(
+                "sess", "turn-1", requestId, "climate.power_on",
+                ExecutionStatus.SUCCEEDED, "已打开空调", retryable = false,
+                executionPath = net.hwyz.iov.vehicle.ivi.ivai.agent.event.AgentExecutionPath(
+                    initialTier = net.hwyz.iov.vehicle.ivi.ivai.agent.router.IntentTier.L0_DETERMINISTIC_TOOL,
+                    finalTier = net.hwyz.iov.vehicle.ivi.ivai.agent.router.IntentTier.L0_DETERMINISTIC_TOOL,
+                    finalReasonCode = "L0_MATCH"
+                )
+            )
+        )
+        runCurrent()
+
+        // DebugInfo 携带 CR-009 匹配资产（领域/能力包/工具）。
+        gateway.emit(
+            AgentEvent.DebugInfo(
+                "sess", "turn-1", requestId,
+                TurnDebugInfo(
+                    turnId = "turn-1",
+                    requestId = requestId,
+                    state = "SUCCEEDED",
+                    route = "LOCAL_TOOL",
+                    intentTier = "L0_DETERMINISTIC_TOOL",
+                    finalTier = "L0_DETERMINISTIC_TOOL",
+                    tool = net.hwyz.iov.vehicle.ivi.ivai.agent.event.ToolDebugInfo(toolId = "climate.power_on", status = "SUCCEEDED"),
+                    cr008 = net.hwyz.iov.vehicle.ivi.ivai.agent.event.Cr008DebugInfo(
+                        domain = "BD01",
+                        operationType = "CONTROL",
+                        selectedPacks = listOf("cabin.climate"),
+                        workflowId = null
+                    )
+                )
+            )
+        )
+        runCurrent()
+
+        val result = viewModel.state.value.messages.last()
+        val label = result.executionTierLabel
+        assertNotNull(label)
+        assertTrue(label!!.contains("L0"), "层级标签应保留 L0")
+        assertTrue(label.contains("座舱舒适"), "层级标签应附带领域中文名")
+        assertTrue(label.contains("cabin.climate"), "层级标签应附带能力包")
+        assertTrue(label.contains("climate.power_on"), "层级标签应附带工具")
+        // 合并后 cr008 信息保留。
+        assertEquals("BD01", result.details?.cr008?.domain)
+        assertEquals(listOf("cabin.climate"), result.details?.cr008?.selectedPacks)
+    }
+
+    @Test
     fun `性能详情按 messageId 展开与收起`() = runTest(dispatcher) {
         val viewModel = ChatViewModel()
         val gateway = FakeGateway()

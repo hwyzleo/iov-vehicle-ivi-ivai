@@ -429,15 +429,20 @@ class AgentWorkflow(
         tracker.candidateSource = CandidateSource.L1_LOCAL_LLM
 
         return when (route) {
-            AgentRoute.LOCAL_DIALOGUE -> handleDialogue(input, session, output, timings, modelResponse, tracker, ragInfo, cr008)
+            AgentRoute.LOCAL_DIALOGUE -> handleDialogue(
+                input, session, output, timings, modelResponse, routeStartNs,
+                tracker, ragInfo, candidateToolIds, cr008
+            )
             AgentRoute.CLOUD_AI -> {
                 timings.addRouteAndPolicy(msSince(routeStartNs))
                 tracker.transition(IntentTier.L3_CLOUD_AI, RouteReasonCode.L3_OPEN_DOMAIN)
                 tracker.finalReasonCode = RouteReasonCode.L3_OPEN_DOMAIN
+                // CLOUD_AI 不是缺参追问场景，模型编造的 missingArguments 不得展示为「缺参」。
+                val sanitized = output.copy(missingArguments = emptyList())
                 val text = "该请求需要云端 AI 处理（预留功能，暂不执行）。"
                 emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build()))
                 finish(
-                    input, session, AgentState.CLOUD_REQUIRED, route, output, emptyList(), null, null,
+                    input, session, AgentState.CLOUD_REQUIRED, route, sanitized, emptyList(), null, null,
                     text, modelResponse.content, false, timings,
                     validJson = true, schemaPassed = true, toolExecuted = false,
                     executionPath = tracker.build(), ragInfo = ragInfo, cr008 = cr008
@@ -447,10 +452,13 @@ class AgentWorkflow(
                 timings.addRouteAndPolicy(msSince(routeStartNs))
                 tracker.transition(IntentTier.REJECT, RouteReasonCode.REJECT_UNSUPPORTED)
                 tracker.finalReasonCode = RouteReasonCode.REJECT_UNSUPPORTED
+                // 模型可给出拒绝理由（如 TOOL_NOT_AVAILABLE）；但 REJECT 不是缺参追问场景，
+                // 模型编造的 missingArguments（如 blower_mode）不得展示为「缺参」。
+                val sanitized = output.copy(missingArguments = emptyList())
                 val text = "已拒绝该请求。"
                 emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build()))
                 finish(
-                    input, session, AgentState.REJECTED, route, output, emptyList(), null, null,
+                    input, session, AgentState.REJECTED, route, sanitized, emptyList(), null, null,
                     text, modelResponse.content, false, timings,
                     validJson = true, schemaPassed = true, toolExecuted = false,
                     executionPath = tracker.build(), ragInfo = ragInfo, cr008 = cr008
@@ -948,24 +956,68 @@ class AgentWorkflow(
         output: AgentOutput,
         timings: TurnTimings,
         modelResponse: ModelResponse,
+        routeStartNs: Long,
         tracker: ExecutionPathTracker,
         ragInfo: RagExecutionInfo?,
+        candidateToolIds: Set<String>?,
         cr008: Cr008DebugInfo? = null
     ): AgentResult {
-        val missing = output.missingArguments
-        output.intents.firstOrNull()?.let { intent ->
-            session.storePendingTask(
-                intent, needConfirmation = false, missingArguments = missing,
-                executionPath = tracker.build()
+        // CR-009 修复：不能盲信模型编造的 missingArguments（如 air_volume_support / toolID）。
+        // 1) 工具不存在（模型编造 toolId）→ 拒绝，不追问。
+        // 2) 按 Tool 的 parameterSchema 重算真实缺失的必填参数。
+        // 3) 真实缺参为空（模型误报缺参，实际参数已足）→ 转 LOCAL_TOOL 执行链。
+        val intent = output.intents.firstOrNull()
+        val tool = intent?.let { registry.get(it.toolId) }
+        if (intent == null || tool == null) {
+            val unknown = intent?.toolId ?: "unknown"
+            emitLifecycle(ToolLifecyclePhase.FAILED, input.requestId, unknown, "unknown tool")
+            emit(
+                AgentEvent.TurnFailed(
+                    session.sessionId, input.turnId, input.requestId,
+                    message = "暂时无法安全理解该请求，请换一种说法",
+                    errorCode = ErrorCode.UNKNOWN_TOOL.code, retryable = false,
+                    executionPath = tracker.build()
+                )
+            )
+            return finish(
+                input, session, AgentState.REJECTED, AgentRoute.LOCAL_DIALOGUE, output, emptyList(), null,
+                ErrorCode.UNKNOWN_TOOL.code, "LOCAL_DIALOGUE 引用了未知工具：$unknown", modelResponse.content, false, timings,
+                validJson = true, schemaPassed = true, toolExecuted = false,
+                executionPath = tracker.build(), ragInfo = ragInfo, cr008 = cr008
             )
         }
+
+        // 以 Tool 的真实参数 Schema 为准，重算缺失的必填参数（过滤模型编造字段）。
+        val values = validator.applyDefaultsAndNormalize(tool, jsonArgsToValues(intent.arguments))
+        val schema = net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.SchemaParser.parse(tool.parameterSchema)
+        val realMissing = schema.required.filter { required ->
+            val provided = values[required]
+            provided == null || (provided as? String)?.isBlank() == true
+        }
+
+        // 真实缺参为空：模型误报缺参（声称要追问但参数已足，或把不存在的字段当缺参）。
+        // 此时不执行（可能映射到错误工具），也不透传编造字段名，改用通用澄清。
+        if (realMissing.isEmpty()) {
+            timings.addRouteAndPolicy(msSince(routeStartNs))
+            record(input, session, AgentState.NEED_DIALOGUE)
+            record(input, session, AgentState.WAITING_USER)
+            val text = "需要更多信息才能继续处理该请求。"
+            emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build()))
+            return finish(
+                input, session, AgentState.WAITING_USER, AgentRoute.LOCAL_DIALOGUE, output, emptyList(), null, null,
+                text, modelResponse.content, false, timings,
+                validJson = true, schemaPassed = true, toolExecuted = false,
+                executionPath = tracker.build(), ragInfo = ragInfo, cr008 = cr008
+            )
+        }
+
+        session.storePendingTask(
+            intent, needConfirmation = false, missingArguments = realMissing,
+            executionPath = tracker.build()
+        )
         record(input, session, AgentState.NEED_DIALOGUE)
         record(input, session, AgentState.WAITING_USER)
-        val text = if (missing.isEmpty()) {
-            "需要更多信息才能继续处理该请求。"
-        } else {
-            "请问需要补充：${missing.joinToString("、")}。"
-        }
+        val text = "请问需要补充：${realMissing.joinToString("、")}。"
         emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build()))
         return finish(
             input, session, AgentState.WAITING_USER, AgentRoute.LOCAL_DIALOGUE, output, emptyList(), null, null,

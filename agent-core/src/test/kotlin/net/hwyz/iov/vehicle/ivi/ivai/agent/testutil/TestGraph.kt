@@ -23,6 +23,7 @@ import net.hwyz.iov.vehicle.ivi.ivai.retrieval.KnowledgeRetriever
 import net.hwyz.iov.vehicle.ivi.ivai.retrieval.knowledge.KnowledgeReranker
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.ToolRegistry
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.ClimateToolDefinitions
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.GovernanceWorkspace
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.AdapterRegistry
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.DefaultToolExecutor
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.ToolExecutor
@@ -103,5 +104,59 @@ object TestGraph {
             workflowRuntime = workflowRuntime
         )
         return workflow to adapter
+    }
+
+    /**
+     * CR-009 集成装配：注册全部 160 个治理 Tool（Mock 桩）+ mock-governed 适配器
+     * + 18 个桩启用 Capability Pack。与 AgentService.buildAgentGraph 的 CR-009 装配一致，
+     * 用于验证 160 个 Tool 的运行时链路（路由→校验→Policy→执行）全部可调通。
+     */
+    fun buildGovernedStubGraph(
+        model: ModelProvider,
+        eventListener: net.hwyz.iov.vehicle.ivi.ivai.agent.event.AgentEventListener? = null,
+        lifecycle: ToolLifecycleListener? = null,
+        config: AgentConfig = AgentConfig(model = "qwen3.5:4b", ollamaBaseUrl = "http://localhost:11434"),
+        vehicleModel: String? = null,
+        softwareVersion: String? = null
+    ): Triple<AgentWorkflow, net.hwyz.iov.vehicle.ivi.ivai.adapter.mock.MockGovernedToolAdapter, ToolRegistry> {
+        val governedAdapter = net.hwyz.iov.vehicle.ivi.ivai.adapter.mock.MockGovernedToolAdapter()
+        // 160 个治理 Tool（Mock 桩）注册进运行时；保留 6 个空调 P0 验证集后仍可叠加，
+        // 此处直接以 160 治理桩为准（与 AgentService 装配一致）。
+        val registry = GovernanceWorkspace.registerAllStubs(ToolRegistry())
+        val validator = ToolValidator(registry)
+        val agentPolicy = AgentPolicyEngine(registry, ToolPolicyEngine())
+        val executor = DefaultToolExecutor(
+            registry = registry,
+            adapterRegistry = AdapterRegistry().register(governedAdapter),
+            lifecycleListener = lifecycle,
+            executionTimeoutMs = config.executionTimeoutMs
+        )
+        val promptBuilder = PromptBuilder(registry)
+        val fastMatcher = DefaultFastIntentMatcher(registry)
+        val domainClassifier = DomainClassifier(registry)
+        val tieredRouter = TieredIntentRouter(
+            fastMatcher, domainClassifier,
+            domainRouter = DomainRouter(registry),
+            capabilitySelector = CapabilityPackSelector(GovernanceWorkspace.runtimePacks()),
+            registry = registry
+        )
+        val workflow = AgentWorkflow(
+            modelProvider = model,
+            registry = registry,
+            router = Router(),
+            promptBuilder = promptBuilder,
+            validator = validator,
+            agentPolicy = agentPolicy,
+            toolExecutor = executor,
+            config = config,
+            tieredRouter = tieredRouter,
+            toolCandidateProvider = net.hwyz.iov.vehicle.ivi.ivai.agent.router.AllEnabledToolsProvider(registry),
+            vehicleStateProvider = VehicleStateProvider { governedAdapter.snapshot() },
+            lifecycleListener = lifecycle,
+            eventListener = eventListener,
+            vehicleModel = vehicleModel,
+            softwareVersion = softwareVersion
+        )
+        return Triple(workflow, governedAdapter, registry)
     }
 }

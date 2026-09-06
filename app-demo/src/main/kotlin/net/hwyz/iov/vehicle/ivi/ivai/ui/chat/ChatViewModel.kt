@@ -582,9 +582,11 @@ class ChatViewModel : ViewModel() {
                                 val merged = mergeDetails(msg.details, event.debug)
                                 // Performance is attached to the final message for the
                                 // collapsible panel; expansion stays default-collapsed.
+                                // CR-009: 气泡层级标签同步附带匹配到的领域/能力包/工具或工作流。
                                 msg.copy(
                                     details = merged,
-                                    performance = merged.performance ?: msg.performance
+                                    performance = merged.performance ?: msg.performance,
+                                    executionTierLabel = tierLabelWithAssets(msg.executionTierLabel, merged)
                                 )
                             }
                         }
@@ -608,7 +610,9 @@ class ChatViewModel : ViewModel() {
             state = incoming.state ?: existing.state,
             route = incoming.route ?: existing.route,
             errorCode = incoming.errorCode ?: existing.errorCode,
-            replayed = incoming.replayed || existing.replayed
+            replayed = incoming.replayed || existing.replayed,
+            // CR-009: 合并时保留领域 / 能力包 / 工作流等匹配资产信息。
+            cr008 = incoming.cr008 ?: existing.cr008
         )
     }
 
@@ -677,6 +681,28 @@ class ChatViewModel : ViewModel() {
 
     private fun tierLabel(path: AgentExecutionPath?): String? =
         path?.finalTier?.let { IntentTier.label(it) }
+
+    /**
+     * CR-009: 在层级标签基础上追加当前指令匹配到的领域 / 能力包 / 工具或工作流。
+     * 例："L0 · 本地直达 · 座舱舒适/cabin.climate/climate.power_on"
+     */
+    private fun tierLabelWithAssets(base: String?, debug: TurnDebugInfo): String? {
+        val cr008 = debug.cr008 ?: return base
+        val parts = mutableListOf<String>()
+        cr008.domain?.let {
+            parts += TurnDebugFormatter.DomainCodeLabels.label(it)
+        }
+        if (cr008.selectedPacks.isNotEmpty()) {
+            parts += cr008.selectedPacks.joinToString("+")
+        }
+        val asset = cr008.workflowId
+            ?: debug.tool?.toolId
+            ?: debug.parsed?.intents?.firstOrNull()?.toolId
+        asset?.let { parts += it }
+        if (parts.isEmpty()) return base
+        val prefix = base?.let { "$it · " } ?: ""
+        return prefix + parts.joinToString("/")
+    }
 
     private fun showHint(text: String) {
         _hints.tryEmit(text)

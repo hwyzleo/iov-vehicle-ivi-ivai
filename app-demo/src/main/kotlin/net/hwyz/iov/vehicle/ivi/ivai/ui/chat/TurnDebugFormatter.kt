@@ -45,6 +45,14 @@ object TurnDebugFormatter {
             sb.append("\n")
         }
 
+        // CR-009: 匹配资产（领域 / 能力包 / 工具或工作流），随 L0~L3 一起展示
+        val matchedSegment = matchedAssetSegment(debug)
+        if (matchedSegment.isNotBlank()) {
+            section(sb, "🎯 匹配资产")
+            sb.append(matchedSegment)
+            sb.append("\n")
+        }
+
         // CR-005: RAG 运行信息
         debug.rag?.let { rag ->
             section(sb, "📡 RAG")
@@ -111,8 +119,49 @@ object TurnDebugFormatter {
         return sb.toString()
     }
 
+    /**
+     * CR-009: 当前指令匹配到的领域 / 能力包 / 工具或工作流（随 L0~L3 一起展示）。
+     * 数据来自 AgentWorkflow 的 Cr008DebugInfo + 执行结果 ToolDebugInfo。
+     */
+    private fun matchedAssetSegment(debug: TurnDebugInfo): String {
+        val sb = StringBuilder()
+        val cr008 = debug.cr008
+        if (cr008 == null) return ""
+
+        val domainCode = cr008.domain
+        if (domainCode != null) {
+            bodyPath(sb, "领域：$domainCode · ${DomainCodeLabels.label(domainCode)}")
+        }
+        cr008.operationType?.let { bodyPath(sb, "操作类型：$it") }
+        if (cr008.selectedPacks.isNotEmpty()) {
+            bodyPath(sb, "能力包：${cr008.selectedPacks.joinToString("、")}")
+        }
+        // 工作流优先（WF 场景编排），否则展示执行/解析出的工具。
+        cr008.workflowId?.let {
+            bodyPath(sb, "工作流：$it${cr008.workflowState?.let { s -> "（$s）" } ?: ""}")
+        } ?: run {
+            val toolId = debug.tool?.toolId ?: debug.parsed?.intents?.firstOrNull()?.toolId
+            toolId?.let { bodyPath(sb, "工具：$it") }
+        }
+        return sb.toString()
+    }
+
     private fun bodyPath(sb: StringBuilder, text: String) {
         sb.append(text).append("\n")
+    }
+
+    /**
+     * BD01～BD10 编码 → 中文名称（app-demo 不直接依赖 tool-registry，本地维护）。
+     * 与 tool-registry 的 BusinessDomainId.label 保持一致。
+     */
+    internal object DomainCodeLabels {
+        private val LABELS = mapOf(
+            "BD01" to "座舱舒适", "BD02" to "车身控制", "BD03" to "车辆设置与驾驶",
+            "BD04" to "能源与补能", "BD05" to "影像与记录", "BD06" to "导航与出行",
+            "BD07" to "通讯", "BD08" to "媒体娱乐", "BD09" to "应用与系统",
+            "BD10" to "信息服务"
+        )
+        fun label(code: String): String = LABELS[code] ?: code
     }
 
     private fun section(sb: SpannableStringBuilder, title: String) {

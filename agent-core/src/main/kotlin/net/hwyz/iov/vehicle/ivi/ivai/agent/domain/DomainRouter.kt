@@ -78,7 +78,11 @@ class DomainRouter(
         for ((domain, words) in extraVocabulary) {
             map.getOrPut(domain) { mutableListOf() }.addAll(words)
         }
-        map.mapValues { (_, signals) -> signals.filter { it.isNotBlank() }.distinct() }
+        // 输入经 TextNormalizer 已转小写；词表统一小写后匹配，避免 ADAS/POI/wifi 等
+        // 英文词大小写不一致导致领域无法识别（CR-009 160 工具含大量英文词）。
+        map.mapValues { (_, signals) ->
+            signals.map { it.lowercase() }.filter { it.isNotBlank() }.distinct()
+        }
     }
 
     fun route(input: NormalizedInput, context: AgentContext): DomainRouteDecision {
