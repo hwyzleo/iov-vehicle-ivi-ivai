@@ -1,17 +1,31 @@
 package net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions
 
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.ToolRegistry
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.AliasSourceType
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.BusinessDomainId
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.OperationType
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.ToolAlias
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.schemas.ClimateSchemas
 
 /**
- * First-batch climate tool definitions (IVI-IVAI-DSN-CR-001 + CR-005).
+ * First-batch climate tool definitions (IVI-IVAI-DSN-CR-001 + CR-005 + CR-008).
  *
  * CR-005 adds L0 deterministic routing rules: uniquely identifiable commands
  * ("打开空调", "主驾调到24度") route through L0 without LLM/RAG; implicit
  * expressions ("我有点冷", "太热了") intentionally have NO L0 rule and fall to
  * L1 Tool/Intent RAG + local LLM.
+ *
+ * CR-008 attaches governance metadata: suggested business domain (CABIN_COMFORT /
+ * BD01), owning capability pack (cabin.climate), operation types and legacy /
+ * expression aliases. The 6 tools form the P0 verification set; the parameterized
+ * `climate.temperature.adjust` suggestion is expressed at the governance layer
+ * (see ClimateGovernedCapabilities) and will be registered as a runtime tool in a
+ * later CR — the migration period keeps the legacy Tool IDs + Function-IDs via
+ * [ToolDefinition.aliases].
  */
 object ClimateToolDefinitions {
+
+    const val CABIN_CLIMATE_PACK = "cabin.climate"
 
     fun registerAll(registry: ToolRegistry): ToolRegistry = registry
         .register(powerOn())
@@ -38,6 +52,23 @@ object ClimateToolDefinitions {
         )
     )
 
+    /** 归并表达 Alias：如「主驾升温」→ position=driver（CR-008 参数预置）。 */
+    private fun expressionAlias(aliasId: String, phrase: String, position: String) = ToolAlias(
+        aliasId = aliasId,
+        sourceType = AliasSourceType.EXPRESSION,
+        sourceValue = phrase,
+        originalDomain = "空调与舒适",
+        mappedArguments = mapOf("position" to position),
+        status = net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.GovernanceStatus.APPROVED
+    )
+
+    private fun functionIdAlias(aliasId: String, functionId: String) = ToolAlias(
+        aliasId = aliasId,
+        sourceType = AliasSourceType.FUNCTION_ID,
+        sourceValue = functionId,
+        status = net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.GovernanceStatus.APPROVED
+    )
+
     private fun powerOn() = ToolDefinition(
         toolId = "climate.power_on",
         functionId = "AC_Control_1",
@@ -58,7 +89,12 @@ object ClimateToolDefinitions {
                 priority = 10
             )
         ),
-        availability = availability()
+        availability = availability(),
+        domainId = BusinessDomainId.CABIN_COMFORT,
+        capabilityPackId = CABIN_CLIMATE_PACK,
+        supportedOperations = setOf(OperationType.CONTROL),
+        aliases = listOf(functionIdAlias("alias.power_on.fn", "AC_Control_1")),
+        governanceVersion = "1.0"
     )
 
     private fun powerOff() = ToolDefinition(
@@ -81,7 +117,12 @@ object ClimateToolDefinitions {
                 priority = 10
             )
         ),
-        availability = availability()
+        availability = availability(),
+        domainId = BusinessDomainId.CABIN_COMFORT,
+        capabilityPackId = CABIN_CLIMATE_PACK,
+        supportedOperations = setOf(OperationType.CONTROL),
+        aliases = listOf(functionIdAlias("alias.power_off.fn", "AC_Control_2")),
+        governanceVersion = "1.0"
     )
 
     private fun temperatureIncrease() = ToolDefinition(
@@ -106,7 +147,16 @@ object ClimateToolDefinitions {
                 priority = 5
             )
         ),
-        availability = availability()
+        availability = availability(),
+        domainId = BusinessDomainId.CABIN_COMFORT,
+        capabilityPackId = CABIN_CLIMATE_PACK,
+        supportedOperations = setOf(OperationType.CONTROL),
+        aliases = listOf(
+            functionIdAlias("alias.temp_inc.fn", "AC_Temperature_2"),
+            expressionAlias("alias.temp_inc.driver_up", "主驾升温", "driver"),
+            expressionAlias("alias.temp_inc.passenger_up", "副驾升温", "passenger")
+        ),
+        governanceVersion = "1.0"
     )
 
     private fun temperatureDecrease() = ToolDefinition(
@@ -130,7 +180,16 @@ object ClimateToolDefinitions {
                 priority = 5
             )
         ),
-        availability = availability()
+        availability = availability(),
+        domainId = BusinessDomainId.CABIN_COMFORT,
+        capabilityPackId = CABIN_CLIMATE_PACK,
+        supportedOperations = setOf(OperationType.CONTROL),
+        aliases = listOf(
+            functionIdAlias("alias.temp_dec.fn", "AC_Temperature_3"),
+            expressionAlias("alias.temp_dec.driver_down", "主驾降温", "driver"),
+            expressionAlias("alias.temp_dec.passenger_down", "副驾降温", "passenger")
+        ),
+        governanceVersion = "1.0"
     )
 
     private fun temperatureSet() = ToolDefinition(
@@ -156,7 +215,12 @@ object ClimateToolDefinitions {
                 priority = 10
             )
         ),
-        availability = availability()
+        availability = availability(),
+        domainId = BusinessDomainId.CABIN_COMFORT,
+        capabilityPackId = CABIN_CLIMATE_PACK,
+        supportedOperations = setOf(OperationType.CONTROL),
+        aliases = listOf(functionIdAlias("alias.temp_set.fn", "AC_Temperature_1")),
+        governanceVersion = "1.0"
     )
 
     private fun statusQuery() = ToolDefinition(
@@ -178,6 +242,11 @@ object ClimateToolDefinitions {
                 priority = 5
             )
         ),
-        availability = availability()
+        availability = availability(),
+        domainId = BusinessDomainId.CABIN_COMFORT,
+        capabilityPackId = CABIN_CLIMATE_PACK,
+        supportedOperations = setOf(OperationType.QUERY),
+        aliases = emptyList(),
+        governanceVersion = "1.0"
     )
 }

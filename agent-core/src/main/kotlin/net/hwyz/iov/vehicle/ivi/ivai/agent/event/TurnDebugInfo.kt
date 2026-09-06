@@ -5,6 +5,28 @@ import net.hwyz.iov.vehicle.ivi.ivai.agent.rag.RagExecutionInfo
 import net.hwyz.iov.vehicle.ivi.ivai.model.AgentPerformanceMetrics
 
 /**
+ * CR-008 领域路由 / 能力包 / Workflow 可观测信息（IVI-IVAI-DSN-CR-008 可观测性）。
+ * 记录初始/最终领域、操作类型、能力包版本、候选数量过滤与 Workflow 执行轨迹。
+ * 不记录未经许可的完整语音文本、敏感上下文或密钥。
+ */
+@Serializable
+data class Cr008DebugInfo(
+    val domain: String? = null,
+    val operationType: String? = null,
+    val domainReasonCode: String? = null,
+    val selectedPacks: List<String> = emptyList(),
+    val packVersion: String? = null,
+    val preFilterCandidateCount: Int? = null,
+    val postFilterCandidateCount: Int? = null,
+    val workflowId: String? = null,
+    val workflowState: String? = null,
+    val workflowStepCount: Int? = null,
+    val workflowStepResults: List<String> = emptyList(),
+    val compensationResult: String? = null,
+    val workflowErrorCode: String? = null
+)
+
+/**
  * A single intent proposed by the model (before validation / execution).
  */
 @Serializable
@@ -68,5 +90,7 @@ data class TurnDebugInfo(
     val finalTier: String? = null,
     val transitions: List<TierTransition> = emptyList(),
     val candidateSource: String? = null,
-    val rag: RagExecutionInfo? = null
+    val rag: RagExecutionInfo? = null,
+    // CR-008: 领域路由 / 能力包 / Workflow 可观测性
+    val cr008: Cr008DebugInfo? = null
 )

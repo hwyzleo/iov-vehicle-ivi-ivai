@@ -82,4 +82,27 @@ class ToolRetrieverTest {
         assertEquals(1, candidates.size)
         assertTrue(candidates.all { it.toolId == "climate.temperature_increase" })
     }
+
+    @Test
+    fun `CR-008 领域与能力包过滤限制召回范围`() = runTest {
+        // 只允许 cabin.climate 包 → 只召回气候 Tool。
+        val packed = hybrid.retrieve(
+            query("打开空调").copy(capabilityPackIds = listOf("cabin.climate")),
+            topK = 10
+        )
+        assertTrue(packed.isNotEmpty())
+        assertTrue(packed.all { it.definition.toolId.startsWith("climate.") })
+
+        // 不允许任何包 → 空召回（先过滤再检索）。
+        val none = hybrid.retrieve(query("打开空调").copy(capabilityPackIds = listOf("energy.charging")), topK = 10)
+        assertTrue(none.isEmpty())
+
+        // 领域限定（BD01 座舱舒适）→ 全部气候 Tool。
+        val domainScoped = hybrid.retrieve(
+            query("我有点冷").copy(domainIds = listOf(net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.BusinessDomainId.CABIN_COMFORT)),
+            topK = 5
+        )
+        assertTrue(domainScoped.isNotEmpty())
+        assertTrue(domainScoped.all { it.toolId.startsWith("climate.") })
+    }
 }

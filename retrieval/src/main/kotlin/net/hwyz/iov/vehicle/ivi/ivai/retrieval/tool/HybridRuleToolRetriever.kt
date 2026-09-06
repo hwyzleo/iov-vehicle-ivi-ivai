@@ -7,6 +7,7 @@ import net.hwyz.iov.vehicle.ivi.ivai.retrieval.ToolRetriever
 import net.hwyz.iov.vehicle.ivi.ivai.retrieval.embedding.Tokenizer
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.ToolRegistry
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.ToolAvailabilityCheck
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.BusinessDomainId
 
 /**
  * Hybrid rule/keyword retriever (CR-005 first phase): scores tools by
@@ -14,6 +15,10 @@ import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.ToolAvailabilityC
  * description bigram overlap (BM25-ish). Applies vehicle / software filtering,
  * a minimum score threshold and Top-K truncation. Intentionally does NOT decide
  * the final intent — the local LLM selects within the recalled Top-K.
+ *
+ * CR-008: when [ToolRetrievalQuery.capabilityPackIds] / [domainIds] are set,
+ * the candidate space is filtered BEFORE scoring (先过滤再检索) — tools outside
+ * the selected Capability Packs / business domains never enter the recall.
  */
 class HybridRuleToolRetriever(
     private val registry: ToolRegistry,
@@ -26,6 +31,8 @@ class HybridRuleToolRetriever(
         return registry.all()
             .filter { ToolAvailabilityCheck.isAvailable(it, query.vehicleModel, query.softwareVersion) }
             .filter { it.toolId !in query.excludeToolIds }
+            .filter { packAllowed(it.capabilityPackId, query.capabilityPackIds) }
+            .filter { domainAllowed(it.domainId, query.domainIds) }
             .map { tool ->
                 val summary = ToolDefinitionSummary.from(tool)
                 val score = score(summary, q, queryTokens)
@@ -56,6 +63,12 @@ class HybridRuleToolRetriever(
         if (descriptionTokens.isNotEmpty() && descriptionTokens.any { q.contains(it) }) fields += "description"
         return fields
     }
+
+    private fun packAllowed(packId: String, allowed: List<String>): Boolean =
+        allowed.isEmpty() || packId in allowed
+
+    private fun domainAllowed(domain: BusinessDomainId, allowed: List<BusinessDomainId>): Boolean =
+        allowed.isEmpty() || domain in allowed
 
     private companion object {
         const val MIN_SCORE = 0.5

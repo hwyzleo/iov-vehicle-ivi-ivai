@@ -2,10 +2,11 @@ package net.hwyz.iov.vehicle.ivi.ivai.retrieval
 
 import kotlinx.serialization.Serializable
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.ToolDefinition
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.BusinessDomainId
 
 /**
  * Query payloads, candidates and shared models for Tool/Intent RAG and
- * Knowledge RAG (IVI-IVAI-DSN-CR-005).
+ * Knowledge RAG (IVI-IVAI-DSN-CR-005 + CR-008).
  */
 
 /** Query passed to a [ToolRetriever]. */
@@ -14,7 +15,11 @@ data class ToolRetrievalQuery(
     val vehicleModel: String? = null,
     val softwareVersion: String? = null,
     val language: String = "zh-CN",
-    val excludeToolIds: Set<String> = emptySet()
+    val excludeToolIds: Set<String> = emptySet(),
+    /** CR-008: 非空时只允许这些业务领域的 Tool 进入召回（先过滤再检索）。 */
+    val domainIds: List<BusinessDomainId> = emptyList(),
+    /** CR-008: 非空时只允许这些 Capability Pack 内的 Tool 进入召回。 */
+    val capabilityPackIds: List<String> = emptyList()
 )
 
 /** Query passed to a [KnowledgeRetriever]. */

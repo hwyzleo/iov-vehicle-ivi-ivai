@@ -29,7 +29,20 @@ enum class ErrorCode(val code: String) {
     // CR-005: Embedding 推理失败或超时
     RAG_EMBEDDING_FAILED("IVAI-RAG-006"),
     // CR-005: Tool 候选来源非法或不受支持
-    CANDIDATE_SOURCE_INVALID("IVAI-TOOL-003");
+    CANDIDATE_SOURCE_INVALID("IVAI-TOOL-003"),
+    // CR-008: 领域预路由与能力包
+    DOMAIN_UNKNOWN("IVAI-DOMAIN-001"),
+    DOMAIN_CONFLICT("IVAI-DOMAIN-002"),
+    NO_AVAILABLE_CAPABILITY("IVAI-CAP-001"),
+    CAPABILITY_INVALID("IVAI-CAP-002"),
+    GOVERNANCE_DENIED("IVAI-GOV-001"),
+    GOVERNANCE_MISMATCH("IVAI-GOV-002"),
+    // CR-008: Workflow
+    WORKFLOW_INVALID("IVAI-WORKFLOW-001"),
+    WORKFLOW_LIMIT_EXCEEDED("IVAI-WORKFLOW-002"),
+    WORKFLOW_FAILED("IVAI-WORKFLOW-003"),
+    // CR-008: 执行 Binding
+    BINDING_MISSING("IVAI-BINDING-001");
 
     companion object {
         fun from(code: String): ErrorCode? = entries.firstOrNull { it.code == code }

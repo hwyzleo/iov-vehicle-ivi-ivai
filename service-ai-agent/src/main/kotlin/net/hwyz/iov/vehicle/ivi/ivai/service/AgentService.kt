@@ -24,6 +24,8 @@ import kotlinx.coroutines.runBlocking
 import net.hwyz.iov.vehicle.ivi.ivai.adapter.mock.MockClimateToolAdapter
 import net.hwyz.iov.vehicle.ivi.ivai.adapter.mock.MockVehicleState
 import net.hwyz.iov.vehicle.ivi.ivai.agent.event.AgentEvent
+import net.hwyz.iov.vehicle.ivi.ivai.agent.capability.CapabilityPackSelector
+import net.hwyz.iov.vehicle.ivi.ivai.agent.domain.DomainRouter
 import net.hwyz.iov.vehicle.ivi.ivai.agent.policy.AgentPolicyEngine
 import net.hwyz.iov.vehicle.ivi.ivai.agent.prompt.PromptBuilder
 import net.hwyz.iov.vehicle.ivi.ivai.agent.prompt.PromptSnapshot
@@ -39,6 +41,8 @@ import net.hwyz.iov.vehicle.ivi.ivai.agent.session.Session
 import net.hwyz.iov.vehicle.ivi.ivai.agent.workflow.AgentConfig
 import net.hwyz.iov.vehicle.ivi.ivai.agent.workflow.AgentInput
 import net.hwyz.iov.vehicle.ivi.ivai.agent.workflow.AgentWorkflow
+import net.hwyz.iov.vehicle.ivi.ivai.agent.workflow.WorkflowRuntime
+import net.hwyz.iov.vehicle.ivi.ivai.agent.workflow.WorkflowValidator
 import net.hwyz.iov.vehicle.ivi.ivai.model.ModelProvider
 import net.hwyz.iov.vehicle.ivi.ivai.model.ModelProviderType
 import net.hwyz.iov.vehicle.ivi.ivai.model.config.DefaultModelConfigRepository
@@ -378,7 +382,24 @@ class AgentService : Service(), AiAgentClient {
         // CR-005: tiered routing + Tool/Knowledge RAG runtime.
         val fastMatcher = DefaultFastIntentMatcher(registry)
         val domainClassifier = DomainClassifier(registry)
-        val tieredRouter = TieredIntentRouter(fastMatcher, domainClassifier)
+        // CR-008: 领域预路由 + 能力包选择 + Workflow 运行时（P0 启用）。
+        val domainRouter = DomainRouter(registry)
+        val capabilitySelector = CapabilityPackSelector()
+        val tieredRouter = TieredIntentRouter(
+            fastMatcher, domainClassifier,
+            domainRouter = domainRouter,
+            capabilitySelector = capabilitySelector,
+            registry = registry
+        )
+        val agentPolicy = AgentPolicyEngine(registry, ToolPolicyEngine())
+        val workflowRuntime = WorkflowRuntime(
+            registry = registry,
+            toolValidator = validator,
+            agentPolicy = agentPolicy,
+            toolExecutor = executor,
+            workflowValidator = WorkflowValidator(registry),
+            vehicleStateProvider = VehicleStateProvider { adapter.snapshot() }
+        )
         val toolRetriever = HybridRuleToolRetriever(registry)
         val toolCandidateProvider = RagToolCandidateProvider(registry, toolRetriever)
         val knowledgeRetriever: KnowledgeRetriever = KnowledgeRetrieverImpl(SampleKnowledgeDocs.chunks)
@@ -397,7 +418,7 @@ class AgentService : Service(), AiAgentClient {
             router = Router(),
             promptBuilder = promptBuilder,
             validator = validator,
-            agentPolicy = AgentPolicyEngine(registry, ToolPolicyEngine()),
+            agentPolicy = agentPolicy,
             toolExecutor = executor,
             config = AgentConfig(model = BuildConfig.OLLAMA_MODEL, ollamaBaseUrl = initialBaseUrl),
             tieredRouter = tieredRouter,
@@ -410,7 +431,8 @@ class AgentService : Service(), AiAgentClient {
             knowledgeRetriever = knowledgeRetriever,
             knowledgeReranker = KnowledgeReranker(),
             vehicleModel = VEHICLE_MODEL,
-            softwareVersion = SOFTWARE_VERSION
+            softwareVersion = SOFTWARE_VERSION,
+            workflowRuntime = workflowRuntime
         )
         promptBuilderRef = promptBuilder
         mockAdapterRef.set(adapter)

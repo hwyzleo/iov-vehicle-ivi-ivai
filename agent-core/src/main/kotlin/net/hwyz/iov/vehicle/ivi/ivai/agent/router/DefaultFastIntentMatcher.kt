@@ -18,7 +18,9 @@ import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.VersionRange
  * reject.
  */
 class DefaultFastIntentMatcher(
-    private val registry: ToolRegistry
+    private val registry: ToolRegistry,
+    /** CR-008: 非空时只在指定 Tool ID 子集内匹配（Domain/Pack 收敛后的候选空间）。 */
+    private val scopeToolIds: Set<String>? = null
 ) : FastIntentMatcher {
 
     override suspend fun match(input: NormalizedInput, context: AgentContext): FastIntentMatchResult {
@@ -27,6 +29,7 @@ class DefaultFastIntentMatcher(
 
         val matches = mutableListOf<RuleMatch>()
         for (tool in registry.all()) {
+            if (scopeToolIds != null && tool.toolId !in scopeToolIds) continue
             if (!ToolAvailabilityCheck.isAvailable(tool, context.vehicleModel, context.softwareVersion)) {
                 continue
             }

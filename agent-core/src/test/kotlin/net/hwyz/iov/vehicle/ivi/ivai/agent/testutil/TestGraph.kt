@@ -1,6 +1,8 @@
 package net.hwyz.iov.vehicle.ivi.ivai.agent.testutil
 
 import net.hwyz.iov.vehicle.ivi.ivai.adapter.mock.MockClimateToolAdapter
+import net.hwyz.iov.vehicle.ivi.ivai.agent.capability.CapabilityPackSelector
+import net.hwyz.iov.vehicle.ivi.ivai.agent.domain.DomainRouter
 import net.hwyz.iov.vehicle.ivi.ivai.agent.policy.AgentPolicyEngine
 import net.hwyz.iov.vehicle.ivi.ivai.agent.prompt.PromptBuilder
 import net.hwyz.iov.vehicle.ivi.ivai.agent.rag.RagConfigRepository
@@ -13,6 +15,8 @@ import net.hwyz.iov.vehicle.ivi.ivai.agent.router.ToolCandidateProvider
 import net.hwyz.iov.vehicle.ivi.ivai.agent.workflow.AgentConfig
 import net.hwyz.iov.vehicle.ivi.ivai.agent.workflow.AgentWorkflow
 import net.hwyz.iov.vehicle.ivi.ivai.agent.workflow.IdempotencyGuard
+import net.hwyz.iov.vehicle.ivi.ivai.agent.workflow.WorkflowRuntime
+import net.hwyz.iov.vehicle.ivi.ivai.agent.workflow.WorkflowValidator
 import net.hwyz.iov.vehicle.ivi.ivai.model.ModelProvider
 import net.hwyz.iov.vehicle.ivi.ivai.observability.TelemetryRecorder
 import net.hwyz.iov.vehicle.ivi.ivai.retrieval.KnowledgeRetriever
@@ -48,7 +52,11 @@ object TestGraph {
         knowledgeRetriever: KnowledgeRetriever? = null,
         ragRuntimeManager: RagRuntimeManager? = null,
         vehicleModel: String? = null,
-        softwareVersion: String? = null
+        softwareVersion: String? = null,
+        // CR-008 (default off → legacy behavior):
+        domainRouter: DomainRouter? = null,
+        capabilitySelector: CapabilityPackSelector? = null,
+        workflowRuntime: WorkflowRuntime? = null
     ): Pair<AgentWorkflow, MockClimateToolAdapter> {
         val registry = ClimateToolDefinitions.registerAll(ToolRegistry())
         val validator = ToolValidator(registry)
@@ -62,7 +70,12 @@ object TestGraph {
         val promptBuilder = PromptBuilder(registry)
         val fastMatcher = DefaultFastIntentMatcher(registry)
         val domainClassifier = DomainClassifier(registry)
-        val tieredRouter = TieredIntentRouter(fastMatcher, domainClassifier)
+        val tieredRouter = TieredIntentRouter(
+            fastMatcher, domainClassifier,
+            domainRouter = domainRouter,
+            capabilitySelector = capabilitySelector,
+            registry = registry
+        )
         val candidateProvider = toolCandidateProvider
             ?: net.hwyz.iov.vehicle.ivi.ivai.agent.router.AllEnabledToolsProvider(registry)
         val ragManager = ragRuntimeManager
@@ -86,7 +99,8 @@ object TestGraph {
             knowledgeRetriever = knowledgeRetriever,
             knowledgeReranker = if (knowledgeRetriever != null) KnowledgeReranker() else null,
             vehicleModel = vehicleModel,
-            softwareVersion = softwareVersion
+            softwareVersion = softwareVersion,
+            workflowRuntime = workflowRuntime
         )
         return workflow to adapter
     }
