@@ -91,10 +91,17 @@ class OpenAiCompatibleModelProviderContractTest {
         assertEquals("Bearer sk-test-secret", recorded.getHeader("Authorization"))
         assertEquals("req-1", recorded.getHeader("X-IVAI-Request-Id"))
 
-        val body = Json.decodeFromString(OpenAiChatRequest.serializer(), recorded.body.readUtf8())
+        val rawBody = recorded.body.readUtf8()
+        // enable_thinking 必须显式下发（SiliconFlow 推理模型默认可能开启思考）。
+        assertTrue(
+            rawBody.contains("\"enable_thinking\":false"),
+            "请求体必须显式关闭思考，实际: $rawBody"
+        )
+        val body = Json.decodeFromString(OpenAiChatRequest.serializer(), rawBody)
         assertEquals("qwen3.5:4b", body.model)
         assertEquals(false, body.stream)
         assertEquals(0.0, body.temperature)
+        assertEquals(false, body.enableThinking)
         assertEquals("user", body.messages.first().role)
         assertEquals("打开空调", body.messages.first().content)
     }

@@ -39,6 +39,11 @@ import net.hwyz.iov.vehicle.ivi.ivai.agent.router.RagToolCandidateProvider
 import net.hwyz.iov.vehicle.ivi.ivai.agent.router.Router
 import net.hwyz.iov.vehicle.ivi.ivai.agent.router.TieredIntentRouter
 import net.hwyz.iov.vehicle.ivi.ivai.agent.session.Session
+import net.hwyz.iov.vehicle.ivi.ivai.agent.vehicle.VehicleDomainInfo
+import net.hwyz.iov.vehicle.ivi.ivai.agent.vehicle.VehicleFeatureSnapshot
+import net.hwyz.iov.vehicle.ivi.ivai.agent.vehicle.VehiclePackInfo
+import net.hwyz.iov.vehicle.ivi.ivai.agent.vehicle.VehicleToolInfo
+import net.hwyz.iov.vehicle.ivi.ivai.agent.vehicle.VehicleWorkflowInfo
 import net.hwyz.iov.vehicle.ivi.ivai.agent.workflow.AgentConfig
 import net.hwyz.iov.vehicle.ivi.ivai.agent.workflow.AgentInput
 import net.hwyz.iov.vehicle.ivi.ivai.agent.workflow.AgentWorkflow
@@ -72,8 +77,10 @@ import net.hwyz.iov.vehicle.ivi.ivai.retrieval.knowledge.KnowledgeRetrieverImpl
 import net.hwyz.iov.vehicle.ivi.ivai.retrieval.knowledge.SampleKnowledgeDocs
 import net.hwyz.iov.vehicle.ivi.ivai.retrieval.tool.HybridRuleToolRetriever
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.ToolRegistry
-import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.ClimateToolDefinitions
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.BusinessDomainId
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.GovernanceRuntimeMode
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.GovernanceWorkspace
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.RuntimeEnvironment
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.AdapterRegistry
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.DefaultToolExecutor
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.ToolPolicyEngine
@@ -302,6 +309,45 @@ class AgentService : Service(), AiAgentClient {
 
     fun vehicleState(): MockVehicleState? = mockAdapterRef.get()?.state
 
+    /**
+     * 本车功能只读快照：治理目录中的领域 / 能力包 / 工具 / 工作流
+     * （中文名称 + 稳定代码），供设置页「本车功能」只读展示（CR-009）。
+     */
+    fun vehicleFeatureSnapshot(): VehicleFeatureSnapshot = VehicleFeatureSnapshot(
+        baselineVersion = GovernanceWorkspace.baseline.baselineVersion,
+        sourceCatalogVersion = GovernanceWorkspace.baseline.sourceCatalogVersion,
+        domains = BusinessDomainId.entries.map { VehicleDomainInfo(code = it.code, label = it.label) },
+        packs = GovernanceWorkspace.packs.map {
+            VehiclePackInfo(
+                packId = it.packId,
+                name = it.name,
+                domainCode = it.domainId.code,
+                toolTarget = it.toolTarget,
+                workflowTarget = it.workflowTarget,
+                priority = it.priority.label
+            )
+        },
+        tools = GovernanceWorkspace.tools.map {
+            VehicleToolInfo(
+                toolId = it.toolId,
+                name = it.name,
+                domainCode = it.domainId.code,
+                packId = it.capabilityPackId,
+                operationType = it.operationType.name
+            )
+        },
+        workflows = GovernanceWorkspace.workflows.map {
+            VehicleWorkflowInfo(
+                workflowId = it.workflowId,
+                name = it.name,
+                ownerDomainCode = it.ownerDomainId.code,
+                domainCodes = it.domainIds.map { d -> d.code },
+                stepToolIds = it.stepToolIds,
+                failurePolicy = it.failurePolicy
+            )
+        }
+    )
+
     fun sessionId(): String = session.sessionId
 
     /**
@@ -358,10 +404,19 @@ class AgentService : Service(), AiAgentClient {
     private fun buildAgentGraph(initialBaseUrl: String) {
         val adapter = MockClimateToolAdapter()
         val governedAdapter = MockGovernedToolAdapter()
-        // CR-009: 运行时注册 160 个治理 Tool（Mock 桩）。保留 6 个空调 Tool 作为 P0 验证集，
-        // 其余以 mock-governed 桩注册，保证全部 160 个 Tool 的运行时链路可调通。
-        val registry = ClimateToolDefinitions.registerAll(ToolRegistry())
-        GovernanceWorkspace.registerAllStubs(registry)
+        // CR-010: 运行时统一候选集 = 全部 160 个治理 Tool（canonical）。6 个旧空调 ID
+        // 不再作为独立可执行定义，而是经 ToolAliasCatalog 映射到 canonical Tool。
+        val registry = GovernanceWorkspace.registerAllStubs(ToolRegistry())
+        // CR-010: 单测、集成测试与 AgentService 使用同一 RuntimeCapabilityAssembler。
+        //   - Release（STRICT）：统一候选集只含 APPROVED + enabled + 唯一有效 Binding；
+        //     当前全部 DRAFT → 无候选，硬动作按 IVAI-CAP-001 拒绝。
+        //   - Debug（DEVELOPMENT_STUB）：白名单 DRAFT 仅经 Mock Adapter 参与 L0/L1 骨架验证。
+        val runtimeEnvironment = if (BuildConfig.DEBUG) {
+            GovernanceWorkspace.devStubEnvironment()
+        } else {
+            GovernanceWorkspace.assertReleaseReady(RuntimeEnvironment(mode = GovernanceRuntimeMode.STRICT))
+            RuntimeEnvironment(mode = GovernanceRuntimeMode.STRICT)
+        }
         val validator = ToolValidator(registry)
         val promptBuilder = PromptBuilder(registry)
         val provider: ModelProvider = runCatching {
@@ -392,9 +447,12 @@ class AgentService : Service(), AiAgentClient {
         val domainClassifier = DomainClassifier(registry)
         // CR-008: 领域预路由 + 能力包选择 + Workflow 运行时（P0 启用）。
         val domainRouter = DomainRouter(registry)
-        // CR-009: 使用 160 个治理 Tool 的 18 个 Pack（桩模式启用）作为能力包选择目录，
-        // 保证全部 160 个 Tool 都能通过领域 → 能力包 → 候选收敛链路。
-        val capabilitySelector = CapabilityPackSelector(GovernanceWorkspace.runtimePacks())
+        // CR-010: 使用共享 RuntimeCapabilityAssembler 装配统一候选集（与单测一致）。
+        val capabilitySelector = CapabilityPackSelector.governed(
+            catalog = GovernanceWorkspace.runtimePacks(),
+            governanceCatalog = GovernanceWorkspace.catalog,
+            defaultEnvironment = runtimeEnvironment
+        )
         val tieredRouter = TieredIntentRouter(
             fastMatcher, domainClassifier,
             domainRouter = domainRouter,

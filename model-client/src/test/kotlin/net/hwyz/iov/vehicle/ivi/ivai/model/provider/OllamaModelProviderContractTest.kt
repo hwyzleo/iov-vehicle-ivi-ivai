@@ -128,6 +128,8 @@ class OllamaModelProviderContractTest {
         }
         assertNotNull(e)
         assertEquals(ModelErrorKind.RESPONSE_PARSE_ERROR, e!!.kind)
+        // CR-010 可观测性补充：解析失败必须携带完整原始返回数据。
+        assertEquals("not-json-at-all", e.rawContent)
     }
 
     @Test
@@ -145,6 +147,8 @@ class OllamaModelProviderContractTest {
         }
         assertNotNull(e)
         assertEquals(ModelErrorKind.RESPONSE_PARSE_ERROR, e!!.kind)
+        // CR-010 可观测性补充：解析失败必须携带完整原始 message.content（“{broken json”）。
+        assertEquals("{broken json", e.rawContent)
     }
 
     @Test

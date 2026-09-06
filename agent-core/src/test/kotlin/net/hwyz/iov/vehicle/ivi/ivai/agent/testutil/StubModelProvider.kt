@@ -30,7 +30,8 @@ class StubModelProvider(
             throw ModelClientException(
                 kind = ModelErrorKind.RESPONSE_PARSE_ERROR,
                 message = "stub: content not valid JSON: ${e.message}",
-                cause = e
+                cause = e,
+                rawContent = content
             )
         }
         return ModelResponse(

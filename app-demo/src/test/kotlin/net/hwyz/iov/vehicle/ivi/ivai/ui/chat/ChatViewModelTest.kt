@@ -404,7 +404,7 @@ class ChatViewModelTest {
         )
         runCurrent()
 
-        // DebugInfo 携带 CR-009 匹配资产（领域/能力包/工具）。
+        // DebugInfo 携带 CR-009/CR-010 匹配资产（领域中文 / 能力包中文 / 工具中文 + 代码 ID）。
         gateway.emit(
             AgentEvent.DebugInfo(
                 "sess", "turn-1", requestId,
@@ -415,11 +415,14 @@ class ChatViewModelTest {
                     route = "LOCAL_TOOL",
                     intentTier = "L0_DETERMINISTIC_TOOL",
                     finalTier = "L0_DETERMINISTIC_TOOL",
-                    tool = net.hwyz.iov.vehicle.ivi.ivai.agent.event.ToolDebugInfo(toolId = "climate.power_on", status = "SUCCEEDED"),
+                    tool = net.hwyz.iov.vehicle.ivi.ivai.agent.event.ToolDebugInfo(
+                        toolId = "climate.power_on", toolName = "打开空调", status = "SUCCEEDED"
+                    ),
                     cr008 = net.hwyz.iov.vehicle.ivi.ivai.agent.event.Cr008DebugInfo(
                         domain = "BD01",
                         operationType = "CONTROL",
                         selectedPacks = listOf("cabin.climate"),
+                        selectedPackNames = listOf("空调与温控"),
                         workflowId = null
                     )
                 )
@@ -432,8 +435,10 @@ class ChatViewModelTest {
         assertNotNull(label)
         assertTrue(label!!.contains("L0"), "层级标签应保留 L0")
         assertTrue(label.contains("座舱舒适"), "层级标签应附带领域中文名")
-        assertTrue(label.contains("cabin.climate"), "层级标签应附带能力包")
-        assertTrue(label.contains("climate.power_on"), "层级标签应附带工具")
+        assertTrue(label.contains("空调与温控"), "气泡首行能力包只显示中文名")
+        assertFalse(label.contains("cabin.climate"), "气泡首行不应出现能力包代码 ID")
+        assertTrue(label.contains("打开空调"), "气泡首行工具只显示中文名")
+        assertFalse(label.contains("climate.power_on"), "气泡首行不应出现工具代码 ID")
         // 合并后 cr008 信息保留。
         assertEquals("BD01", result.details?.cr008?.domain)
         assertEquals(listOf("cabin.climate"), result.details?.cr008?.selectedPacks)

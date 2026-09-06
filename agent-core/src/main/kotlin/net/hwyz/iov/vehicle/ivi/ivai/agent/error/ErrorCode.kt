@@ -48,3 +48,23 @@ enum class ErrorCode(val code: String) {
         fun from(code: String): ErrorCode? = entries.firstOrNull { it.code == code }
     }
 }
+
+/**
+ * CR-010 新增错误码（与 [ErrorCode] 同一定义域，按 CR-010 错误码表新增）：
+ * 常量统一委托给 tool-registry 的
+ * [net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.Cr010ErrorCodes]（单一来源）。
+ */
+object Cr010ErrorCode {
+    const val CAP_CANONICAL_UNCLOSED =
+        net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.Cr010ErrorCodes.CAP_CANONICAL_UNCLOSED
+    const val ROUTE_CONFLICT =
+        net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.Cr010ErrorCodes.ROUTE_CONFLICT
+    const val ROUTE_COVERAGE_MISSING =
+        net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.Cr010ErrorCodes.ROUTE_COVERAGE_MISSING
+    const val GOV_DRAFT_PROMOTED =
+        net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.Cr010ErrorCodes.GOV_DRAFT_PROMOTED
+    const val GOV_STUB_EXEMPTION_INVALID =
+        net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.Cr010ErrorCodes.GOV_STUB_EXEMPTION_INVALID
+    const val ALIAS_CONFLICT =
+        net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.Cr010ErrorCodes.ALIAS_CONFLICT
+}

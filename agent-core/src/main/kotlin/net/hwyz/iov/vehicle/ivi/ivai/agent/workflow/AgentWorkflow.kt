@@ -62,6 +62,9 @@ import net.hwyz.iov.vehicle.ivi.ivai.retrieval.ToolRetrievalQuery
 import net.hwyz.iov.vehicle.ivi.ivai.retrieval.knowledge.KnowledgeCitationMapper
 import net.hwyz.iov.vehicle.ivi.ivai.retrieval.knowledge.KnowledgeReranker
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.ToolRegistry
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.GovernanceWorkspace
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.ToolCatalogV1
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.WorkflowCatalogV1
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.ExecutionContext
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.ExecutionStatus
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.ToolExecutionResult
@@ -372,7 +375,7 @@ class AgentWorkflow(
             }
             return turnFailed(
                 input, session, timings, code.code, message, true,
-                tracker, ragInfo, "模型调用失败：${e.message}", cr008 = cr008
+                tracker, ragInfo, modelFailureDetail(e, "模型调用失败"), cr008 = cr008
             )
         } catch (e: CancellationException) {
             throw e
@@ -397,7 +400,8 @@ class AgentWorkflow(
             timings.parseAndSchemaMs = msSince(parseStartNs)
             return turnFailed(
                 input, session, timings, ErrorCode.MODEL_RESPONSE_PARSE.code,
-                "暂时无法理解你的请求，请稍后再试", true, tracker, ragInfo, null, cr008 = cr008
+                "暂时无法理解你的请求，请稍后再试", true, tracker, ragInfo,
+                "模型返回内容不是合法 JSON：\n${modelResponse.content}", cr008 = cr008
             )
         }
         record(input, session, AgentState.PARSED)
@@ -408,7 +412,7 @@ class AgentWorkflow(
             return turnFailed(
                 input, session, timings, ErrorCode.OUTPUT_SCHEMA.code,
                 "暂时无法安全理解该请求，请换一种说法", false, tracker, ragInfo,
-                "结构化输出不符合 Schema：${e.message}", cr008 = cr008
+                "结构化输出不符合 Schema：${e.message}\n—— 原始返回 ——\n$contentJson", cr008 = cr008
             )
         }
         timings.parseAndSchemaMs = msSince(parseStartNs)
@@ -539,7 +543,7 @@ class AgentWorkflow(
         } catch (e: ModelClientException) {
             timings.modelCallTotalMs = msSince(modelStartNs)
             val code = mapModelError(e.kind)
-            return turnFailed(input, session, timings, code.code, "模型服务暂不可用，请稍后重试", true, tracker, ragInfo, "模型调用失败：${e.message}", cr008 = cr008)
+            return turnFailed(input, session, timings, code.code, "模型服务暂不可用，请稍后重试", true, tracker, ragInfo, modelFailureDetail(e, "模型调用失败"), cr008 = cr008)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -643,7 +647,10 @@ class AgentWorkflow(
             return turnFailed(
                 input, session, timings, ErrorCode.WORKFLOW_INVALID.code,
                 "Workflow 运行时未配置，无法执行「${workflow.name}」", false, null, null, null,
-                state = AgentState.FAILED, cr008 = cr008Of(decision).copy(workflowId = workflow.workflowId)
+                state = AgentState.FAILED, cr008 = cr008Of(decision).copy(
+                    workflowId = workflow.workflowId,
+                    workflowName = workflowName(workflow.workflowId)
+                )
             )
         }
         record(input, session, AgentState.WORKFLOW_VALIDATED)
@@ -680,6 +687,7 @@ class AgentWorkflow(
         )
         val cr008 = cr008Of(decision).copy(
             workflowId = workflow.workflowId,
+            workflowName = workflowName(workflow.workflowId),
             workflowState = result.state.name,
             workflowStepCount = result.stepResults.size,
             workflowStepResults = result.stepResults.map { "${it.stepId}:${it.state.name}" },
@@ -1305,10 +1313,24 @@ class AgentWorkflow(
             operationType = domain.operationType.name,
             domainReasonCode = domain.reasonCode,
             selectedPacks = snapshot?.packs?.map { it.packId } ?: emptyList(),
+            // CR-010 展示：选中 Pack 中文名（与 selectedPacks 一一对应）。
+            selectedPackNames = snapshot?.packs?.map { packName(it.packId) ?: it.packId } ?: emptyList(),
             packVersion = snapshot?.packVersion,
             postFilterCandidateCount = snapshot?.filteredToolIds?.size
         )
     }
+
+    /** Pack ID → 中文名（治理目录）。 */
+    private fun packName(packId: String): String? =
+        GovernanceWorkspace.packs.firstOrNull { it.packId == packId }?.name
+
+    /** Tool ID → 中文名（运行时注册表，兜底治理目录）。 */
+    private fun toolName(toolId: String): String? =
+        registry.get(toolId)?.name ?: ToolCatalogV1.get(toolId)?.name
+
+    /** Workflow ID → 中文名（治理目录）。 */
+    private fun workflowName(workflowId: String): String? =
+        WorkflowCatalogV1.get(workflowId)?.name
 
     private fun mapModelError(kind: ModelErrorKind): ErrorCode = when (kind) {
         ModelErrorKind.RESPONSE_PARSE_ERROR -> ErrorCode.MODEL_RESPONSE_PARSE
@@ -1468,6 +1490,7 @@ class AgentWorkflow(
                     turnId = input.turnId,
                     requestId = input.requestId,
                     performance = performance,
+                    rawModelContent = rawModelContent,
                     parsed = parsedOutput?.let {
                         ParsedOutputSummary(
                             route = it.route,
@@ -1480,6 +1503,7 @@ class AgentWorkflow(
                                 ParsedIntentSummary(
                                     toolId = intent.toolId,
                                     functionId = intent.functionId,
+                                    toolName = toolName(intent.toolId),
                                     arguments = intent.arguments.mapValues { (_, value) -> value.toString() }
                                 )
                             }
@@ -1488,6 +1512,7 @@ class AgentWorkflow(
                     tool = executionResult?.let {
                         ToolDebugInfo(
                             toolId = it.toolId,
+                            toolName = it.toolId?.let { id -> toolName(id) },
                             status = it.status.name,
                             message = it.message,
                             errorCode = it.errorCode,
@@ -1508,6 +1533,16 @@ class AgentWorkflow(
                 )
             )
         )
+    }
+
+    /**
+     * 组装模型调用失败详情：异常信息 + 完整原始返回数据（便于定位模型返回问题）。
+     * 原始返回经 TurnDebugInfo.errorDetail 全量透出到失败详情（CR-010 可观测性补充）。
+     */
+    private fun modelFailureDetail(e: ModelClientException, prefix: String): String {
+        val base = "$prefix：${e.message}"
+        val raw = e.rawContent
+        return if (raw.isNullOrBlank()) base else "$base\n—— 原始返回 ——\n$raw"
     }
 
     private fun msSince(startNs: Long): Long = (System.nanoTime() - startNs) / NANOS_PER_MILLI

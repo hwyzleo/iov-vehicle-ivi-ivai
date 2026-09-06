@@ -53,7 +53,7 @@
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp"
                 android:layout_marginTop="8dp"
-                android:text="模型配置" />
+                android:text="本地模型配置" />
 
             <Button
                 android:id="@+id/asrConfigButton"
@@ -64,24 +64,32 @@
                 android:layout_marginTop="8dp"
                 android:text="语音识别配置" />
 
-            <TextView
+            <Button
+                android:id="@+id/promptInfoButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp"
-                android:layout_marginTop="16dp"
-                android:text="调试信息"
-                android:textStyle="bold" />
+                android:layout_marginTop="8dp"
+                android:text="提示词信息" />
 
-            <androidx.fragment.app.FragmentContainerView
-                android:id="@+id/settingsPromptContainer"
+            <Button
+                android:id="@+id/vehicleInfoButton"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginEnd="16dp"
+                android:layout_marginTop="8dp"
+                android:text="本车功能" />
 
-            <androidx.fragment.app.FragmentContainerView
-                android:id="@+id/settingsRagContainer"
+            <Button
+                android:id="@+id/ragConfigButton"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginEnd="16dp"
+                android:layout_marginTop="8dp"
+                android:text="检索增强RAG设置" />
         </LinearLayout>
     </ScrollView>
 </LinearLayout>

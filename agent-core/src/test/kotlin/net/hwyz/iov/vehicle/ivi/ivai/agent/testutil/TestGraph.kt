@@ -24,6 +24,7 @@ import net.hwyz.iov.vehicle.ivi.ivai.retrieval.knowledge.KnowledgeReranker
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.ToolRegistry
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.ClimateToolDefinitions
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.GovernanceWorkspace
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.RuntimeEnvironment
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.AdapterRegistry
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.DefaultToolExecutor
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.ToolExecutor
@@ -107,9 +108,10 @@ object TestGraph {
     }
 
     /**
-     * CR-009 集成装配：注册全部 160 个治理 Tool（Mock 桩）+ mock-governed 适配器
-     * + 18 个桩启用 Capability Pack。与 AgentService.buildAgentGraph 的 CR-009 装配一致，
-     * 用于验证 160 个 Tool 的运行时链路（路由→校验→Policy→执行）全部可调通。
+     * CR-009/CR-010 集成装配：注册全部 160 个治理 Tool（Mock 桩）+ mock-governed 适配器
+     * + 18 个 Capability Pack。与 AgentService.buildAgentGraph 使用**同一**
+     * RuntimeCapabilityAssembler + 统一候选集（EARS #10）：开发桩模式（STUB）下
+     * 白名单 DRAFT 仅经 Mock Adapter 参与 L0/L1 骨架验证，DRAFT 状态保留。
      */
     fun buildGovernedStubGraph(
         model: ModelProvider,
@@ -117,11 +119,11 @@ object TestGraph {
         lifecycle: ToolLifecycleListener? = null,
         config: AgentConfig = AgentConfig(model = "qwen3.5:4b", ollamaBaseUrl = "http://localhost:11434"),
         vehicleModel: String? = null,
-        softwareVersion: String? = null
+        softwareVersion: String? = null,
+        environment: RuntimeEnvironment = GovernanceWorkspace.devStubEnvironment()
     ): Triple<AgentWorkflow, net.hwyz.iov.vehicle.ivi.ivai.adapter.mock.MockGovernedToolAdapter, ToolRegistry> {
         val governedAdapter = net.hwyz.iov.vehicle.ivi.ivai.adapter.mock.MockGovernedToolAdapter()
-        // 160 个治理 Tool（Mock 桩）注册进运行时；保留 6 个空调 P0 验证集后仍可叠加，
-        // 此处直接以 160 治理桩为准（与 AgentService 装配一致）。
+        // CR-010: 统一候选集 = 160 个 canonical 治理 Tool（旧 6 空调 ID 经 Alias 映射，不再单独注册）。
         val registry = GovernanceWorkspace.registerAllStubs(ToolRegistry())
         val validator = ToolValidator(registry)
         val agentPolicy = AgentPolicyEngine(registry, ToolPolicyEngine())
@@ -134,10 +136,16 @@ object TestGraph {
         val promptBuilder = PromptBuilder(registry)
         val fastMatcher = DefaultFastIntentMatcher(registry)
         val domainClassifier = DomainClassifier(registry)
+        // CR-010: 与 AgentService 共用同一 RuntimeCapabilityAssembler + 统一候选集。
+        val capabilitySelector = CapabilityPackSelector.governed(
+            catalog = GovernanceWorkspace.runtimePacks(),
+            governanceCatalog = GovernanceWorkspace.catalog,
+            defaultEnvironment = environment
+        )
         val tieredRouter = TieredIntentRouter(
             fastMatcher, domainClassifier,
             domainRouter = DomainRouter(registry),
-            capabilitySelector = CapabilityPackSelector(GovernanceWorkspace.runtimePacks()),
+            capabilitySelector = capabilitySelector,
             registry = registry
         )
         val workflow = AgentWorkflow(

@@ -8,21 +8,22 @@ import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.ToolAlias
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.schemas.ClimateSchemas
 
 /**
- * First-batch climate tool definitions (IVI-IVAI-DSN-CR-001 + CR-005 + CR-008).
+ * 旧空调 P0 验证集定义（IVI-IVAI-DSN-CR-001 + CR-005 + CR-008 + CR-010）。
  *
- * CR-005 adds L0 deterministic routing rules: uniquely identifiable commands
- * ("打开空调", "主驾调到24度") route through L0 without LLM/RAG; implicit
- * expressions ("我有点冷", "太热了") intentionally have NO L0 rule and fall to
- * L1 Tool/Intent RAG + local LLM.
+ * CR-010 之后该集合**仅作为非路由机制的夹具（fixture）保留**：供 CR-005/CR-008
+ * 的执行器、校验器、Policy、Prompt、Workflow Runtime 等机制级单元测试引用（这些
+ * 测试不验证 L0/L1 路由模型，EARS #10 不适用于它们）。
  *
- * CR-008 attaches governance metadata: suggested business domain (CABIN_COMFORT /
- * BD01), owning capability pack (cabin.climate), operation types and legacy /
- * expression aliases. The 6 tools form the P0 verification set; the parameterized
- * `climate.temperature.adjust` suggestion is expressed at the governance layer
- * (see ClimateGovernedCapabilities) and will be registered as a runtime tool in a
- * later CR — the migration period keeps the legacy Tool IDs + Function-IDs via
- * [ToolDefinition.aliases].
+ * **运行时路径（AgentService、路由单测、集成测试）不再使用本集合**：6 个旧空调 ID
+ * 已退役为 [net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.ToolAliasCatalog]
+ * 中的 LEGACY_TOOL_ID / FUNCTION_ID Alias，映射到 160 治理目录中的 canonical Tool
+ * （climate.power.set / climate.temperature.set / climate.temperature.adjust /
+ * climate.status.query），并经统一 RuntimeCapabilityAssembler 装配（CR-010）。
+ *
+ * @deprecated CR-010：仅限机制级测试夹具；运行时装配请使用 GovernanceWorkspace +
+ * RuntimeCapabilityAssembler + ToolAliasCatalog。
  */
+@Deprecated("CR-010：仅限非路由机制测试夹具；运行时使用 GovernanceWorkspace + ToolAliasCatalog + RuntimeCapabilityAssembler")
 object ClimateToolDefinitions {
 
     const val CABIN_CLIMATE_PACK = "cabin.climate"

@@ -5,27 +5,27 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 /**
- * CR-009 验证设计 · Contract Test Catalog v1：
- *  - 总量 1,174 = 50 Domain + 960 Tool + 144 Workflow + 20 Governance。
- *  - 各层数量与公式一致（10×5 / 160×6 / 18×8 / 20）。
+ * CR-009 + CR-010 验证设计 · Contract Test Catalog v1：
+ *  - 总量 1,500 = 50 Domain + 1280 Tool + 144 Workflow + 26 Governance。
+ *  - 各层数量与公式一致（10×5 / 160×8 / 18×8 / 26）。
  *  - 每条可追溯（Test ID、对象、reasonCode）。
- *  - 代表性 reasonCode（TC-GOV-001～020、Domain 路由、Workflow 成功）。
+ *  - 代表性 reasonCode（TC-GOV-001～026、Domain 路由、Workflow 成功）。
  */
 class ContractTestCatalogTest {
 
     @Test
-    fun `契约测试总量为 1174`() {
-        assertEquals(1174, ContractTestCatalog.ALL.size)
-        assertEquals(1174, ContractTestCatalog.expectedTotal)
+    fun `契约测试总量为 1500`() {
+        assertEquals(1500, ContractTestCatalog.ALL.size)
+        assertEquals(1500, ContractTestCatalog.expectedTotal)
     }
 
     @Test
     fun `分层数量与公式一致`() {
         val counts = ContractTestCatalog.layerCounts()
         assertEquals(50, counts[ContractTestType.DOMAIN])      // 10 × 5
-        assertEquals(960, counts[ContractTestType.TOOL])       // 160 × 6
+        assertEquals(1280, counts[ContractTestType.TOOL])      // 160 × 8（CR-010 增 DET_L0 / DET_AMBIGUOUS）
         assertEquals(144, counts[ContractTestType.WORKFLOW])   // 18 × 8
-        assertEquals(20, counts[ContractTestType.GOVERNANCE])  // 20
+        assertEquals(26, counts[ContractTestType.GOVERNANCE])  // 20 + CR-010 6
     }
 
     @Test
@@ -38,13 +38,20 @@ class ContractTestCatalogTest {
     }
 
     @Test
-    fun `Governance 测试覆盖 TC-GOV-001 至 TC-GOV-020`() {
+    fun `Governance 测试覆盖 TC-GOV-001 至 TC-GOV-026`() {
         val gov = ContractTestCatalog.governanceTests
-        assertEquals(20, gov.size)
+        assertEquals(26, gov.size)
         assertEquals("TC-GOV-001", gov.first().testId)
-        assertEquals("TC-GOV-020", gov.last().testId)
+        assertEquals("TC-GOV-026", gov.last().testId)
         assertEquals("GOV_STATUS_REJECTED", gov[0].expectedReasonCode)
         assertEquals("AUDIT_TRACE_MISSING", gov[19].expectedReasonCode)
+        // CR-010 新错误码（TC-GOV-021～026）。
+        assertEquals("IVAI-CAP-003", gov[20].expectedReasonCode)
+        assertEquals("IVAI-ROUTE-003", gov[21].expectedReasonCode)
+        assertEquals("IVAI-ROUTE-004", gov[22].expectedReasonCode)
+        assertEquals("IVAI-GOV-003", gov[23].expectedReasonCode)
+        assertEquals("IVAI-GOV-004", gov[24].expectedReasonCode)
+        assertEquals("IVAI-ALIAS-001", gov[25].expectedReasonCode)
     }
 
     @Test
@@ -60,12 +67,21 @@ class ContractTestCatalogTest {
     }
 
     @Test
-    fun `Tool 测试覆盖 160 个 Tool 共 960 条`() {
+    fun `Tool 测试覆盖 160 个 Tool 共 1280 条含确定性覆盖分类`() {
         val toolTests = ContractTestCatalog.toolTests
-        assertEquals(960, toolTests.size)
+        assertEquals(1280, toolTests.size)
         val perTool = toolTests.groupingBy { it.objectId }.eachCount()
         assertEquals(160, perTool.size)
-        assertTrue(perTool.values.all { it == 6 }, "每个 Tool 应有 6 类")
+        assertTrue(perTool.values.all { it == 8 }, "每个 Tool 应有 8 类")
+        // CR-010：具备确定性画像的 Tool → DET_L0 唯一匹配走 L0；否则记录覆盖缺口。
+        val detL0 = toolTests.filter { it.category == "DET_L0" }
+        assertEquals(160, detL0.size)
+        val profiled = detL0.first { it.objectId == "climate.power.set" }
+        assertEquals("L0_UNIQUE_MATCH", profiled.expectedReasonCode)
+        val unprofiled = detL0.first { it.objectId == "body.window.set" }
+        assertEquals("DETERMINISTIC_COVERAGE_MISSING", unprofiled.expectedReasonCode)
+        val detAmb = toolTests.first { it.category == "DET_AMBIGUOUS" && it.objectId == "climate.power.set" }
+        assertEquals("IVAI-ROUTE-003", detAmb.expectedReasonCode)
     }
 
     @Test

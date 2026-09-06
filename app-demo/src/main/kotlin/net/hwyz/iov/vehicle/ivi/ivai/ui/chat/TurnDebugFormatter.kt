@@ -23,16 +23,18 @@ object TurnDebugFormatter {
     private val SECTION_COLOR = 0xFF1565C0.toInt()
     private val CODE_COLOR = 0xFF37474F.toInt()
 
-    /** 失败详情只展示截断后的诊断原因，避免原始模型输出/敏感信息进入 UI。 */
-    private const val MAX_DETAIL_CHARS = 200
-
+    /**
+     * 失败详情展示失败原因与完整原始模型返回数据（用户要求的调试手段）：
+     * 解析失败时把模型返回内容全文透出，便于定位“模型返回格式异常”的具体原因。
+     * 仅在失败（errorDetail 非空）时展示，正常执行不渲染原始输出。
+     */
     fun format(debug: TurnDebugInfo): CharSequence {
         val sb = SpannableStringBuilder()
 
         section(sb, "⚡ 执行状态")
         body(sb, "状态：${debug.state ?: "-"}    路由：${debug.route ?: "-"}")
         debug.errorCode?.let { body(sb, "错误码：$it") }
-        debug.errorDetail?.let { body(sb, "失败详情：${it.take(MAX_DETAIL_CHARS)}") }
+        debug.errorDetail?.let { body(sb, "失败详情：\n$it") }
         if (debug.replayed) body(sb, "（命中幂等缓存，未重复执行）")
         body(sb, "requestId：${debug.requestId}")
         sb.append("\n")
@@ -81,9 +83,10 @@ object TurnDebugFormatter {
             parsed.reasonCode?.let { body(sb, "reasonCode：$it") }
             if (parsed.intents.isNotEmpty()) {
                 parsed.intents.forEach { intent ->
+                    val label = intent.toolName?.let { cn -> "$cn（${intent.toolId}）" } ?: intent.toolId
                     code(
                         sb,
-                        "→ ${intent.toolId}${intent.functionId?.let { " ($it)" } ?: ""}  ${intent.arguments}"
+                        "→ $label${intent.functionId?.let { " ($it)" } ?: ""}  ${intent.arguments}"
                     )
                 }
             }
@@ -92,7 +95,10 @@ object TurnDebugFormatter {
 
         debug.tool?.let { tool ->
             section(sb, "🔧 工具执行")
-            tool.toolId?.let { body(sb, "工具：$it") }
+            tool.toolId?.let {
+                val cn = tool.toolName ?: it
+                body(sb, "工具：${if (cn == it) it else "$cn（$it）"}")
+            }
             tool.status?.let { body(sb, "状态：$it") }
             tool.latencyMs?.let { body(sb, "耗时：${it}ms") }
             tool.errorCode?.let { body(sb, "错误码：$it") }
@@ -116,6 +122,14 @@ object TurnDebugFormatter {
             }
         }
         debug.candidateSource?.let { bodyPath(sb, "候选来源：$it") }
+        // CR-010 可观测性：走过本地模型（L1/L2，候选来源为 LLM）时，把 LLM 的完整
+        // 响应原文打印在执行路径里，便于核对「匹配资产 / 解析结果」与模型输出的关系
+        // （例如模型误报缺参、选错 Tool 时能直接看到原文）。
+        val llmResponded = debug.candidateSource == "L1_LOCAL_LLM" ||
+            debug.candidateSource == "L3_CLOUD_AI"
+        if (llmResponded && !debug.rawModelContent.isNullOrBlank()) {
+            bodyPath(sb, "—— LLM 返回 ——\n${debug.rawModelContent}")
+        }
         return sb.toString()
     }
 
@@ -134,14 +148,23 @@ object TurnDebugFormatter {
         }
         cr008.operationType?.let { bodyPath(sb, "操作类型：$it") }
         if (cr008.selectedPacks.isNotEmpty()) {
-            bodyPath(sb, "能力包：${cr008.selectedPacks.joinToString("、")}")
+            // CR-010 展示：能力包中文名（代码）一一对应。
+            val packs = cr008.selectedPacks.mapIndexed { index, packId ->
+                val cn = cr008.selectedPackNames.getOrNull(index) ?: packId
+                if (cn == packId) packId else "$cn（$packId）"
+            }
+            bodyPath(sb, "能力包：${packs.joinToString("、")}")
         }
         // 工作流优先（WF 场景编排），否则展示执行/解析出的工具。
         cr008.workflowId?.let {
-            bodyPath(sb, "工作流：$it${cr008.workflowState?.let { s -> "（$s）" } ?: ""}")
+            val cn = cr008.workflowName ?: it
+            bodyPath(sb, "工作流：${if (cn == it) it else "$cn（$it）"}${cr008.workflowState?.let { s -> "（$s）" } ?: ""}")
         } ?: run {
             val toolId = debug.tool?.toolId ?: debug.parsed?.intents?.firstOrNull()?.toolId
-            toolId?.let { bodyPath(sb, "工具：$it") }
+            toolId?.let {
+                val cn = debug.tool?.toolName ?: debug.parsed?.intents?.firstOrNull()?.toolName ?: it
+                bodyPath(sb, "工具：${if (cn == it) it else "$cn（$it）"}")
+            }
         }
         return sb.toString()
     }

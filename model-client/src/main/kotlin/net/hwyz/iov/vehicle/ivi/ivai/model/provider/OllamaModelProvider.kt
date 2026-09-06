@@ -327,7 +327,8 @@ class OllamaModelProvider(
             throw ModelClientException(
                 kind = ModelErrorKind.RESPONSE_PARSE_ERROR,
                 message = "Ollama outer response parse failed: ${e.message}",
-                cause = e
+                cause = e,
+                rawContent = rawBody
             )
         }
     }
@@ -344,7 +345,8 @@ class OllamaModelProvider(
         throw ModelClientException(
             kind = ModelErrorKind.RESPONSE_PARSE_ERROR,
             message = "Ollama message.content is not valid JSON (requestId=$requestId): ${e.message}",
-            cause = e
+            cause = e,
+            rawContent = content
         )
     }
 

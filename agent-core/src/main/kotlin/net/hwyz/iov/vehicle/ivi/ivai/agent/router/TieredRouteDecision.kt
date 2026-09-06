@@ -31,7 +31,26 @@ data class TieredRouteDecision(
     // CR-008:
     val domain: DomainRouteDecision? = null,
     val capabilitySnapshot: CapabilitySnapshot? = null,
-    val workflow: WorkflowDefinition? = null
+    val workflow: WorkflowDefinition? = null,
+    // CR-010 observability:
+    val observability: RouteObservability? = null
+)
+
+/**
+ * CR-010 路由可观测性：统一候选集、确定性匹配与治理模式的现场信息。
+ * 不参与路由决策，仅供调试、评测与治理覆盖建设。
+ */
+data class RouteObservability(
+    val selectedPackIds: Set<String> = emptySet(),
+    val runtimeCandidateToolIdsHash: String? = null,
+    val deterministicMatchedToolIds: Set<String> = emptySet(),
+    val matchedPatternId: String? = null,
+    val sourceAliasId: String? = null,
+    val canonicalToolId: String? = null,
+    val deterministicFallbackReason: String? = null,
+    val governanceRuntimeMode: String? = null,
+    val runtimeExceptionId: String? = null,
+    val errorCode: String? = null
 )
 
 /** Common reason codes produced by the tiered router (CR-005 + CR-008). */

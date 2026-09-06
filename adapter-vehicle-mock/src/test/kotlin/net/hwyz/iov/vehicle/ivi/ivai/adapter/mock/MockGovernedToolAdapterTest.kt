@@ -100,8 +100,8 @@ class MockGovernedToolAdapterTest {
     }
 
     @Test
-    fun `契约测试目录 1174 条可数据驱动生成且对象均可解析`() {
-        assertEquals(1174, ContractTestCatalog.ALL.size)
+    fun `契约测试目录 1500 条可数据驱动生成且对象均可解析`() {
+        assertEquals(1500, ContractTestCatalog.ALL.size)
         val toolIds = ToolCatalogV1.toolIds
         val wfIds = net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.WorkflowCatalogV1.workflowIds
         for (spec in ContractTestCatalog.ALL) {

@@ -45,10 +45,14 @@ enum class ModelErrorKind {
 
 /**
  * Thrown by [ModelProvider] implementations for any network / HTTP / model / parse failure.
+ *
+ * @param rawContent 解析/调用失败时携带的完整原始返回数据（消息原文或响应体），
+ *   用于失败详情完整展示以便定位模型返回问题（CR-010 可观测性补充）。
  */
 class ModelClientException(
     val kind: ModelErrorKind,
     val httpCode: Int? = null,
     message: String,
-    cause: Throwable? = null
+    cause: Throwable? = null,
+    val rawContent: String? = null
 ) : RuntimeException(message, cause)

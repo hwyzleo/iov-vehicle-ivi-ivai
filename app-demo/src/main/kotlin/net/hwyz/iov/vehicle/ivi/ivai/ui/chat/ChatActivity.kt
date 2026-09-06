@@ -113,7 +113,7 @@ class ChatActivity : ComponentActivity() {
         messageList.adapter = adapter
 
         sendButton.setOnClickListener { sendFromInput() }
-        // 统一设置入口：模型配置 / 语音识别配置 / 调试信息 都从设置中心进入。
+        // 统一设置入口：本地模型配置 / 语音识别配置 / 提示词信息 / 本车功能 / 检索增强RAG设置 都从设置中心进入。
         findViewById<Button>(R.id.settingsButton).setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }

@@ -15,6 +15,9 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.put
 import net.hwyz.iov.vehicle.ivi.ivai.model.HttpNetworkMetrics
 import net.hwyz.iov.vehicle.ivi.ivai.model.ModelClientException
 import net.hwyz.iov.vehicle.ivi.ivai.model.ModelErrorKind
@@ -156,7 +159,8 @@ class OpenAiCompatibleModelProvider(
                 if (contentJson == null) {
                     throw ModelClientException(
                         kind = ModelErrorKind.RESPONSE_PARSE_ERROR,
-                        message = "OpenAI message.content is not a valid JSON object (requestId=${request.requestId})"
+                        message = "OpenAI message.content is not a valid JSON object (requestId=${request.requestId})",
+                        rawContent = finalContent
                     )
                 }
                 ModelResponse(
@@ -414,9 +418,16 @@ class OpenAiCompatibleModelProvider(
             snapshot.baseUrl.toString(),
             snapshot.endpointPath ?: DEFAULT_ENDPOINT_PATH
         )
+        // 序列化后合并顶层字段：确保 enable_thinking 显式下发（kotlinx 默认会省略
+        // 等于默认值的字段，而 SiliconFlow 推理模型默认可能开启思考）。
+        val bodyJson = buildJsonObject {
+            json.encodeToJsonElement(OpenAiChatRequest.serializer(), payload)
+                .jsonObject.forEach { (k, v) -> put(k, v) }
+            put("enable_thinking", payload.enableThinking)
+        }
         val builder = Request.Builder()
             .url(endpoint)
-            .post(json.encodeToString(OpenAiChatRequest.serializer(), payload).toRequestBody(jsonMediaType))
+            .post(bodyJson.toString().toRequestBody(jsonMediaType))
             .header("X-IVAI-Request-Id", requestId)
         snapshot.apiKey?.use { key ->
             // The raw key exists only for this header construction; logs must mask it.
@@ -432,7 +443,8 @@ class OpenAiCompatibleModelProvider(
             throw ModelClientException(
                 kind = ModelErrorKind.RESPONSE_PARSE_ERROR,
                 message = "OpenAI compatible response parse failed: ${e.message}",
-                cause = e
+                cause = e,
+                rawContent = rawBody
             )
         }
     }
@@ -449,7 +461,8 @@ class OpenAiCompatibleModelProvider(
         throw ModelClientException(
             kind = ModelErrorKind.RESPONSE_PARSE_ERROR,
             message = "OpenAI message.content is not valid JSON (requestId=$requestId): ${e.message}",
-            cause = e
+            cause = e,
+            rawContent = content
         )
     }
 

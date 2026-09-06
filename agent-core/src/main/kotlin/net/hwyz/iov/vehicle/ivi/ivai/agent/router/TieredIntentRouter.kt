@@ -8,29 +8,26 @@ import net.hwyz.iov.vehicle.ivi.ivai.agent.domain.DomainRouter
 import net.hwyz.iov.vehicle.ivi.ivai.retrieval.KnowledgeRetrievalQuery
 import net.hwyz.iov.vehicle.ivi.ivai.retrieval.RetrievalQuery
 import net.hwyz.iov.vehicle.ivi.ivai.retrieval.ToolRetrievalQuery
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.SemanticFeature
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.workflows.WorkflowDefinition
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.workflows.WorkflowRegistry
 
 /**
- * Tiered intent router (IVI-IVAI-DSN-CR-005 + CR-008). Decides the execution
- * tier for a turn following the design order:
+ * Tiered intent router (IVI-IVAI-DSN-CR-005 + CR-008 + CR-010). Decides the
+ * execution tier for a turn following the design order:
  *
  *  input normalization → safety / domain pre-check → domain route + pack select
- *    (CR-008) → L0 unique match?
+ *    (CR-008) → unified runtimeCandidateToolIds（CR-010）→ L0 unique match?
  *      ├─ yes → ToolCallCandidate (no RAG / no LLM)
- *      └─ no → local tool domain? → L1 Tool/Intent RAG + local LLM
- *              └─ no → local knowledge domain? → L2 Knowledge RAG + local LLM
+ *      └─ no → L1 Tool/Intent RAG + local LLM（只能在同一统一候选集或其 Top-K 子集内）
+ *              └─ no → L2 Knowledge RAG + local LLM
  *                      └─ no → L3 Cloud AI / REJECT
  *
- * CR-008: when a [DomainRouter] + [CapabilityPackSelector] are injected, the
- * business-domain pre-routing and capability-pack filtering happen BEFORE L0 /
- * L1; L0 is scoped to the selected pack's tools and the L1 retrieval query is
- * restricted to the selected domains / packs. A confident domain with no
- * available pack is rejected as NO_AVAILABLE_CAPABILITY; low-confidence /
- * ambiguous / unknown domains fall back to the legacy classifier path.
- *
- * The router records the hit tier, rule, confidence and reason code; retrieval
- * / prompt / model orchestration happens downstream in the workflow.
+ * CR-010：L0/L1 是请求解析路径而非 Tool 分类。选中 Pack 内全部运行时可执行
+ * Tool 经 RuntimeCapabilityAssembler 形成统一 runtimeCandidateToolIds；L0 匹配
+ * 与 L1 检索都只在该集合或其 Top-K 子集内工作，不存在独立 L0 白名单。
+ * 同一 Tool 可由明确表达走 L0、隐式表达走 L1（IntentTier 描述候选产生方式，
+ * 不是 ToolDefinition 的固有属性）。
  */
 class TieredIntentRouter(
     private val matcher: FastIntentMatcher,
@@ -41,7 +38,7 @@ class TieredIntentRouter(
     private val domainRouter: DomainRouter? = null,
     private val capabilitySelector: CapabilityPackSelector? = null,
     private val workflows: List<WorkflowDefinition> = WorkflowRegistry.AVAILABLE,
-    /** CR-008 能力包限定 L0 所需的 Tool 注册表（启用领域路由时由装配方提供）。 */
+    /** CR-008/CR-010 统一候选集限定 L0 所需的 Tool 注册表（启用领域路由时由装配方提供）。 */
     private val registry: net.hwyz.iov.vehicle.ivi.ivai.tool.registry.ToolRegistry? = null
 ) {
 
@@ -66,9 +63,8 @@ class TieredIntentRouter(
         val domainDecision = dr.route(input, context)
         val snapshot = cs.select(domainDecision, context)
 
-        // Workflow fast-path: a registered workflow uniquely matches and is inside
-        // the selected packs → WorkflowPlanner selects it (each step still passes
-        // the safe execution chain).
+        // CR-010: Workflow 若存在已注册、唯一且参数完整的显式触发，也可由确定性
+        // 匹配产生 WorkflowCandidate（每个步骤仍执行完整安全校验）。
         val workflow = matchWorkflow(input, snapshot)
         if (workflow != null) {
             return TieredRouteDecision(
@@ -77,7 +73,8 @@ class TieredIntentRouter(
                 reasonCode = RouteReasonCode.WORKFLOW_MATCHED,
                 domain = domainDecision,
                 capabilitySnapshot = snapshot,
-                workflow = workflow
+                workflow = workflow,
+                observability = observability(snapshot)
             )
         }
 
@@ -93,18 +90,19 @@ class TieredIntentRouter(
                     confidence = domainDecision.confidence,
                     reasonCode = RouteReasonCode.DOMAIN_NO_AVAILABLE_PACK,
                     domain = domainDecision,
-                    capabilitySnapshot = snapshot
+                    capabilitySnapshot = snapshot,
+                    observability = observability(snapshot)
                 )
             }
             // 缺上下文 / 低置信 / 未知 / 软请求：回退旧链路（L1/L2/L3）。
             return legacyRoute(input, context, domainDecision, snapshot)
         }
 
-        // Pack-scoped L0: only tools inside the selected packs may match.
-        val scopedMatcher = if (snapshot.filteredToolIds.isEmpty() || registry == null) {
+        // CR-010: L0 scoped to the unified canonical candidate set (no L0 whitelist).
+        val scopedMatcher = if (snapshot.runtimeCandidateToolIds.isEmpty() || registry == null) {
             matcher
         } else {
-            DefaultFastIntentMatcher(registry, snapshot.filteredToolIds)
+            DefaultFastIntentMatcher(registry, snapshot.runtimeCandidateToolIds)
         }
         return when (val match = scopedMatcher.match(input, context)) {
             is FastIntentMatchResult.Unique -> TieredRouteDecision(
@@ -113,14 +111,26 @@ class TieredIntentRouter(
                 reasonCode = match.reasonCode,
                 directCandidate = match.candidate,
                 domain = domainDecision,
-                capabilitySnapshot = snapshot
+                capabilitySnapshot = snapshot,
+                observability = observability(
+                    snapshot,
+                    matchedToolIds = match.matchedToolIds,
+                    patternId = match.matchedPatternId,
+                    canonicalToolId = match.canonicalToolId ?: match.candidate.toolId,
+                    errorCode = null
+                )
             )
             is FastIntentMatchResult.Ambiguous -> toolDomainDecision(
                 reasonCode = RouteReasonCode.L0_RULE_AMBIGUOUS,
                 input = input,
                 context = context,
                 domain = domainDecision,
-                snapshot = snapshot
+                snapshot = snapshot,
+                observability = observability(
+                    snapshot,
+                    matchedToolIds = match.matchedToolIds,
+                    errorCode = ErrorCodeString.ROUTE_CONFLICT // IVAI-ROUTE-003
+                )
             )
             is FastIntentMatchResult.MissingArguments -> toolDomainDecision(
                 reasonCode = RouteReasonCode.L0_MISSING_ARGUMENTS,
@@ -129,7 +139,8 @@ class TieredIntentRouter(
                 domain = domainDecision,
                 snapshot = snapshot,
                 missingToolId = match.toolId,
-                missingArguments = match.missing
+                missingArguments = match.missing,
+                observability = observability(snapshot, canonicalToolId = match.toolId)
             )
             FastIntentMatchResult.NoMatch -> {
                 val l0Reason = when {
@@ -137,15 +148,32 @@ class TieredIntentRouter(
                     input.hasMultiIntent -> RouteReasonCode.L0_MULTI_INTENT
                     else -> RouteReasonCode.L0_NO_MATCH
                 }
+                // CR-010：高频明确表达没有确定性匹配元数据 → 记录治理缺口
+                // DETERMINISTIC_COVERAGE_MISSING（IVAI-ROUTE-004），仍走 L1；
+                // 隐式/强上下文表达属于正常 L1，不记录缺口。
+                val coverageGap = isExplicitToolCommand(domainDecision, input) &&
+                    l0Reason == RouteReasonCode.L0_NO_MATCH
                 toolDomainDecision(
                     reasonCode = l0Reason,
                     input = input,
                     context = context,
                     domain = domainDecision,
-                    snapshot = snapshot
+                    snapshot = snapshot,
+                    observability = observability(
+                        snapshot,
+                        fallbackReason = if (coverageGap) "DETERMINISTIC_COVERAGE_MISSING" else null,
+                        errorCode = if (coverageGap) ErrorCodeString.ROUTE_COVERAGE_MISSING else null // IVAI-ROUTE-004
+                    )
                 )
             }
         }
+    }
+
+    /** CR-010：是否为「可安全直达的显式表达」候选（无隐式语义特征）。 */
+    private fun isExplicitToolCommand(domain: DomainRouteDecision, input: NormalizedInput): Boolean {
+        if (input.hasNegation || input.hasMultiIntent) return false
+        if (domain.semanticFeatures.contains(SemanticFeature.IMPLICIT_EXPRESSION)) return false
+        return domain.operationType in EXPLICIT_OPERATION_TYPES
     }
 
     /** 领域 / 能力包限定后的 L1 工具领域决策。 */
@@ -156,7 +184,8 @@ class TieredIntentRouter(
         domain: DomainRouteDecision?,
         snapshot: CapabilitySnapshot?,
         missingToolId: String? = null,
-        missingArguments: List<String> = emptyList()
+        missingArguments: List<String> = emptyList(),
+        observability: RouteObservability? = null
     ): TieredRouteDecision = TieredRouteDecision(
         tier = IntentTier.L1_LOCAL_TOOL_REASONING,
         confidence = 0.8,
@@ -173,23 +202,43 @@ class TieredIntentRouter(
         missingToolId = missingToolId,
         missingArguments = missingArguments,
         domain = domain,
-        capabilitySnapshot = snapshot
+        capabilitySnapshot = snapshot,
+        observability = observability
     )
 
-    /** 在选中 Pack 的 Workflow 中按触发表达唯一匹配。 */
+    /** 在选中 Pack 的 Workflow 中按触发表达唯一匹配（CR-010 统一 Workflow 候选集）。 */
     private fun matchWorkflow(
         input: NormalizedInput,
         snapshot: CapabilitySnapshot
     ): WorkflowDefinition? {
-        if (snapshot.filteredWorkflowIds.isEmpty()) return null
+        if (snapshot.runtimeCandidateWorkflowIds.isEmpty()) return null
         val normalized = input.normalized
         val matched = workflows.filter { candidate ->
-            candidate.workflowId in snapshot.filteredWorkflowIds &&
+            candidate.workflowId in snapshot.runtimeCandidateWorkflowIds &&
                 candidate.available &&
                 (candidate.triggerExamples.any { normalized.contains(it) } || normalized.contains(candidate.name))
         }
         return matched.singleOrNull()
     }
+
+    /** CR-010 可观测性构造。 */
+    private fun observability(
+        snapshot: CapabilitySnapshot?,
+        matchedToolIds: Set<String> = emptySet(),
+        patternId: String? = null,
+        canonicalToolId: String? = null,
+        fallbackReason: String? = null,
+        errorCode: String? = null
+    ): RouteObservability = RouteObservability(
+        selectedPackIds = snapshot?.selectedPackIds ?: emptySet(),
+        runtimeCandidateToolIdsHash = snapshot?.runtimeCandidateToolIdsHash,
+        deterministicMatchedToolIds = matchedToolIds,
+        matchedPatternId = patternId,
+        canonicalToolId = canonicalToolId,
+        deterministicFallbackReason = fallbackReason,
+        governanceRuntimeMode = snapshot?.governanceRuntimeMode,
+        errorCode = errorCode
+    )
 
     /** 旧链路（未注入 CR-008 组件时的完整路由，CR-005 行为不变）。 */
     private suspend fun legacyRoute(
@@ -206,7 +255,13 @@ class TieredIntentRouter(
                     reasonCode = match.reasonCode,
                     directCandidate = match.candidate,
                     domain = domain,
-                    capabilitySnapshot = snapshot
+                    capabilitySnapshot = snapshot,
+                    observability = observability(
+                        snapshot,
+                        matchedToolIds = match.matchedToolIds,
+                        patternId = match.matchedPatternId,
+                        canonicalToolId = match.canonicalToolId
+                    )
                 )
             }
             is FastIntentMatchResult.Ambiguous -> {
@@ -215,7 +270,8 @@ class TieredIntentRouter(
                     input = input,
                     context = context,
                     domain = domain,
-                    snapshot = snapshot
+                    snapshot = snapshot,
+                    observability = observability(snapshot, matchedToolIds = match.matchedToolIds)
                 )
             }
             is FastIntentMatchResult.MissingArguments -> {
@@ -226,7 +282,8 @@ class TieredIntentRouter(
                     domain = domain,
                     snapshot = snapshot,
                     missingToolId = match.toolId,
-                    missingArguments = match.missing
+                    missingArguments = match.missing,
+                    observability = observability(snapshot, canonicalToolId = match.toolId)
                 )
             }
             FastIntentMatchResult.NoMatch -> {
@@ -249,7 +306,8 @@ class TieredIntentRouter(
                         confidence = 0.5,
                         reasonCode = RouteReasonCode.L3_OPEN_DOMAIN,
                         domain = domain,
-                        capabilitySnapshot = snapshot
+                        capabilitySnapshot = snapshot,
+                        observability = observability(snapshot)
                     )
                 }
             }
@@ -263,7 +321,8 @@ class TieredIntentRouter(
         domain: DomainRouteDecision?,
         snapshot: CapabilitySnapshot?,
         missingToolId: String? = null,
-        missingArguments: List<String> = emptyList()
+        missingArguments: List<String> = emptyList(),
+        observability: RouteObservability? = null
     ): TieredRouteDecision = TieredRouteDecision(
         tier = IntentTier.L1_LOCAL_TOOL_REASONING,
         confidence = 0.8,
@@ -278,7 +337,8 @@ class TieredIntentRouter(
         missingToolId = missingToolId,
         missingArguments = missingArguments,
         domain = domain,
-        capabilitySnapshot = snapshot
+        capabilitySnapshot = snapshot,
+        observability = observability
     )
 
     private fun knowledgeDecision(
@@ -292,7 +352,8 @@ class TieredIntentRouter(
                 confidence = 0.5,
                 reasonCode = RouteReasonCode.L2_NO_KNOWLEDGE,
                 domain = domain,
-                capabilitySnapshot = snapshot
+                capabilitySnapshot = snapshot,
+                observability = observability(snapshot)
             )
         } else {
             TieredRouteDecision(
@@ -303,7 +364,8 @@ class TieredIntentRouter(
                     KnowledgeRetrievalQuery(text = input.normalized)
                 ),
                 domain = domain,
-                capabilitySnapshot = snapshot
+                capabilitySnapshot = snapshot,
+                observability = observability(snapshot)
             )
         }
 
@@ -323,5 +385,24 @@ class TieredIntentRouter(
             net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.OperationType.SEARCH,
             net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.OperationType.WORKFLOW
         )
+
+        /** CR-010: 可安全直达的显式表达操作类型（明确对象、动作与参数）。 */
+        val EXPLICIT_OPERATION_TYPES = setOf(
+            net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.OperationType.CONTROL,
+            net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.OperationType.QUERY,
+            net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.OperationType.CONFIGURE,
+            net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.OperationType.NAVIGATE_UI,
+            net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.OperationType.PLAYBACK
+        )
     }
+}
+
+/** CR-010 错误码字符串常量（与 ErrorCode 枚举码一致，避免循环依赖 agent-core 内部引用）。 */
+object ErrorCodeString {
+    const val CAP_CANONICAL_UNCLOSED = "IVAI-CAP-003"
+    const val ROUTE_CONFLICT = "IVAI-ROUTE-003"
+    const val ROUTE_COVERAGE_MISSING = "IVAI-ROUTE-004"
+    const val GOV_DRAFT_PROMOTED = "IVAI-GOV-003"
+    const val GOV_STUB_EXEMPTION_INVALID = "IVAI-GOV-004"
+    const val ALIAS_CONFLICT = "IVAI-ALIAS-001"
 }

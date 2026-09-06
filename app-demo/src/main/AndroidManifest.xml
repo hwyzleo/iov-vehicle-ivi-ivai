@@ -33,6 +33,18 @@
             android:name="net.hwyz.iov.vehicle.ivi.ivai.ui.settings.SettingsActivity"
             android:exported="false" />
 
+        <activity
+            android:name="net.hwyz.iov.vehicle.ivi.ivai.ui.settings.prompt.PromptInfoActivity"
+            android:exported="false" />
+
+        <activity
+            android:name="net.hwyz.iov.vehicle.ivi.ivai.ui.settings.vehicle.VehicleInfoActivity"
+            android:exported="false" />
+
+        <activity
+            android:name="net.hwyz.iov.vehicle.ivi.ivai.ui.settings.rag.RagConfigActivity"
+            android:exported="false" />
+
         <service
             android:name="net.hwyz.iov.vehicle.ivi.ivai.service.AgentService"
             android:exported="false" />

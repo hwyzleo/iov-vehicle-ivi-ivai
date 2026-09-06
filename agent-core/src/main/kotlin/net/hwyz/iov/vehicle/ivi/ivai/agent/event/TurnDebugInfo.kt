@@ -15,10 +15,14 @@ data class Cr008DebugInfo(
     val operationType: String? = null,
     val domainReasonCode: String? = null,
     val selectedPacks: List<String> = emptyList(),
+    /** CR-010 展示：选中 Pack 的中文名，与 [selectedPacks] 一一对应。 */
+    val selectedPackNames: List<String> = emptyList(),
     val packVersion: String? = null,
     val preFilterCandidateCount: Int? = null,
     val postFilterCandidateCount: Int? = null,
     val workflowId: String? = null,
+    /** CR-010 展示：Workflow 中文名。 */
+    val workflowName: String? = null,
     val workflowState: String? = null,
     val workflowStepCount: Int? = null,
     val workflowStepResults: List<String> = emptyList(),
@@ -33,6 +37,8 @@ data class Cr008DebugInfo(
 data class ParsedIntentSummary(
     val toolId: String,
     val functionId: String? = null,
+    /** CR-010 展示：Tool 中文名（无则回退 null，UI 退化为仅代码）。 */
+    val toolName: String? = null,
     val arguments: Map<String, String> = emptyMap()
 )
 
@@ -56,6 +62,8 @@ data class ParsedOutputSummary(
 @Serializable
 data class ToolDebugInfo(
     val toolId: String? = null,
+    /** CR-010 展示：Tool 中文名。 */
+    val toolName: String? = null,
     val status: String? = null,
     val message: String? = null,
     val errorCode: String? = null,
@@ -78,6 +86,12 @@ data class TurnDebugInfo(
     val turnId: String,
     val requestId: String,
     val performance: AgentPerformanceMetrics? = null,
+    /**
+     * CR-010 可观测性：模型原始返回（仅调试面板展示）。
+     * 走 L1/L2 本地模型时保留 LLM 的完整响应原文，便于定位“匹配资产 / 解析结果
+     * 与模型输出不符”的问题（如模型误报缺参、选错 Tool）。
+     */
+    val rawModelContent: String? = null,
     val parsed: ParsedOutputSummary? = null,
     val tool: ToolDebugInfo? = null,
     val state: String? = null,
