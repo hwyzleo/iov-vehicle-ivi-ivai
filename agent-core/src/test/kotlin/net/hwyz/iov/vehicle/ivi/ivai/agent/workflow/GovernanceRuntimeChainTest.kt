@@ -9,7 +9,9 @@ import net.hwyz.iov.vehicle.ivi.ivai.agent.testutil.TestGraph
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.DeterministicIntentCatalog
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.ToolAliasCatalog
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.ToolCatalogV1
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.ToolRegistry
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.ExecutionStatus
+import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.SchemaParser
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -58,12 +60,13 @@ class GovernanceRuntimeChainTest {
 
         val listener = CollectingAgentEventListener()
         val stub = StubModelProvider()
-        val (workflow, adapter, _) = TestGraph.buildGovernedStubGraph(stub, eventListener = listener)
+        val (workflow, adapter, registry) = TestGraph.buildGovernedStubGraph(stub, eventListener = listener)
 
         var executed = 0
         lowAndMedium.forEachIndexed { index, tool ->
+            val args = minimalArguments(tool.toolId, registry)
             stub.queue(
-                """{"route":"LOCAL_TOOL","intents":[{"toolId":"${tool.toolId}","arguments":{}}],"modelConfidence":0.9,"riskLevel":"low","needConfirmation":false,"missingArguments":[],"reasonCode":"EXPLICIT_INTENT"}"""
+                """{"route":"LOCAL_TOOL","intents":[{"toolId":"${tool.toolId}","arguments":{${argsJson(args)}}}],"modelConfidence":0.9,"riskLevel":"low","needConfirmation":false,"missingArguments":[],"reasonCode":"EXPLICIT_INTENT"}"""
             )
             val result = workflow.process(input("req-$index", tool.name, turnId = "turn-$index"), Session())
             assertEquals(AgentState.SUCCEEDED, result.state, "Tool ${tool.toolId} 应执行成功，实际 ${result.state}（${result.errorCode}）")
@@ -96,16 +99,50 @@ class GovernanceRuntimeChainTest {
             "挂挡", "开走", "变道", "倒车", "漂移", "自动驾驶", "车速"
         ).any { text.contains(it) }
 
+    /**
+     * 按展开后的运行时 Schema 生成最小合法参数（每个必填参数取枚举首值 / 类型默认），
+     * 使桩模型输出能通过 Schema 校验——校验语义由治理 Schema 驱动（CR-009）。
+     */
+    private fun minimalArguments(toolId: String, registry: ToolRegistry): Map<String, Any?> {
+        val schema = SchemaParser.parse(registry.get(toolId)!!.parameterSchema)
+        return buildMap {
+            for (key in schema.required) {
+                val prop = schema.properties[key]
+                put(
+                    key,
+                    when (prop?.type) {
+                        "boolean" -> true
+                        "integer" -> (prop.minimum ?: 0.0).toInt()
+                        "number" -> prop.minimum ?: 0.0
+                        "string" -> prop.enum?.firstOrNull() ?: key
+                        "array" -> emptyList<Any?>()
+                        "object" -> emptyMap<String, Any?>()
+                        else -> key
+                    }
+                )
+            }
+        }
+    }
+
+    private fun argsJson(args: Map<String, Any?>): String = args.entries.joinToString(",") { (k, v) ->
+        "\"$k\": " + when (v) {
+            is Boolean -> v.toString()
+            is Number -> v.toString()
+            else -> "\"$v\""
+        }
+    }
+
     @Test
     fun `HIGH 风险 Tool 触发确认流程而非直接执行`() = runTest {
         val high = ToolCatalogV1.ALL.filter { it.policySummary.startsWith("HIGH") }
         assertTrue(high.isNotEmpty(), "应存在 HIGH 风险 Tool")
 
         val stub = StubModelProvider()
-        val (workflow, adapter, _) = TestGraph.buildGovernedStubGraph(stub)
+        val (workflow, adapter, registry) = TestGraph.buildGovernedStubGraph(stub)
         val tool = high.first()
+        val args = minimalArguments(tool.toolId, registry)
         stub.queue(
-            """{"route":"LOCAL_TOOL","intents":[{"toolId":"${tool.toolId}","arguments":{}}],"modelConfidence":0.9,"riskLevel":"high","needConfirmation":false,"missingArguments":[],"reasonCode":"EXPLICIT_INTENT"}"""
+            """{"route":"LOCAL_TOOL","intents":[{"toolId":"${tool.toolId}","arguments":{${argsJson(args)}}}],"modelConfidence":0.9,"riskLevel":"high","needConfirmation":false,"missingArguments":[],"reasonCode":"EXPLICIT_INTENT"}"""
         )
         val result = workflow.process(input("req-high", tool.name, turnId = "turn-high"), Session())
 

@@ -20,7 +20,7 @@ class DebugInfoChineseNamesTest {
     @Test
     fun `DebugInfo 携带能力包与工具中文名`() = runTest {
         val stub = StubModelProvider(
-            """{"route":"LOCAL_TOOL","intents":[{"toolId":"climate.temperature.adjust","arguments":{"direction":"increase","step":2}}],"modelConfidence":0.9,"riskLevel":"low","needConfirmation":false,"missingArguments":[],"reasonCode":"EXPLICIT_INTENT"}"""
+            """{"route":"LOCAL_TOOL","intents":[{"toolId":"climate.temperature.adjust","arguments":{"zone":"driver","direction":"increase","step":2}}],"modelConfidence":0.9,"riskLevel":"low","needConfirmation":false,"missingArguments":[],"reasonCode":"EXPLICIT_INTENT"}"""
         )
         val listener = CollectingAgentEventListener()
         val (workflow, _, _) = TestGraph.buildGovernedStubGraph(stub, eventListener = listener)

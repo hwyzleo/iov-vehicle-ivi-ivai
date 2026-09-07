@@ -1,5 +1,7 @@
 package net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance
 
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonPrimitive
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.ToolRegistry
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.capability.CapabilityPack
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.RiskLevel
@@ -65,6 +67,49 @@ object GovernanceWorkspace {
         )
     }
 
+    // ------------------------------------------------------------------ L0 治理数据（Schema 枚举 / 正反例）
+
+    /** L0 治理目录（懒加载，仅在需要 Schema 枚举或正反例时读取）。 */
+    private val l0Catalog: L0GovernanceCatalogSpec by lazy { L0CatalogLoader.load() }
+
+    /**
+     * L0 目录批准的参数枚举值（toolId → 参数名 → JSON 字面量列表）。
+     *
+     * 来自 l0-governance-catalog.json 的 presetArguments（如 vehicle.brake_regen.set
+     * level: OFF/LOW/STANDARD/HIGH），用于把泛型 `enum` 参数展开为可取枚举，供 L1
+     * Prompt / Schema 校验使用。没有批准值的 `enum` 保持 string 类型、不携带枚举。
+     */
+    private val l0EnumValues: Map<String, Map<String, List<String>>> by lazy { buildL0EnumValues() }
+
+    /** L0 目录批准正例（toolId → 正例列表），挂载到无 ToolAliasCatalog 画像的治理 Tool。 */
+    private val l0PositiveExamples: Map<String, List<String>> by lazy {
+        l0Catalog.tools.associate { tool -> tool.toolId to tool.positiveExamples }
+    }
+
+    /** L0 目录批准反例（toolId → 反例列表）。 */
+    private val l0NegativeExamples: Map<String, List<String>> by lazy {
+        l0Catalog.tools.associate { tool -> tool.toolId to tool.negativeExamples }
+    }
+
+    private fun buildL0EnumValues(): Map<String, Map<String, List<String>>> {
+        val result = mutableMapOf<String, MutableMap<String, MutableList<String>>>()
+        l0Catalog.tools.forEach { tool ->
+            tool.rules.forEach { rule ->
+                rule.presetArguments.forEach { (arg, value) ->
+                    val raw = value.toRawJsonLiteral()
+                    val list = result.getOrPut(tool.toolId) { mutableMapOf() }.getOrPut(arg) { mutableListOf() }
+                    if (raw !in list) list += raw
+                }
+            }
+        }
+        return result
+    }
+
+    private fun JsonElement.toRawJsonLiteral(): String = when (this) {
+        is JsonPrimitive -> if (isString) "\"$content\"" else content
+        else -> toString()
+    }
+
     /** 运行时可执行索引：APPROVED + BOUND 的 Tool（治理目录视角）。 */
     fun runtimeIndexableTools(): List<ToolGovernanceSpec> =
         tools.filter { it.status == GovernanceStatus.APPROVED && it.bindingStatus.name == "BOUND" }
@@ -85,10 +130,13 @@ object GovernanceWorkspace {
             functionId = null,
             name = spec.name,
             description = "治理目录 ${spec.toolId}（${spec.operationType}），Mock 桩执行。",
-            positiveExamples = emptyList(),
-            negativeExamples = emptyList(),
+            positiveExamples = l0PositiveExamples[spec.toolId].orEmpty(),
+            negativeExamples = l0NegativeExamples[spec.toolId].orEmpty(),
             selectionPriority = 1,
-            parameterSchema = "{ \"type\": \"object\", \"properties\": {}, \"required\": [] }",
+            parameterSchema = GovernanceSchemaParser.parse(
+                spec.parameterSchema,
+                l0EnumValues[spec.toolId].orEmpty()
+            ),
             policy = ToolPolicy(riskLevel = riskLevelOf(spec.policySummary)),
             execution = ToolExecutionBinding(adapterId = MOCK_ADAPTER_ID, methodId = spec.toolId),
             domainId = spec.domainId,
