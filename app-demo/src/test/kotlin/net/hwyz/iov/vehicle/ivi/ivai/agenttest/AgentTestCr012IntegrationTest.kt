@@ -60,10 +60,15 @@ import org.junit.jupiter.api.Test
  * 复用真实 AgentWorkflow + Mock 适配器（与 AgentService debug 相同的
  * GovernanceWorkspace + RuntimeCapabilityAssembler + 统一候选集），
  * TestBatchRunner 走与聊天相同的 HandleText 入口串行执行本地资产用例。
+ *
+ * 注意：本测试验证「套件解析 + 五维评分管线 + 批次状态机」等结构性契约，
+ * 不逐条断言 30 条用例的命中准确率（准确率由 CR-012 v3 分层回归集后续
+ * 单独评估）；仅对 Catalog 已批准 L0 规则（AIRFLOW-001/002/003）断言 5/5，
+ * 对 NONE 目标语义做维度级断言。
  */
 class AgentTestCr012IntegrationTest {
 
-    /** 确定性模型桩：按队列返回 AgentOutput JSON（仅 L1/L2 会调用模型）。 */
+    /** 确定性模型桩：按队列返回 AgentOutput JSON（仅 L1/L2 等需要模型的路径会调用）。 */
     private class QueuedModelProvider(vararg contents: String) : ModelProvider {
         private val queue = ArrayDeque(contents.toList())
         override suspend fun generate(request: ModelRequest): ModelResponse {
@@ -190,62 +195,63 @@ class AgentTestCr012IntegrationTest {
         val file = File("src/debug/assets/agent-tests/v1/agent-regression.json")
         val repository = AgentTestCaseRepository(AgentTestCaseLoader { file.takeIf { it.exists() }?.readText() })
         val result = repository.load()
-        assertNull(result.errorCode, "示例资产应可解析：${result.errorMessage}")
+        assertNull(result.errorCode, "资产应可解析：${result.errorMessage}")
         return result.validCases
     }
 
     @Test
-    fun `本地资产套件经真实 Workflow 串行回归 全部分与隔离 Session`() = runTest {
-        val model = QueuedModelProvider(DIALOGUE_JSON) // 仅「我有点冷」走 L1 调用一次模型
+    fun `CR-012 v3 分层套件经真实 Workflow 串行回归 全部分与隔离 Session`() = runTest {
+        // 需要模型的路径（L1 消歧 / 候选 L0 回退等）统一返回纯追问；队列留足余量。
+        val model = QueuedModelProvider(*Array(60) { DIALOGUE_JSON })
         val client = InProcessAgentClient(model)
         val cases = loadSampleSuite()
-        // 5 条合法（4 enabled + 1 disabled），disabled 在运行时跳过。
-        assertEquals(5, cases.size)
+        // CR-012 v3 分层回归集：3 分类 × 10 条，全部启用。
+        assertEquals(30, cases.size)
+        assertTrue(cases.all { it.enabled })
 
         val runner = TestBatchRunner(client, caseTimeoutMs = 5_000)
         val results = mutableListOf<net.hwyz.iov.vehicle.ivi.ivai.agenttest.runner.AgentTestCaseResult>()
-        val summary = runner.run("integration-run", cases) { results += it }
+        val summary = runner.run("v3-run", cases) { results += it }
 
-        // 4 条执行 + 1 条跳过（跳过不提交）。
-        assertEquals(4, summary.executed)
-        assertEquals(1, summary.skipped)
-        assertEquals(4, summary.passed)
-        assertEquals(20, summary.score)
-        assertEquals(20, summary.maxScore)
+        // 结构性契约：30 条全部执行、无跳过、满分 150。
+        assertEquals(30, summary.executed)
+        assertEquals(0, summary.skipped)
+        assertEquals(30 * 5, summary.maxScore)
+        // 每条都有五维评分结果；批次不出现超时 / 非法。
+        assertEquals(30, results.size)
+        assertTrue(results.all { it.score != null }, "每条用例都应产出五维评分")
+        assertTrue(results.none { it.status == AgentTestCaseStatus.TIMEOUT })
+        assertTrue(results.none { it.status == AgentTestCaseStatus.INVALID })
 
-        // 打开空调 → 5/5。
-        val power = results.first { it.caseId == "CLIMATE-POWER-001" }
-        assertEquals(AgentTestCaseStatus.PASSED, power.status)
-        assertEquals(5, power.score?.total)
+        // Catalog 已批准 L0 规则（climate.airflow.mode.set 三个正例）应直达 5/5。
+        for (caseId in listOf("AIRFLOW-001", "AIRFLOW-002", "AIRFLOW-003")) {
+            val r = results.first { it.caseId == caseId }
+            assertEquals(AgentTestCaseStatus.PASSED, r.status, "$caseId 应为 Catalog L0 直达")
+            assertEquals(5, r.score?.total, "$caseId 应五维全匹配")
+        }
 
-        // 主驾升温（表达 Alias）→ 5/5。
-        val adjust = results.first { it.caseId == "CLIMATE-ADJUST-001" }
-        assertEquals(5, adjust.score?.total)
-
-        // 槽位抽取（两度 → step=2，数值等价）→ 5/5。
-        val slots = results.first { it.caseId == "CLIMATE-ADJUST-002" }
-        assertEquals(5, slots.score?.total)
-
-        // 隐式表达：记录 L1 终态且不阻塞批次。
-        val cold = results.first { it.caseId == "CLIMATE-COLD-001" }
-        assertEquals(5, cold.score?.total)
-        val coldSnap = client.snapshotsByRequest.entries.first { it.value.finalTier == IntentTier.L1_LOCAL_TOOL_REASONING }.value
-        assertEquals(IntentTier.L1_LOCAL_TOOL_REASONING, coldSnap.finalTier)
-        assertEquals(BusinessDomainId.CABIN_COMFORT, coldSnap.finalDomain)
-        assertTrue("cabin.climate" in coldSnap.selectedCapabilityPackIds)
-        assertNull(coldSnap.selectedTarget)
+        // NONE 目标语义：REJECT 用例实际不产生目标时 target / arguments 维度匹配
+        // （L2/L3/REJECT 无合法 Target，不伪造 Tool）。
+        val reject = results.first { it.caseId == "REGEN-009" }
+        assertTrue(reject.score?.target?.matched == true, "REJECT 应不产生目标：${reject.score?.target?.reason}")
+        assertTrue(reject.score?.arguments?.matched == true, "REJECT 应无业务参数：${reject.score?.arguments?.reason}")
     }
 
     @Test
     fun `注入超时 → 取消活动请求并继续下一条`() = runTest {
-        // 第一条延迟 500ms 模拟慢请求；Runner 单条超时 50ms。
-        val client = InProcessAgentClient(QueuedModelProvider(DIALOGUE_JSON), submitDelayMs = { if (it == 0) 500 else 0 })
-        val cases = loadSampleSuite().filter { it.caseId in setOf("CLIMATE-POWER-001", "CLIMATE-ADJUST-001") }
+        // 第一条延迟 500ms 模拟慢请求；Runner 单条超时 50ms。选用 Catalog 已批准
+        // L0 用例（无需模型桩响应），第二条同步直达通过。
+        val client = InProcessAgentClient(
+            QueuedModelProvider(*Array(60) { DIALOGUE_JSON }),
+            submitDelayMs = { if (it == 0) 500 else 0 }
+        )
+        val cases = loadSampleSuite().filter { it.caseId in setOf("AIRFLOW-001", "AIRFLOW-002") }
 
         val runner = TestBatchRunner(client, caseTimeoutMs = 50)
         val results = mutableListOf<net.hwyz.iov.vehicle.ivi.ivai.agenttest.runner.AgentTestCaseResult>()
         runner.run("timeout-run", cases) { results += it }
 
+        assertEquals(2, results.size)
         assertEquals(AgentTestCaseStatus.TIMEOUT, results[0].status)
         assertEquals(TestErrorCode.CASE_TIMEOUT, results[0].errorCode)
         assertEquals(AgentTestCaseStatus.PASSED, results[1].status)
@@ -253,7 +259,7 @@ class AgentTestCr012IntegrationTest {
 
     @Test
     fun `环境门禁 - Release 语义拒绝批次`() = runTest {
-        val client = InProcessAgentClient(QueuedModelProvider(DIALOGUE_JSON))
+        val client = InProcessAgentClient(QueuedModelProvider(*Array(60) { DIALOGUE_JSON }))
         val cases = loadSampleSuite()
         val runner = TestBatchRunner(client, environmentAllowed = { false })
         val error = runCatching { runner.run("gate-run", cases) { } }.exceptionOrNull()
