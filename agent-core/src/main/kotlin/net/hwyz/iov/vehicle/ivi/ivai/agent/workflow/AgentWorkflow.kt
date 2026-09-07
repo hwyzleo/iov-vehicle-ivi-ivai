@@ -353,7 +353,17 @@ class AgentWorkflow(
             runtimeStatus = ragRuntimeManager?.status() ?: RagRuntimeStatus.DISABLED,
             retrievalExecuted = candidateSet.source == net.hwyz.iov.vehicle.ivi.ivai.agent.router.CandidateSetSource.RETRIEVED,
             retrievalType = candidateSet.retrieverType,
-            fallbackReason = candidateSet.fallbackReason
+            fallbackReason = candidateSet.fallbackReason,
+            // CR-011 可观测性：检索输入 / 输出 / 候选规模（调试面板展示）。
+            queryText = normalized.normalized,
+            modelId = ragRuntimeManager?.embeddingModelId(),
+            topK = ragSnapshot.toolTopK,
+            topScores = packScopedSet.candidates.map { it.score },
+            selectedCanonicalIds = packScopedSet.candidates.map { it.toolId },
+            retrievedTitles = packScopedSet.candidates.map { it.definition.name },
+            eligibleCandidateCount = candidateSet.candidates.size,
+            filteredCandidateCount = packScopedSet.candidates.size,
+            searchLatencyMs = msSince(retrievalStartNs)
         )
 
         val contextStartNs = System.nanoTime()
@@ -495,7 +505,11 @@ class AgentWorkflow(
             configuredEnabled = ragSnapshot.enabled,
             runtimeStatus = ragRuntimeManager?.status() ?: RagRuntimeStatus.DISABLED,
             retrievalExecuted = !knowledgeUnavailable,
-            retrievalType = ragSnapshot.knowledgeRetrieverType
+            retrievalType = ragSnapshot.knowledgeRetrieverType,
+            // CR-011 可观测性：检索输入 / 模型 / Top-K（调试面板展示）。
+            queryText = query.text,
+            modelId = ragRuntimeManager?.embeddingModelId(),
+            topK = ragSnapshot.knowledgeTopK
         )
 
         if (knowledgeUnavailable) {
@@ -533,6 +547,14 @@ class AgentWorkflow(
             )
         }
 
+        // CR-011 可观测性：检索输出（召回片段标题 / 耗时）。
+        val ragResult = ragInfo.copy(
+            retrievedTitles = reranked.map { it.chunk.title },
+            selectedCanonicalIds = reranked.map { it.chunk.chunkId },
+            topScores = reranked.map { it.score },
+            searchLatencyMs = msSince(retrievalStartNs)
+        )
+
         val contextStartNs = System.nanoTime()
         val composedMessages = promptBuilder.buildKnowledge(session, input, context.vehicleState, reranked.map { it.chunk })
         timings.contextAndPromptMs = msSince(contextStartNs)
@@ -543,12 +565,12 @@ class AgentWorkflow(
         } catch (e: ModelClientException) {
             timings.modelCallTotalMs = msSince(modelStartNs)
             val code = mapModelError(e.kind)
-            return turnFailed(input, session, timings, code.code, "模型服务暂不可用，请稍后重试", true, tracker, ragInfo, modelFailureDetail(e, "模型调用失败"), cr008 = cr008)
+            return turnFailed(input, session, timings, code.code, "模型服务暂不可用，请稍后重试", true, tracker, ragResult, modelFailureDetail(e, "模型调用失败"), cr008 = cr008)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             timings.modelCallTotalMs = msSince(modelStartNs)
-            return turnFailed(input, session, timings, ErrorCode.MODEL_UNAVAILABLE.code, "模型服务暂不可用，请稍后重试", true, tracker, ragInfo, "模型调用异常：${e.message}", cr008 = cr008)
+            return turnFailed(input, session, timings, ErrorCode.MODEL_UNAVAILABLE.code, "模型服务暂不可用，请稍后重试", true, tracker, ragResult, "模型调用异常：${e.message}", cr008 = cr008)
         }
         timings.modelCallTotalMs = msSince(modelStartNs)
         timings.network = modelResponse.network
@@ -569,7 +591,7 @@ class AgentWorkflow(
             input, session, AgentState.REPLY_READY, AgentRoute.LOCAL_DIALOGUE, null, emptyList(), null, null,
             text, modelResponse.content, false, timings,
             validJson = false, schemaPassed = false, toolExecuted = false,
-            executionPath = tracker.build(), ragInfo = ragInfo, cr008 = cr008
+            executionPath = tracker.build(), ragInfo = ragResult, cr008 = cr008
         )
     }
 

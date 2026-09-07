@@ -15,6 +15,9 @@ android {
         versionCode = 1
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // 打包时间戳（毫秒）：聊天页「设置」按钮旁展示，便于确认设备上的 APK 是否最新。
+        buildConfigField("long", "BUILD_TIME_MS", "${System.currentTimeMillis()}L")
     }
 
     compileOptions {

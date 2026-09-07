@@ -89,6 +89,7 @@ class RagConfigFragment : Fragment() {
         if (state.runtimeStatus != "READY" && state.enabled) {
             statusView.append("\n（开关已打开，但资源未全部就绪 — 按策略降级）")
         }
+        state.embeddingSummary?.let { statusView.append("\n$it") }
         messageView.text = state.message ?: ""
         messageView.visibility = if (state.message == null) View.GONE else View.VISIBLE
         resetButton.isEnabled = state.loaded && !state.saving

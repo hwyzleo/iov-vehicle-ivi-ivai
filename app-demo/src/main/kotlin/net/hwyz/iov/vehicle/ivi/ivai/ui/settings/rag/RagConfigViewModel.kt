@@ -7,8 +7,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import net.hwyz.iov.vehicle.ivi.ivai.agent.rag.EmbeddingConfigValidator
 import net.hwyz.iov.vehicle.ivi.ivai.agent.rag.RagConfigDraft
 import net.hwyz.iov.vehicle.ivi.ivai.agent.rag.RagSaveResult
+import net.hwyz.iov.vehicle.ivi.ivai.retrieval.rag.RagConfig
 
 /**
  * RAG settings ViewModel (CR-005). Reads the persisted config + runtime status
@@ -22,6 +24,9 @@ class RagConfigViewModel : ViewModel() {
 
     private var gateway: RagConfigGateway? = null
 
+    /** 最近加载的 CR-011 高级配置（Embedding 等），开关保存时透传，避免误清空。 */
+    private var currentRag: RagConfig = RagConfig()
+
     fun attach(gateway: RagConfigGateway) {
         this.gateway = gateway
         viewModelScope.launch {
@@ -30,6 +35,7 @@ class RagConfigViewModel : ViewModel() {
                 _state.update { it.copy(message = "加载 RAG 配置失败") }
                 return@launch
             }
+            currentRag = config.rag
             _state.update {
                 it.copy(
                     loaded = true,
@@ -39,6 +45,7 @@ class RagConfigViewModel : ViewModel() {
                     toolTopK = config.toolTopK,
                     knowledgeTopK = config.knowledgeTopK,
                     runtimeStatus = gateway.runtimeStatus().name,
+                    embeddingSummary = embeddingSummary(config.rag.embedding),
                     message = null
                 )
             }
@@ -71,7 +78,8 @@ class RagConfigViewModel : ViewModel() {
                     toolRagEnabled = s.toolRagEnabled,
                     knowledgeRagEnabled = s.knowledgeRagEnabled,
                     toolTopK = s.toolTopK,
-                    knowledgeTopK = s.knowledgeTopK
+                    knowledgeTopK = s.knowledgeTopK,
+                    rag = currentRag
                 )
             )
             handleResult(result, "RAG 配置已保存")
@@ -93,4 +101,11 @@ class RagConfigViewModel : ViewModel() {
             }
         }
     }
+
+    private fun embeddingSummary(embedding: net.hwyz.iov.vehicle.ivi.ivai.retrieval.rag.EmbeddingConfig): String =
+        if (EmbeddingConfigValidator.isBlank(embedding)) {
+            "嵌入模型：本地默认（哈希桩）"
+        } else {
+            "嵌入模型：${embedding.providerType} · ${embedding.modelId} · dim=${embedding.dimension}"
+        }
 }

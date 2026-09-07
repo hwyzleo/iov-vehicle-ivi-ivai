@@ -3,6 +3,10 @@ package net.hwyz.iov.vehicle.ivi.ivai.agent.rag
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import net.hwyz.iov.vehicle.ivi.ivai.model.config.ApiKeyAction
+import net.hwyz.iov.vehicle.ivi.ivai.model.config.ConnectionTestResult
+import net.hwyz.iov.vehicle.ivi.ivai.model.config.KeyStatus
+import net.hwyz.iov.vehicle.ivi.ivai.model.config.ValidationResult
 import net.hwyz.iov.vehicle.ivi.ivai.retrieval.knowledge.KnowledgeRetrieverImpl
 import net.hwyz.iov.vehicle.ivi.ivai.retrieval.knowledge.SampleKnowledgeDocs
 import net.hwyz.iov.vehicle.ivi.ivai.retrieval.tool.FixedToolRetriever
@@ -38,6 +42,41 @@ class FakeRagConfigRepository(initial: RagRuntimeConfig = RagRuntimeConfig()) : 
     override suspend fun resetToDefault(): RagSaveResult {
         _configState.value = RagConfigState.Valid(RagRuntimeConfig())
         return RagSaveResult.Success(0)
+    }
+
+    // ---- CR-011 补齐：Embedding 配置（内存实现） ----
+
+    override suspend fun validateEmbedding(config: net.hwyz.iov.vehicle.ivi.ivai.retrieval.rag.EmbeddingConfig): ValidationResult =
+        EmbeddingConfigValidator().validate(config)
+
+    override suspend fun embeddingKeyStatus(): KeyStatus = KeyStatus.NOT_SET
+
+    override suspend fun testEmbeddingConnection(
+        config: net.hwyz.iov.vehicle.ivi.ivai.retrieval.rag.EmbeddingConfig,
+        apiKeyAction: ApiKeyAction
+    ): ConnectionTestResult = ConnectionTestResult.InvalidResponse("内存 fake 不执行连接测试")
+
+    override suspend fun saveEmbedding(
+        config: net.hwyz.iov.vehicle.ivi.ivai.retrieval.rag.EmbeddingConfig,
+        apiKeyAction: ApiKeyAction
+    ): RagSaveResult {
+        val current = loadSnapshot()
+        val next = current.copy(
+            version = current.version + 1,
+            rag = current.rag.copy(embedding = config)
+        )
+        _configState.value = RagConfigState.Valid(next)
+        return RagSaveResult.Success(next.version)
+    }
+
+    override suspend fun resetEmbedding(): RagSaveResult {
+        val current = loadSnapshot()
+        val next = current.copy(
+            version = current.version + 1,
+            rag = current.rag.copy(embedding = net.hwyz.iov.vehicle.ivi.ivai.retrieval.rag.EmbeddingConfig())
+        )
+        _configState.value = RagConfigState.Valid(next)
+        return RagSaveResult.Success(next.version)
     }
 }
 

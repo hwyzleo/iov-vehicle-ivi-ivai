@@ -73,6 +73,10 @@ data class RagExecutionInfo(
     val topK: Int? = null,
     val topScores: List<Double> = emptyList(),
     val selectedCanonicalIds: List<String> = emptyList(),
+    /** 检索输入（L1 归一化文本 / L2 知识查询），仅调试面板展示。 */
+    val queryText: String? = null,
+    /** 检索输出条目（L1 工具名 / L2 知识片段标题），仅调试面板展示。 */
+    val retrievedTitles: List<String> = emptyList(),
     val embeddingLatencyMs: Long? = null,
     val searchLatencyMs: Long? = null
 )

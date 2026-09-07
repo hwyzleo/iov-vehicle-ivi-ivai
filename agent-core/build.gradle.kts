@@ -16,6 +16,8 @@ dependencies {
     implementation(project(":observability"))
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.core)
+    // EmbeddingConfig 校验（URL 解析）与连接测试使用 OkHttp（JVM/Android 双跑）。
+    implementation(libs.okhttp)
 
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.kotlinx.coroutines.test)

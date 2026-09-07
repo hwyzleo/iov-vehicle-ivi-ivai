@@ -6,12 +6,15 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import net.hwyz.iov.vehicle.ivi.ivai.retrieval.rag.EmbeddingConfig
 import net.hwyz.iov.vehicle.ivi.ivai.retrieval.rag.RagErrorCode
 import net.hwyz.iov.vehicle.ivi.ivai.retrieval.rag.RagException
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.net.URI
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
+import java.util.concurrent.TimeUnit
 
 /**
  * HTTP_COMPATIBLE Embedding Provider（CR-011 首期注册）。
@@ -28,13 +31,14 @@ import java.net.http.HttpResponse
  *
  * [credentialRef] 指向 Keystore/安全配置，由 [credentialResolver] 解析，不保存
  * 密钥明文。
+ *
+ * 传输层使用 OkHttp（JVM 与 Android API 26 双跑）；禁止改用 java.net.http，
+ * 该 API 不存在于 Android，真机加载本类会抛 NoClassDefFoundError。
  */
 class HttpCompatibleEmbeddingProvider(
-    private val config: net.hwyz.iov.vehicle.ivi.ivai.retrieval.rag.EmbeddingConfig,
+    private val config: EmbeddingConfig,
     private val credentialResolver: suspend () -> String? = { null },
-    private val client: HttpClient = HttpClient.newBuilder()
-        .connectTimeout(java.time.Duration.ofMillis(config.timeoutMs))
-        .build(),
+    private val client: OkHttpClient? = null,
     private val json: Json = Json { ignoreUnknownKeys = true },
     private val allowInsecureHttp: Boolean = false,
     private val clock: () -> Long = System::currentTimeMillis
@@ -98,27 +102,29 @@ class HttpCompatibleEmbeddingProvider(
 
     private suspend fun embedChunk(texts: List<String>, apiKey: String?): List<FloatArray> = withContext(Dispatchers.IO) {
         val body = EmbeddingRequestBody(model = config.modelId, input = texts)
-        val requestBuilder = HttpRequest.newBuilder()
-            .uri(URI.create(config.baseUrl.trimEnd('/') + "/embeddings"))
-            .timeout(java.time.Duration.ofMillis(config.timeoutMs))
+        val requestBuilder = Request.Builder()
+            .url(config.baseUrl.trimEnd('/') + "/embeddings")
             .header("Content-Type", "application/json")
-            .POST(HttpRequest.BodyPublishers.ofString(json.encodeToString(body)))
+            .post(json.encodeToString(body).toRequestBody("application/json".toMediaType()))
         apiKey?.let { requestBuilder.header("Authorization", "Bearer $it") }
-        val response = client.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString())
-        if (response.statusCode() !in 200..299) {
-            when {
-                response.statusCode() in 500..599 -> throw IllegalStateException("Embedding HTTP ${response.statusCode()}")
-                response.statusCode() == 401 || response.statusCode() == 403 ->
-                    throw RagException(RagErrorCode.EMBEDDING_UNAVAILABLE, "Embedding 鉴权失败 HTTP ${response.statusCode()}")
-                else -> throw RagException(RagErrorCode.EMBEDDING_UNAVAILABLE, "Embedding HTTP ${response.statusCode()}")
+
+        client().newCall(requestBuilder.build()).execute().use { response ->
+            if (response.code !in 200..299) {
+                when {
+                    response.code in 500..599 -> throw IllegalStateException("Embedding HTTP ${response.code}")
+                    response.code == 401 || response.code == 403 ->
+                        throw RagException(RagErrorCode.EMBEDDING_UNAVAILABLE, "Embedding 鉴权失败 HTTP ${response.code}")
+                    else -> throw RagException(RagErrorCode.EMBEDDING_UNAVAILABLE, "Embedding HTTP ${response.code}")
+                }
             }
+            val bodyText = response.body?.string() ?: ""
+            val dto = runCatching { json.decodeFromString<EmbeddingResponseDto>(bodyText) }.getOrNull()
+                ?: throw RagException(RagErrorCode.EMBEDDING_UNAVAILABLE, "Embedding 响应解析失败")
+            if (dto.data.isEmpty() || dto.data.size != texts.size) {
+                throw RagException(RagErrorCode.EMBEDDING_UNAVAILABLE, "Embedding 返回数量不一致: ${dto.data.size} != ${texts.size}")
+            }
+            dto.data.sortedBy { it.index }.map { it.embedding.toFloatArray() }
         }
-        val dto = runCatching { json.decodeFromString<EmbeddingResponseDto>(response.body()) }.getOrNull()
-            ?: throw RagException(RagErrorCode.EMBEDDING_UNAVAILABLE, "Embedding 响应解析失败")
-        if (dto.data.isEmpty() || dto.data.size != texts.size) {
-            throw RagException(RagErrorCode.EMBEDDING_UNAVAILABLE, "Embedding 返回数量不一致: ${dto.data.size} != ${texts.size}")
-        }
-        dto.data.sortedBy { it.index }.map { it.embedding.toFloatArray() }
     }
 
     private fun validateVectors(vectors: List<FloatArray>, expectedCount: Int) {
@@ -137,6 +143,13 @@ class HttpCompatibleEmbeddingProvider(
             }
         }
     }
+
+    /** 每个请求共享一个 OkHttpClient；connect/read 超时取自配置，重试跨请求进行。 */
+    private fun client(): OkHttpClient =
+        client ?: OkHttpClient.Builder()
+            .connectTimeout(config.timeoutMs, TimeUnit.MILLISECONDS)
+            .readTimeout(config.timeoutMs, TimeUnit.MILLISECONDS)
+            .build()
 
     private companion object {
         const val MAX_BATCH_SIZE = 64

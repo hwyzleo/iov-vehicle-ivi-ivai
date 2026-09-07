@@ -612,7 +612,9 @@ class ChatViewModel : ViewModel() {
             errorCode = incoming.errorCode ?: existing.errorCode,
             replayed = incoming.replayed || existing.replayed,
             // CR-009: 合并时保留领域 / 能力包 / 工作流等匹配资产信息。
-            cr008 = incoming.cr008 ?: existing.cr008
+            cr008 = incoming.cr008 ?: existing.cr008,
+            // CR-011: 合并时保留 RAG 执行信息（后到的 payload 可能只补性能/工具）。
+            rag = incoming.rag ?: existing.rag
         )
     }
 
@@ -688,21 +690,28 @@ class ChatViewModel : ViewModel() {
      * CR-010 展示：能力包与工具/工作流在气泡首行只显示中文名，代码 ID 仅作兜底。
      */
     private fun tierLabelWithAssets(base: String?, debug: TurnDebugInfo): String? {
-        val cr008 = debug.cr008 ?: return base
         val parts = mutableListOf<String>()
-        cr008.domain?.let {
-            parts += TurnDebugFormatter.DomainCodeLabels.label(it)
+        val cr008 = debug.cr008
+        if (cr008 != null) {
+            cr008.domain?.let {
+                parts += TurnDebugFormatter.DomainCodeLabels.label(it)
+            }
+            if (cr008.selectedPacks.isNotEmpty()) {
+                // 中文名优先；若载荷未带中文（旧事件），回退代码 ID。
+                val packNames = cr008.selectedPackNames.ifEmpty { cr008.selectedPacks }
+                parts += packNames.joinToString("+")
+            }
+            val workflowName = cr008.workflowName
+            val toolName = debug.tool?.toolName ?: debug.parsed?.intents?.firstOrNull()?.toolName
+            val asset = workflowName ?: toolName
+                ?: cr008.workflowId ?: debug.tool?.toolId ?: debug.parsed?.intents?.firstOrNull()?.toolId
+            asset?.let { parts += it }
         }
-        if (cr008.selectedPacks.isNotEmpty()) {
-            // 中文名优先；若载荷未带中文（旧事件），回退代码 ID。
-            val packNames = cr008.selectedPackNames.ifEmpty { cr008.selectedPacks }
-            parts += packNames.joinToString("+")
+        // CR-011: 本轮用到了 RAG 就追加标识（区分 工具/知识 路径）。
+        debug.rag?.takeIf { it.retrievalExecuted }?.let { rag ->
+            val kind = if (rag.retrievalType?.contains("Knowledge") == true) "知识" else "工具"
+            parts += "RAG·$kind"
         }
-        val workflowName = cr008.workflowName
-        val toolName = debug.tool?.toolName ?: debug.parsed?.intents?.firstOrNull()?.toolName
-        val asset = workflowName ?: toolName
-            ?: cr008.workflowId ?: debug.tool?.toolId ?: debug.parsed?.intents?.firstOrNull()?.toolId
-        asset?.let { parts += it }
         if (parts.isEmpty()) return base
         val prefix = base?.let { "$it · " } ?: ""
         return prefix + parts.joinToString("/")

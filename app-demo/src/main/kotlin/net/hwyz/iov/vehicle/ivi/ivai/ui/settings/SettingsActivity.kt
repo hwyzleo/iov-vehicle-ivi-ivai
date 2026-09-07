@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import net.hwyz.iov.vehicle.ivi.ivai.demo.R
 import net.hwyz.iov.vehicle.ivi.ivai.ui.config.ModelConfigActivity
 import net.hwyz.iov.vehicle.ivi.ivai.ui.config.asr.AsrConfigActivity
+import net.hwyz.iov.vehicle.ivi.ivai.ui.config.embedding.EmbeddingConfigActivity
 import net.hwyz.iov.vehicle.ivi.ivai.ui.settings.prompt.PromptInfoActivity
 import net.hwyz.iov.vehicle.ivi.ivai.ui.settings.rag.RagConfigActivity
 import net.hwyz.iov.vehicle.ivi.ivai.ui.settings.vehicle.VehicleInfoActivity
@@ -36,6 +37,9 @@ class SettingsActivity : ComponentActivity() {
         }
         findViewById<Button>(R.id.ragConfigButton).setOnClickListener {
             startActivity(Intent(this, RagConfigActivity::class.java))
+        }
+        findViewById<Button>(R.id.embeddingConfigButton).setOnClickListener {
+            startActivity(Intent(this, EmbeddingConfigActivity::class.java))
         }
     }
 

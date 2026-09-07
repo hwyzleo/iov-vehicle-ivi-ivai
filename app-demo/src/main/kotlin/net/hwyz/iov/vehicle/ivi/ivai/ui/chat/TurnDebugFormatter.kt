@@ -55,7 +55,7 @@ object TurnDebugFormatter {
             sb.append("\n")
         }
 
-        // CR-005: RAG 运行信息
+        // CR-005: RAG 运行信息 + CR-011 可观测性（检索输入 / 模型 / 召回输出）
         debug.rag?.let { rag ->
             section(sb, "📡 RAG")
             body(sb, "配置：${if (rag.configuredEnabled) "已打开" else "关闭"}")
@@ -70,6 +70,28 @@ object TurnDebugFormatter {
             )
             rag.indexVersion?.let { body(sb, "索引版本：$it") }
             rag.fallbackReason?.let { body(sb, "降级原因：$it") }
+            // CR-011 可观测性：检索输入 / 模型 / Top-K / 候选规模 / 召回输出
+            rag.queryText?.let { body(sb, "查询输入：$it") }
+            rag.modelId?.let { model ->
+                body(sb, "模型：$model${rag.modelVersion?.let { "（$it）" } ?: ""}")
+            }
+            rag.topK?.let { body(sb, "Top-K：$it") }
+            rag.eligibleCandidateCount?.let { eligible ->
+                body(
+                    sb,
+                    "候选：召回 $eligible${rag.filteredCandidateCount?.let { " / 收敛后 $it" } ?: ""}"
+                )
+            }
+            val outputs = rag.retrievedTitles.ifEmpty { rag.selectedCanonicalIds }
+            if (outputs.isNotEmpty()) {
+                body(sb, "召回输出：")
+                outputs.forEach { code(sb, "· $it") }
+                if (rag.topScores.isNotEmpty()) {
+                    code(sb, "分数：${rag.topScores.joinToString(", ") { "%.3f".format(it) }}")
+                }
+            }
+            rag.searchLatencyMs?.let { body(sb, "检索耗时：${it}ms") }
+            rag.embeddingLatencyMs?.let { body(sb, "嵌入耗时：${it}ms") }
             sb.append("\n")
         }
 

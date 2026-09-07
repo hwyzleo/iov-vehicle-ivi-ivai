@@ -28,6 +28,7 @@ import kotlinx.coroutines.launch
 import net.hwyz.iov.vehicle.ivi.ivai.demo.R
 import net.hwyz.iov.vehicle.ivi.ivai.service.AgentService
 import net.hwyz.iov.vehicle.ivi.ivai.speech.api.SpeechCapability
+import net.hwyz.iov.vehicle.ivi.ivai.demo.BuildConfig
 import net.hwyz.iov.vehicle.ivi.ivai.ui.settings.SettingsActivity
 
 /**
@@ -117,6 +118,11 @@ class ChatActivity : ComponentActivity() {
         findViewById<Button>(R.id.settingsButton).setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
+        // 打包时间：便于确认设备上的 APK 是否最新（BuildConfig.BUILD_TIME_MS 为打包时刻时间戳）。
+        val buildTimeText = findViewById<TextView>(R.id.buildTimeText)
+        buildTimeText.text = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").apply {
+            timeZone = java.util.TimeZone.getTimeZone("Asia/Shanghai")
+        }.format(java.util.Date(BuildConfig.BUILD_TIME_MS))
         inputEdit.doAfterTextChanged { editable ->
             viewModel.onAction(ChatUiAction.InputChanged(editable?.toString() ?: ""))
         }

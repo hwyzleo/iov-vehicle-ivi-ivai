@@ -30,6 +30,11 @@
             android:windowSoftInputMode="adjustResize" />
 
         <activity
+            android:name="net.hwyz.iov.vehicle.ivi.ivai.ui.config.embedding.EmbeddingConfigActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
             android:name="net.hwyz.iov.vehicle.ivi.ivai.ui.settings.SettingsActivity"
             android:exported="false" />
 

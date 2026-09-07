@@ -44,6 +44,9 @@ class RagRuntimeManager(
     /** CR-011 生效 RAG 配置（UI 开关镜像进 RagConfig）。 */
     fun ragConfig(): RagConfig = currentConfig().effectiveRagConfig()
 
+    /** 当前 Embedding Provider 的模型标识（调试面板展示用）。 */
+    fun embeddingModelId(): String? = embeddingProvider?.descriptor?.modelId
+
     /** Immutable per-request snapshot; in-flight requests keep the one they got. */
     fun snapshot(): RagExecutionSnapshot {
         val config = currentConfig()

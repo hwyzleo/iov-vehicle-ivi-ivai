@@ -26,5 +26,7 @@ data class RagConfigUiState(
     val knowledgeTopK: Int = 5,
     val runtimeStatus: String = RagRuntimeStatus.DISABLED.name,
     val saving: Boolean = false,
-    val message: String? = null
+    val message: String? = null,
+    /** CR-011 补齐：当前生效 Embedding 摘要（用于状态展示，不回显密钥）。 */
+    val embeddingSummary: String? = null
 )

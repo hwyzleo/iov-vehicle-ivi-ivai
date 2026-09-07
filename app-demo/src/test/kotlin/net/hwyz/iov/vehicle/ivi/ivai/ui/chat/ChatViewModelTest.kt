@@ -445,6 +445,109 @@ class ChatViewModelTest {
     }
 
     @Test
+    fun `RAG 执行时气泡首行追加 RAG 标识（知识路径）`() = runTest(dispatcher) {
+        val viewModel = ChatViewModel()
+        val gateway = FakeGateway()
+        viewModel.attach(gateway)
+        runCurrent()
+
+        viewModel.onAction(ChatUiAction.InputChanged("胎压报警是什么意思"))
+        viewModel.onAction(ChatUiAction.SendClicked)
+        runCurrent()
+        val requestId = viewModel.state.value.messages.first().requestId!!
+
+        // 真实顺序：先 Reply（带 L2 执行路径），再 finish→DebugInfo（带 rag + cr008）。
+        gateway.emit(
+            AgentEvent.UserSubmitted("sess", "turn-rag", requestId, "胎压报警是什么意思"),
+            AgentEvent.ProcessingStarted("sess", "turn-rag", requestId),
+            AgentEvent.Reply(
+                "sess", "turn-rag", requestId, "胎压报警指轮胎气压低于标准…",
+                executionPath = net.hwyz.iov.vehicle.ivi.ivai.agent.event.AgentExecutionPath(
+                    initialTier = net.hwyz.iov.vehicle.ivi.ivai.agent.router.IntentTier.L2_LOCAL_KNOWLEDGE,
+                    finalTier = net.hwyz.iov.vehicle.ivi.ivai.agent.router.IntentTier.L2_LOCAL_KNOWLEDGE,
+                    finalReasonCode = "L2_KNOWLEDGE_DOMAIN"
+                )
+            ),
+            AgentEvent.DebugInfo(
+                "sess", "turn-rag", requestId,
+                TurnDebugInfo(
+                    turnId = "turn-rag",
+                    requestId = requestId,
+                    state = "REPLY_READY",
+                    route = "LOCAL_DIALOGUE",
+                    intentTier = "L2_LOCAL_KNOWLEDGE",
+                    finalTier = "L2_LOCAL_KNOWLEDGE",
+                    rag = net.hwyz.iov.vehicle.ivi.ivai.agent.rag.RagExecutionInfo(
+                        configuredEnabled = true,
+                        runtimeStatus = net.hwyz.iov.vehicle.ivi.ivai.agent.rag.RagRuntimeStatus.READY,
+                        retrievalExecuted = true,
+                        retrievalType = "KnowledgeRagRetriever",
+                        queryText = "胎压报警是什么意思",
+                        modelId = "BAAI/bge-m3",
+                        topK = 5,
+                        retrievedTitles = listOf("故障/胎压报警")
+                    )
+                )
+            )
+        )
+        runCurrent()
+
+        val label = viewModel.state.value.messages.last().executionTierLabel
+        assertNotNull(label)
+        assertTrue(label!!.contains("L2"), "层级标签应保留 L2")
+        assertTrue(label.contains("RAG·知识"), "用到了 RAG 应在首行追加 RAG·知识 标识")
+    }
+
+    @Test
+    fun `合并多条 DebugInfo 时保留 RAG 信息`() = runTest(dispatcher) {
+        val viewModel = ChatViewModel()
+        val gateway = FakeGateway()
+        viewModel.attach(gateway)
+        runCurrent()
+
+        viewModel.onAction(ChatUiAction.InputChanged("我感觉有点冷"))
+        viewModel.onAction(ChatUiAction.SendClicked)
+        runCurrent()
+        val requestId = viewModel.state.value.messages.first().requestId!!
+
+        val rag = net.hwyz.iov.vehicle.ivi.ivai.agent.rag.RagExecutionInfo(
+            configuredEnabled = true,
+            runtimeStatus = net.hwyz.iov.vehicle.ivi.ivai.agent.rag.RagRuntimeStatus.READY,
+            retrievalExecuted = true,
+            retrievalType = "ToolRagRetriever",
+            queryText = "我感觉有点冷",
+            modelId = "BAAI/bge-m3",
+            topK = 5,
+            retrievedTitles = listOf("调高温度")
+        )
+
+        // 第一条 DebugInfo 带 RAG；后续（工具执行）DebugInfo 不带 RAG——不得覆盖丢失。
+        gateway.emit(
+            AgentEvent.UserSubmitted("sess", "turn-rag2", requestId, "我感觉有点冷"),
+            AgentEvent.ProcessingStarted("sess", "turn-rag2", requestId),
+            AgentEvent.DebugInfo(
+                "sess", "turn-rag2", requestId,
+                TurnDebugInfo(turnId = "turn-rag2", requestId = requestId, rag = rag)
+            ),
+            AgentEvent.DebugInfo(
+                "sess", "turn-rag2", requestId,
+                TurnDebugInfo(
+                    turnId = "turn-rag2", requestId = requestId,
+                    tool = net.hwyz.iov.vehicle.ivi.ivai.agent.event.ToolDebugInfo(
+                        toolId = "climate.temperature_increase", toolName = "调高温度", status = "SUCCEEDED"
+                    )
+                )
+            )
+        )
+        runCurrent()
+
+        val details = viewModel.state.value.messages.last().details
+        assertNotNull(details?.rag)
+        assertEquals("BAAI/bge-m3", details?.rag?.modelId)
+        assertTrue(details?.rag?.retrievalExecuted == true)
+    }
+
+    @Test
     fun `性能详情按 messageId 展开与收起`() = runTest(dispatcher) {
         val viewModel = ChatViewModel()
         val gateway = FakeGateway()

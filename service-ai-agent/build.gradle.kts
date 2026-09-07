@@ -59,7 +59,9 @@ dependencies {
     // (configRepository), so app-demo needs them on its compile classpath.
     api(project(":model-client"))
     implementation(project(":tool-registry"))
-    implementation(project(":retrieval"))
+    // AgentService 公开 API（ragConfigRepository.loadSnapshot().rag.embedding 等）暴露
+    // retrieval 类型给 app-demo 消费方，因此必须 api。
+    api(project(":retrieval"))
     implementation(project(":speech-input"))
 
     implementation(libs.kotlinx.coroutines.core)

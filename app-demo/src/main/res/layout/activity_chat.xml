@@ -34,6 +34,15 @@
             android:minWidth="0dp"
             android:paddingStart="12dp"
             android:paddingEnd="12dp" />
+
+        <TextView
+            android:id="@+id/buildTimeText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text=""
+            android:textColor="@color/text_secondary"
+            android:textSize="11sp" />
     </LinearLayout>
 
     <androidx.recyclerview.widget.RecyclerView

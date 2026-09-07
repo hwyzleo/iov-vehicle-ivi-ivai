@@ -32,6 +32,8 @@ import net.hwyz.iov.vehicle.ivi.ivai.agent.policy.AgentPolicyEngine
 import net.hwyz.iov.vehicle.ivi.ivai.agent.prompt.PromptBuilder
 import net.hwyz.iov.vehicle.ivi.ivai.agent.prompt.PromptSnapshot
 import net.hwyz.iov.vehicle.ivi.ivai.agent.rag.RagConfigRepository
+import net.hwyz.iov.vehicle.ivi.ivai.agent.rag.EmbeddingProviderFactory
+import net.hwyz.iov.vehicle.ivi.ivai.agent.rag.RagConfigState
 import net.hwyz.iov.vehicle.ivi.ivai.agent.rag.RagRuntimeManager
 import net.hwyz.iov.vehicle.ivi.ivai.agent.rag.RagRuntimeStatus
 import net.hwyz.iov.vehicle.ivi.ivai.agent.router.DefaultFastIntentMatcher
@@ -52,12 +54,14 @@ import net.hwyz.iov.vehicle.ivi.ivai.agent.workflow.WorkflowRuntime
 import net.hwyz.iov.vehicle.ivi.ivai.agent.workflow.WorkflowValidator
 import net.hwyz.iov.vehicle.ivi.ivai.model.ModelProvider
 import net.hwyz.iov.vehicle.ivi.ivai.model.ModelProviderType
+import net.hwyz.iov.vehicle.ivi.ivai.model.config.SecretStore
 import net.hwyz.iov.vehicle.ivi.ivai.model.config.DefaultModelConfigRepository
 import net.hwyz.iov.vehicle.ivi.ivai.model.config.ModelConfigRepository
 import net.hwyz.iov.vehicle.ivi.ivai.model.config.ModelConfigState
 import net.hwyz.iov.vehicle.ivi.ivai.model.config.ModelConfigValidator
 import net.hwyz.iov.vehicle.ivi.ivai.model.config.ModelRuntimeConfig
 import net.hwyz.iov.vehicle.ivi.ivai.model.provider.ModelProviderFactory
+import net.hwyz.iov.vehicle.ivi.ivai.service.config.AndroidKeystoreEmbeddingSecretStore
 import net.hwyz.iov.vehicle.ivi.ivai.service.config.AndroidKeystoreSecretStore
 import net.hwyz.iov.vehicle.ivi.ivai.service.config.DataStorePublicConfigStore
 import net.hwyz.iov.vehicle.ivi.ivai.service.config.DataStoreRagConfigRepository
@@ -142,6 +146,12 @@ class AgentService : Service(), AiAgentClient {
     lateinit var ragConfigRepository: RagConfigRepository
         private set
 
+    /** Embedding Provider API key（CR-011：鉴权配置使用 Keystore 引用，不存明文）。 */
+    private lateinit var embeddingSecretStore: SecretStore
+
+    /** 最近一次构建 Agent 图所用的 Base URL（RAG 配置变更重建时复用）。 */
+    private var lastAgentBaseUrl: String = BuildConfig.OLLAMA_BASE_URL
+
     /** Single shared ASR runtime config repository (IVI-IVAI-DSN-CR-006). */
     lateinit var asrConfigRepository: AsrConfigRepository
         private set
@@ -163,7 +173,13 @@ class AgentService : Service(), AiAgentClient {
     override fun onCreate() {
         super.onCreate()
         configRepository = buildConfigRepository()
-        ragConfigRepository = DataStoreRagConfigRepository(this, scope)
+        embeddingSecretStore = AndroidKeystoreEmbeddingSecretStore(this)
+        ragConfigRepository = DataStoreRagConfigRepository(
+            this,
+            scope,
+            embeddingSecretStore = embeddingSecretStore,
+            allowInsecureHttp = BuildConfig.ALLOW_INSECURE_HTTP
+        )
         asrConfigRepository = DefaultAsrConfigRepository(
             publicStore = AsrDataStorePublicConfigStore(this),
             secretStore = AndroidKeystoreAsrSecretStore(this),
@@ -179,6 +195,7 @@ class AgentService : Service(), AiAgentClient {
         }.getOrDefault(BuildConfig.OLLAMA_BASE_URL)
         buildAgentGraph(initialBaseUrl)
         observeConfigChanges()
+        observeRagConfigChanges()
         log("AgentService created: baseUrl=$initialBaseUrl model=${BuildConfig.OLLAMA_MODEL}")
     }
 
@@ -414,7 +431,29 @@ class AgentService : Service(), AiAgentClient {
         }
     }
 
+    /**
+     * CR-011 补齐：RAG 配置（含 Embedding Provider）变化时重建 Agent 图，使新配置
+     * 对下一个请求立即生效（与 ModelConfig 热更新同一模式）。Embedding 模型切换由
+     * IndexLifecycle 按兼容键触发全量重建（IVAI-REQ-102）。
+     */
+    private fun observeRagConfigChanges() {
+        scope.launch {
+            var seen = false
+            ragConfigRepository.configState.collect { state ->
+                if (state is RagConfigState.Valid) {
+                    if (seen) {
+                        buildAgentGraph(lastAgentBaseUrl)
+                        log("Agent graph rebuilt on RAG config change (version=${state.config.version})")
+                    } else {
+                        seen = true
+                    }
+                }
+            }
+        }
+    }
+
     private fun buildAgentGraph(initialBaseUrl: String) {
+        lastAgentBaseUrl = initialBaseUrl
         val adapter = MockClimateToolAdapter()
         val governedAdapter = MockGovernedToolAdapter()
         // CR-010: 运行时统一候选集 = 全部 160 个治理 Tool（canonical）。6 个旧空调 ID
@@ -538,7 +577,14 @@ class AgentService : Service(), AiAgentClient {
         registry: ToolRegistry,
         environment: RuntimeEnvironment
     ): Cr011RagStack = runBlocking {
-        val embedding = LocalEmbeddingProvider()
+        // CR-011 补齐：Embedding Provider 由持久化 RagConfig.embedding 驱动（IVAI-REQ-097
+        // 不得在业务代码中硬编码供应商）；配置为空 → 回退本地哈希桩。
+        val embeddingConfig = ragConfigRepository.loadSnapshot().rag.embedding
+        val embedding = EmbeddingProviderFactory.create(
+            config = embeddingConfig,
+            allowInsecureHttp = BuildConfig.ALLOW_INSECURE_HTTP,
+            credentialResolver = { runCatching { embeddingSecretStore.read() }.getOrNull() }
+        )
         val indexDir = File(getDir("rag_index", MODE_PRIVATE), "v1")
         val persistence = FileVectorPersistence(indexDir)
         val store = LocalExactVectorStore(persistence)
