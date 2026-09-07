@@ -42,4 +42,8 @@ class ServiceAgentCommandGateway(
     override suspend fun createTestSession(): String = testSupport.createTestSession()
 
     override suspend fun cancelRequest(requestId: String): Boolean = testSupport.cancelRequest(requestId)
+
+    override suspend fun awaitIdle(timeoutMs: Long): Boolean = testSupport.awaitIdle(timeoutMs)
+
+    override fun cancelActiveRequest(): Boolean = testSupport.cancelActiveRequest()
 }

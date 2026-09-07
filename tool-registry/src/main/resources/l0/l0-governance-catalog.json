@@ -3855,17 +3855,66 @@
     },
     {
       "toolId": "vehicle.brake_regen.set",
-      "support": "NEEDS_REVIEW",
-      "supportReason": "必填枚举 level 尚缺少批准的中文值别名表，暂不启用L0",
-      "rules": [],
+      "support": "SUPPORTED",
+      "supportReason": "明确配置类 Tool；对象词“能量回收”和设置动作稳定，必填 level 可通过批准的中文别名唯一映射为 OFF/LOW/STANDARD/HIGH。车型不支持目标枚举时由 Schema/Binding 返回不支持或降级 L1，不得静默替换为其他档位。",
+      "rules": [{
+        "ruleId": "L0.vehicle.brake_regen.set.off",
+        "exactPhrases": ["设置能量回收为关闭", "关闭能量回收", "关掉能量回收"],
+        "slotPatterns": [],
+        "presetArguments": {
+          "level": "OFF"
+        },
+        "negativePatterns": ["不想", "不要", "别", "取消"],
+        "priority": 20,
+        "synonymPatterns": ["^(?:请)?(?:把)?能量回收(?:设置|调)?(?:为|到)?(?:关闭|关掉|关|停用)$"]
+      }, {
+        "ruleId": "L0.vehicle.brake_regen.set.low",
+        "exactPhrases": ["设置能量回收为低", "把能量回收调到最低"],
+        "slotPatterns": [],
+        "presetArguments": {
+          "level": "LOW"
+        },
+        "negativePatterns": ["不想", "不要", "别", "取消"],
+        "priority": 20,
+        "synonymPatterns": ["^(?:请)?(?:把)?能量回收(?:设置|调)?(?:为|到)?(?:低|弱|最低|最弱)$"]
+      }, {
+        "ruleId": "L0.vehicle.brake_regen.set.standard",
+        "exactPhrases": ["设置能量回收为标准", "把能量回收调到标准"],
+        "slotPatterns": [],
+        "presetArguments": {
+          "level": "STANDARD"
+        },
+        "negativePatterns": ["不想", "不要", "别", "取消"],
+        "priority": 20,
+        "synonymPatterns": ["^(?:请)?(?:把)?能量回收(?:设置|调)?(?:为|到)?(?:标准|中|默认)$"]
+      }, {
+        "ruleId": "L0.vehicle.brake_regen.set.high",
+        "exactPhrases": ["设置能量回收为高", "把能量回收调到最强"],
+        "slotPatterns": [],
+        "presetArguments": {
+          "level": "HIGH"
+        },
+        "negativePatterns": ["不想", "不要", "别", "取消"],
+        "priority": 20,
+        "synonymPatterns": ["^(?:请)?(?:把)?能量回收(?:设置|调)?(?:为|到)?(?:高|强|最高|最强)$"]
+      }],
       "positiveExamples": [
-        "设置能量回收"
+        "设置能量回收为关闭",
+        "关掉能量回收",
+        "设置能量回收为低",
+        "设置能量回收为标准",
+        "设置能量回收为高",
+        "把能量回收调到最强"
       ],
       "negativeExamples": [
-        "未明确level的设置能量回收"
+        "设置能量回收",
+        "调整一下能量回收",
+        "不要关闭能量回收",
+        "关闭能量回收，同时把能量回收调到最强",
+        "把能量回收设置到系统允许范围之外"
       ],
       "conflictToolIds": [],
-      "reviewStatus": "NEEDS_REVIEW"
+      "reviewStatus": "DRAFT"
     },
     {
       "toolId": "vehicle.suspension.height.set",

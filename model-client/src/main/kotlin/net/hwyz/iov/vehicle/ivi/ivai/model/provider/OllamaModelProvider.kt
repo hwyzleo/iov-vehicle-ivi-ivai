@@ -9,6 +9,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.job
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -184,6 +185,8 @@ class OllamaModelProvider(
                         var ttftNs: Long? = null
                         var lastEnvelope: OllamaEnvelope? = null
                         while (true) {
+                            // 取消加固：阻塞读流期间也能及时观察到协程取消（配合 call.cancel()）。
+                            coroutineContext.ensureActive()
                             val line = source.readUtf8Line() ?: break
                             if (line.isBlank()) continue
                             val envelope = parseEnvelope(line)

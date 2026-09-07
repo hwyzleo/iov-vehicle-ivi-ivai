@@ -16,6 +16,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -417,6 +418,25 @@ class AgentService : Service(), AiAgentClient, AgentTestSupport {
         return true
     }
 
+    /**
+     * CR-012 串行语义加固：等待活动 Turn 释放（终态事件 ≠ process 返回）。
+     * Runner 提交下一条前调用；超时返回 false。
+     */
+    override suspend fun awaitIdle(timeoutMs: Long): Boolean {
+        val deadline = System.nanoTime() + timeoutMs * NANOS_PER_MILLI
+        while (activeTurn.get()) {
+            if (System.nanoTime() >= deadline) return false
+            delay(AWAIT_IDLE_POLL_MS)
+        }
+        return true
+    }
+
+    /** CR-012: 强制取消当前活动请求（不校验 requestId；阻塞调用未中断时的兜底）。 */
+    override fun cancelActiveRequest(): Boolean {
+        activeJobRef.get()?.cancel()
+        return true
+    }
+
     /** CR-012: 按 requestId 读取测试快照（见 [AgentTestSupport]）。 */
     override fun evaluationSnapshot(requestId: String): AgentEvaluationSnapshot? {
         if (!BuildConfig.DEBUG) return null
@@ -714,6 +734,11 @@ class AgentService : Service(), AiAgentClient, AgentTestSupport {
 
         /** CR-012: 测试快照有界容量（防止调试会话长期运行导致内存膨胀）。 */
         const val MAX_EVALUATION_SNAPSHOTS = 512
+
+        /** CR-012: awaitIdle 轮询间隔。 */
+        const val AWAIT_IDLE_POLL_MS = 20L
+
+        const val NANOS_PER_MILLI = 1_000_000L
 
         /** Mock vehicle deployment metadata (CR-005 availability filtering). */
         val VEHICLE_MODEL: String? = null

@@ -509,13 +509,13 @@ class AgentWorkflow(
                 // CLOUD_AI 不是缺参追问场景，模型编造的 missingArguments 不得展示为「缺参」。
                 val sanitized = output.copy(missingArguments = emptyList())
                 val text = "该请求需要云端 AI 处理（预留功能，暂不执行）。"
-                emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build()))
+                
                 finish(
                     input, session, AgentState.CLOUD_REQUIRED, route, sanitized, emptyList(), null, null,
                     text, modelResponse.content, false, timings,
                     validJson = true, schemaPassed = true, toolExecuted = false,
                     executionPath = tracker.build(), ragInfo = ragInfo, cr008 = cr008
-                )
+                ).also { emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build())) }
             }
             AgentRoute.REJECT -> {
                 timings.addRouteAndPolicy(msSince(routeStartNs))
@@ -525,13 +525,13 @@ class AgentWorkflow(
                 // 模型编造的 missingArguments（如 blower_mode）不得展示为「缺参」。
                 val sanitized = output.copy(missingArguments = emptyList())
                 val text = "已拒绝该请求。"
-                emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build()))
+                
                 finish(
                     input, session, AgentState.REJECTED, route, sanitized, emptyList(), null, null,
                     text, modelResponse.content, false, timings,
                     validJson = true, schemaPassed = true, toolExecuted = false,
                     executionPath = tracker.build(), ragInfo = ragInfo, cr008 = cr008
-                )
+                ).also { emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build())) }
             }
             AgentRoute.LOCAL_TOOL -> handleLocalTool(
                 input, session, output, timings, modelResponse, routeStartNs, tracker, ragInfo, candidateToolIds, cr008
@@ -572,14 +572,14 @@ class AgentWorkflow(
             tracker.transition(IntentTier.L3_CLOUD_AI, RouteReasonCode.L2_NO_KNOWLEDGE)
             tracker.finalReasonCode = RouteReasonCode.L2_NO_KNOWLEDGE
             val text = "本地知识库未启用，无法在本机回答该问题。该请求需云端处理（预留功能，暂不执行）。"
-            emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build()))
+            
             return finish(
                 input, session, AgentState.CLOUD_REQUIRED, AgentRoute.CLOUD_AI, null, emptyList(), null, null,
                 text, null, false, timings,
                 validJson = false, schemaPassed = false, toolExecuted = false,
                 executionPath = tracker.build(), ragInfo = ragInfo.copy(fallbackReason = RouteReasonCode.L2_NO_KNOWLEDGE),
                 cr008 = cr008
-            )
+            ).also { emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build())) }
         }
 
         val retrievalStartNs = System.nanoTime()
@@ -592,14 +592,14 @@ class AgentWorkflow(
             tracker.transition(IntentTier.L3_CLOUD_AI, RouteReasonCode.RAG_RETRIEVAL_EMPTY)
             tracker.finalReasonCode = RouteReasonCode.RAG_RETRIEVAL_EMPTY
             val text = "本地知识库未找到相关说明，暂时无法确认。该请求已转云端处理（预留功能，暂不执行）。"
-            emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build()))
+            
             return finish(
                 input, session, AgentState.CLOUD_REQUIRED, AgentRoute.CLOUD_AI, null, emptyList(), null, null,
                 text, null, false, timings,
                 validJson = false, schemaPassed = false, toolExecuted = false,
                 executionPath = tracker.build(), ragInfo = ragInfo.copy(fallbackReason = RouteReasonCode.RAG_RETRIEVAL_EMPTY),
                 cr008 = cr008
-            )
+            ).also { emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build())) }
         }
 
         // CR-011 可观测性：检索输出（召回片段标题 / 耗时）。
@@ -641,13 +641,13 @@ class AgentWorkflow(
             rawAnswer
         }
         tracker.finalReasonCode = RouteReasonCode.L2_KNOWLEDGE_DOMAIN
-        emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build()))
+        
         return finish(
             input, session, AgentState.REPLY_READY, AgentRoute.LOCAL_DIALOGUE, null, emptyList(), null, null,
             text, modelResponse.content, false, timings,
             validJson = false, schemaPassed = false, toolExecuted = false,
             executionPath = tracker.build(), ragInfo = ragResult, cr008 = cr008
-        )
+        ).also { emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build())) }
     }
 
     private suspend fun handleL3(
@@ -660,13 +660,13 @@ class AgentWorkflow(
         val tracker = ExecutionPathTracker(IntentTier.L3_CLOUD_AI)
         tracker.finalReasonCode = decision.reasonCode
         val text = "该请求需要云端 AI 处理（预留功能，暂不执行）。"
-        emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build()))
+        
         return finish(
             input, session, AgentState.CLOUD_REQUIRED, AgentRoute.CLOUD_AI, null, emptyList(), null, null,
             text, null, false, timings,
             validJson = false, schemaPassed = false, toolExecuted = false,
             executionPath = tracker.build(), cr008 = cr008Of(decision)
-        )
+        ).also { emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build())) }
     }
 
     private suspend fun handleReject(
@@ -697,13 +697,13 @@ class AgentWorkflow(
                 errorCode = null
             }
         }
-        emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build()))
+        
         return finish(
             input, session, AgentState.REJECTED, AgentRoute.REJECT, null, emptyList(), null,
             errorCode, text, null, false, timings,
             validJson = false, schemaPassed = false, toolExecuted = false,
             executionPath = tracker.build(), cr008 = cr008
-        )
+        ).also { emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build())) }
     }
 
     /**
@@ -755,16 +755,6 @@ class AgentWorkflow(
             finalReasonCode = decision.reasonCode,
             candidateSource = null
         )
-        emit(
-            AgentEvent.ToolExecutionFinished(
-                session.sessionId, input.turnId, input.requestId, workflow.workflowId,
-                status = if (succeeded) ExecutionStatus.SUCCEEDED else ExecutionStatus.FAILED,
-                message = result.message,
-                errorCode = errorCode,
-                retryable = !succeeded,
-                executionPath = execPath
-            )
-        )
         val cr008 = cr008Of(decision).copy(
             workflowId = workflow.workflowId,
             workflowName = workflowName(workflow.workflowId),
@@ -774,12 +764,24 @@ class AgentWorkflow(
             compensationResult = result.compensationResult?.let { "${it.stepId}:${it.state.name}" },
             workflowErrorCode = errorCode
         )
+        // 先写快照（finish）再发终态事件，避免测试 Runner 读到「有事件无快照」的竞态。
         return finish(
             input, session, state, AgentRoute.LOCAL_TOOL, null, emptyList(), null,
             errorCode, text, null, false, timings,
             validJson = false, schemaPassed = true, toolExecuted = succeeded,
             executionPath = execPath, cr008 = cr008
-        )
+        ).also {
+            emit(
+                AgentEvent.ToolExecutionFinished(
+                    session.sessionId, input.turnId, input.requestId, workflow.workflowId,
+                    status = if (succeeded) ExecutionStatus.SUCCEEDED else ExecutionStatus.FAILED,
+                    message = result.message,
+                    errorCode = errorCode,
+                    retryable = !succeeded,
+                    executionPath = execPath
+                )
+            )
+        }
     }
 
     /** L0 missing-argument fast path: ask for the missing slots without a model call. */
@@ -800,13 +802,13 @@ class AgentWorkflow(
         record(input, session, AgentState.NEED_DIALOGUE)
         record(input, session, AgentState.WAITING_USER)
         val text = "请问需要补充：${missing.joinToString("、")}。"
-        emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build()))
+        
         return finish(
             input, session, AgentState.WAITING_USER, AgentRoute.LOCAL_DIALOGUE, null, emptyList(), null, null,
             text, null, false, timings,
             validJson = true, schemaPassed = true, toolExecuted = false,
             executionPath = tracker.build(), cr008 = cr008
-        )
+        ).also { emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build())) }
     }
 
     // ------------------------------------------------------------------ unified execution chain
@@ -870,19 +872,19 @@ class AgentWorkflow(
                 )
                 record(input, session, AgentState.NEED_DIALOGUE)
                 record(input, session, AgentState.WAITING_USER)
-                emit(
-                    AgentEvent.ConfirmationRequired(
-                        session.sessionId, input.turnId, input.requestId,
-                        confirmationId = confirmationId, toolId = toolId, toolName = name,
-                        text = "确认执行「$name」？", currentTier = tracker.currentTier
-                    )
-                )
+                
                 return finish(
                     input, session, AgentState.WAITING_USER, AgentRoute.LOCAL_TOOL, output, emptyList(), null, null,
                     "确认执行「$name」？回复「${config.confirmationKeyword}」以继续。", rawModelContent, false,
                     timings, validJson = true, schemaPassed = true, toolExecuted = false,
                     executionPath = tracker.build(), cr008 = cr008
-                )
+                ).also { emit(
+                    AgentEvent.ConfirmationRequired(
+                        session.sessionId, input.turnId, input.requestId,
+                        confirmationId = confirmationId, toolId = toolId, toolName = name,
+                        text = "确认执行「$name」？", currentTier = tracker.currentTier
+                    )
+                ) }
             }
             is PolicyOutcome.Denied -> {
                 emitLifecycle(ToolLifecyclePhase.FAILED, input.requestId, toolId, outcome.message)
@@ -975,11 +977,11 @@ class AgentWorkflow(
         val text = "已取消「${pending.toolName ?: pending.intent.toolId}」。"
         session.consumePendingTask()
         session.appendAssistant(text)
-        emit(AgentEvent.TurnCancelled(session.sessionId, input.turnId, input.requestId, text))
         record(input, session, AgentState.REJECTED, route = AgentRoute.LOCAL_TOOL.name)
         val timings = TurnTimings(input.submittedAtNs)
         timings.endToEndMs = msSince(input.submittedAtNs)
         // CR-012: 取消是终态之一（CANCELLED），仍需投影快照供测试采集。
+        // 先写快照再发终态事件，避免测试 Runner 读到「有事件无快照」的竞态。
         evaluationListener?.invoke(
             EvaluationSnapshotProjector.project(
                 SnapshotFacts(
@@ -996,6 +998,7 @@ class AgentWorkflow(
                 )
             )
         )
+        emit(AgentEvent.TurnCancelled(session.sessionId, input.turnId, input.requestId, text))
         return AgentResult(
             requestId = input.requestId,
             sessionId = session.sessionId,
@@ -1046,13 +1049,13 @@ class AgentWorkflow(
         cr008: Cr008DebugInfo? = null
     ): AgentResult {
         val path = tracker?.build()
-        emit(AgentEvent.TurnFailed(session.sessionId, input.turnId, input.requestId, message, errorCode, retryable, path))
+        
         return finish(
             input, session, state, null, null, emptyList(), null,
             errorCode, message, null, false, timings,
             validJson = false, schemaPassed = false, toolExecuted = false,
             errorDetail = errorDetail, executionPath = path, ragInfo = ragInfo, cr008 = cr008
-        )
+        ).also { emit(AgentEvent.TurnFailed(session.sessionId, input.turnId, input.requestId, message, errorCode, retryable, path)) }
     }
 
     // ------------------------------------------------------------------ branches (model-driven)
@@ -1078,20 +1081,20 @@ class AgentWorkflow(
         if (intent == null || tool == null) {
             val unknown = intent?.toolId ?: "unknown"
             emitLifecycle(ToolLifecyclePhase.FAILED, input.requestId, unknown, "unknown tool")
-            emit(
+            
+            return finish(
+                input, session, AgentState.REJECTED, AgentRoute.LOCAL_DIALOGUE, output, emptyList(), null,
+                ErrorCode.UNKNOWN_TOOL.code, "LOCAL_DIALOGUE 引用了未知工具：$unknown", modelResponse.content, false, timings,
+                validJson = true, schemaPassed = true, toolExecuted = false,
+                executionPath = tracker.build(), ragInfo = ragInfo, cr008 = cr008
+            ).also { emit(
                 AgentEvent.TurnFailed(
                     session.sessionId, input.turnId, input.requestId,
                     message = "暂时无法安全理解该请求，请换一种说法",
                     errorCode = ErrorCode.UNKNOWN_TOOL.code, retryable = false,
                     executionPath = tracker.build()
                 )
-            )
-            return finish(
-                input, session, AgentState.REJECTED, AgentRoute.LOCAL_DIALOGUE, output, emptyList(), null,
-                ErrorCode.UNKNOWN_TOOL.code, "LOCAL_DIALOGUE 引用了未知工具：$unknown", modelResponse.content, false, timings,
-                validJson = true, schemaPassed = true, toolExecuted = false,
-                executionPath = tracker.build(), ragInfo = ragInfo, cr008 = cr008
-            )
+            ) }
         }
 
         // 以 Tool 的真实参数 Schema 为准，重算缺失的必填参数（过滤模型编造字段）。
@@ -1109,13 +1112,13 @@ class AgentWorkflow(
             record(input, session, AgentState.NEED_DIALOGUE)
             record(input, session, AgentState.WAITING_USER)
             val text = "需要更多信息才能继续处理该请求。"
-            emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build()))
+            
             return finish(
                 input, session, AgentState.WAITING_USER, AgentRoute.LOCAL_DIALOGUE, output, emptyList(), null, null,
                 text, modelResponse.content, false, timings,
                 validJson = true, schemaPassed = true, toolExecuted = false,
                 executionPath = tracker.build(), ragInfo = ragInfo, cr008 = cr008
-            )
+            ).also { emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build())) }
         }
 
         session.storePendingTask(
@@ -1125,13 +1128,13 @@ class AgentWorkflow(
         record(input, session, AgentState.NEED_DIALOGUE)
         record(input, session, AgentState.WAITING_USER)
         val text = "请问需要补充：${realMissing.joinToString("、")}。"
-        emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build()))
+        
         return finish(
             input, session, AgentState.WAITING_USER, AgentRoute.LOCAL_DIALOGUE, output, emptyList(), null, null,
             text, modelResponse.content, false, timings,
             validJson = true, schemaPassed = true, toolExecuted = false,
             executionPath = tracker.build(), ragInfo = ragInfo, cr008 = cr008
-        )
+        ).also { emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build())) }
     }
 
     private suspend fun handleLocalTool(
@@ -1158,21 +1161,21 @@ class AgentWorkflow(
                 return if (inRegistry) {
                     timings.addRouteAndPolicy(msSince(policyStartNs))
                     emitLifecycle(ToolLifecyclePhase.FAILED, input.requestId, intent.toolId, "tool outside candidate set")
-                    emit(
-                        AgentEvent.TurnFailed(
-                            session.sessionId, input.turnId, input.requestId,
-                            message = "暂时无法安全理解该请求，请换一种说法",
-                            errorCode = ErrorCode.CANDIDATE_SOURCE_INVALID.code, retryable = false,
-                            executionPath = tracker.build()
-                        )
-                    )
+                    
                     finish(
                         input, session, AgentState.REJECTED, AgentRoute.LOCAL_TOOL, merged, emptyList(), null,
                         ErrorCode.CANDIDATE_SOURCE_INVALID.code, "工具候选不在本次召回集合内：${intent.toolId}",
                         modelResponse.content, false, timings,
                         validJson = true, schemaPassed = true, toolExecuted = false,
                         executionPath = tracker.build(), ragInfo = ragInfo, cr008 = cr008
-                    )
+                    ).also { emit(
+                        AgentEvent.TurnFailed(
+                            session.sessionId, input.turnId, input.requestId,
+                            message = "暂时无法安全理解该请求，请换一种说法",
+                            errorCode = ErrorCode.CANDIDATE_SOURCE_INVALID.code, retryable = false,
+                            executionPath = tracker.build()
+                        )
+                    ) }
                 } else {
                     // Not even in the registry → the existing UNKNOWN_TOOL path below.
                     break
@@ -1188,20 +1191,20 @@ class AgentWorkflow(
             val unknownTool = issues.any { it.kind == ValidationIssueKind.UNKNOWN_TOOL }
             val errorCode = if (unknownTool) ErrorCode.UNKNOWN_TOOL else ErrorCode.INVALID_ARGUMENT
             emitLifecycle(ToolLifecyclePhase.FAILED, input.requestId, issues.first().toolId.orEmpty(), issues.first().message)
-            emit(
+            
+            return finish(
+                input, session, AgentState.REJECTED, AgentRoute.LOCAL_TOOL, merged, issues, null,
+                errorCode.code, issues.first().message, modelResponse.content, false, timings,
+                validJson = true, schemaPassed = true, toolExecuted = false,
+                executionPath = tracker.build(), ragInfo = ragInfo, cr008 = cr008
+            ).also { emit(
                 AgentEvent.TurnFailed(
                     session.sessionId, input.turnId, input.requestId,
                     message = "暂时无法安全理解该请求，请换一种说法",
                     errorCode = errorCode.code, retryable = false,
                     executionPath = tracker.build()
                 )
-            )
-            return finish(
-                input, session, AgentState.REJECTED, AgentRoute.LOCAL_TOOL, merged, issues, null,
-                errorCode.code, issues.first().message, modelResponse.content, false, timings,
-                validJson = true, schemaPassed = true, toolExecuted = false,
-                executionPath = tracker.build(), ragInfo = ragInfo, cr008 = cr008
-            )
+            ) }
         }
 
         // Policy (risk / precondition / confirmation).
@@ -1220,36 +1223,36 @@ class AgentWorkflow(
                 )
                 record(input, session, AgentState.NEED_DIALOGUE)
                 record(input, session, AgentState.WAITING_USER)
-                emit(
-                    AgentEvent.ConfirmationRequired(
-                        session.sessionId, input.turnId, input.requestId,
-                        confirmationId = confirmationId, toolId = intent.toolId, toolName = name,
-                        text = "确认执行「$name」？", currentTier = tracker.currentTier
-                    )
-                )
+                
                 return finish(
                     input, session, AgentState.WAITING_USER, AgentRoute.LOCAL_TOOL, merged, emptyList(), null, null,
                     "确认执行「$name」？回复「${config.confirmationKeyword}」以继续。", modelResponse.content, false,
                     timings, validJson = true, schemaPassed = true, toolExecuted = false,
                     executionPath = tracker.build(), ragInfo = ragInfo, cr008 = cr008
-                )
+                ).also { emit(
+                    AgentEvent.ConfirmationRequired(
+                        session.sessionId, input.turnId, input.requestId,
+                        confirmationId = confirmationId, toolId = intent.toolId, toolName = name,
+                        text = "确认执行「$name」？", currentTier = tracker.currentTier
+                    )
+                ) }
             }
             is PolicyOutcome.Denied -> {
                 emitLifecycle(ToolLifecyclePhase.FAILED, input.requestId, merged.intents.first().toolId, outcome.message)
-                emit(
+                
+                return finish(
+                    input, session, AgentState.REJECTED, AgentRoute.LOCAL_TOOL, merged, emptyList(), null,
+                    outcome.errorCode.code, outcome.message, modelResponse.content, false, timings,
+                    validJson = true, schemaPassed = true, toolExecuted = false,
+                    executionPath = tracker.build(), ragInfo = ragInfo, cr008 = cr008
+                ).also { emit(
                     AgentEvent.TurnFailed(
                         session.sessionId, input.turnId, input.requestId,
                         message = "该操作未获授权，无法执行",
                         errorCode = outcome.errorCode.code, retryable = false,
                         executionPath = tracker.build()
                     )
-                )
-                return finish(
-                    input, session, AgentState.REJECTED, AgentRoute.LOCAL_TOOL, merged, emptyList(), null,
-                    outcome.errorCode.code, outcome.message, modelResponse.content, false, timings,
-                    validJson = true, schemaPassed = true, toolExecuted = false,
-                    executionPath = tracker.build(), ragInfo = ragInfo, cr008 = cr008
-                )
+                ) }
             }
             PolicyOutcome.Authorized -> {
                 session.clearPendingTask()
@@ -1277,20 +1280,20 @@ class AgentWorkflow(
         val toolId = intent.toolId
         val tool = registry.get(toolId)
         if (tool == null) {
-            emit(
+            
+            return finish(
+                input, session, AgentState.REJECTED, AgentRoute.LOCAL_TOOL, parsedOutput, emptyList(), null,
+                ErrorCode.UNKNOWN_TOOL.code, "未知工具：$toolId", rawModelContent, false, timings,
+                validJson = false, schemaPassed = false, toolExecuted = false,
+                executionPath = executionPath, cr008 = cr008
+            ).also { emit(
                 AgentEvent.TurnFailed(
                     session.sessionId, input.turnId, input.requestId,
                     message = "无法执行：未知工具 $toolId",
                     errorCode = ErrorCode.UNKNOWN_TOOL.code, retryable = false,
                     executionPath = executionPath
                 )
-            )
-            return finish(
-                input, session, AgentState.REJECTED, AgentRoute.LOCAL_TOOL, parsedOutput, emptyList(), null,
-                ErrorCode.UNKNOWN_TOOL.code, "未知工具：$toolId", rawModelContent, false, timings,
-                validJson = false, schemaPassed = false, toolExecuted = false,
-                executionPath = executionPath, cr008 = cr008
-            )
+            ) }
         }
         val values = validator.applyDefaultsAndNormalize(tool, jsonArgsToValues(intent.arguments))
         val toolName = tool.name ?: toolId
@@ -1306,7 +1309,13 @@ class AgentWorkflow(
         val cached = idempotencyGuard.find(key)
         if (cached != null) {
             emitLifecycle(ToolLifecyclePhase.REPORTED, input.requestId, toolId, "replayed")
-            emit(
+            
+            return finish(
+                input, session, AgentState.SUCCEEDED, AgentRoute.LOCAL_TOOL, parsedOutput, emptyList(), cached,
+                null, "${cached.message}（重复请求，已返回上次执行结果）", rawModelContent, replayed = true, timings,
+                validJson = false, schemaPassed = true, toolExecuted = false,
+                executionPath = executionPath, cr008 = cr008
+            ).also { emit(
                 AgentEvent.ToolExecutionFinished(
                     session.sessionId, input.turnId, input.requestId, toolId,
                     status = cached.status,
@@ -1315,13 +1324,7 @@ class AgentWorkflow(
                     retryable = cached.status != ExecutionStatus.SUCCEEDED,
                     executionPath = executionPath
                 )
-            )
-            return finish(
-                input, session, AgentState.SUCCEEDED, AgentRoute.LOCAL_TOOL, parsedOutput, emptyList(), cached,
-                null, "${cached.message}（重复请求，已返回上次执行结果）", rawModelContent, replayed = true, timings,
-                validJson = false, schemaPassed = true, toolExecuted = false,
-                executionPath = executionPath, cr008 = cr008
-            )
+            ) }
         }
 
         emitLifecycle(ToolLifecyclePhase.AUTHORIZED, input.requestId, toolId)
@@ -1354,7 +1357,13 @@ class AgentWorkflow(
         } else {
             exec.errorCode ?: ErrorCode.EXECUTION_FAILED.code
         }
-        emit(
+        
+        return finish(
+            input, session, state, AgentRoute.LOCAL_TOOL, parsedOutput, emptyList(), exec,
+            errorCode, exec.message, rawModelContent, false, timings,
+            validJson = false, schemaPassed = true, toolExecuted = true, toolLatencyMs = toolLatencyMs,
+            executionPath = executionPath, cr008 = cr008
+        ).also { emit(
             AgentEvent.ToolExecutionFinished(
                 session.sessionId, input.turnId, input.requestId, toolId,
                 status = exec.status,
@@ -1363,13 +1372,7 @@ class AgentWorkflow(
                 retryable = exec.status != ExecutionStatus.SUCCEEDED,
                 executionPath = executionPath
             )
-        )
-        return finish(
-            input, session, state, AgentRoute.LOCAL_TOOL, parsedOutput, emptyList(), exec,
-            errorCode, exec.message, rawModelContent, false, timings,
-            validJson = false, schemaPassed = true, toolExecuted = true, toolLatencyMs = toolLatencyMs,
-            executionPath = executionPath, cr008 = cr008
-        )
+        ) }
     }
 
     // ------------------------------------------------------------------ helpers

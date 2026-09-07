@@ -22,6 +22,9 @@ object TestErrorCode {
     /** 结构化实际结果缺失或无法关联 requestId。 */
     const val RESULT_MISSING = "IVAI-TEST-006"
 
+    /** 服务端活动 Turn 持续未释放（串行语义被阻塞，等待+强制取消后仍不可用）。 */
+    const val SERVICE_BUSY = "IVAI-TEST-009"
+
     /** 参数规范化或 Schema 解析失败。 */
     const val CANONICALIZATION_FAILED = "IVAI-TEST-007"
 

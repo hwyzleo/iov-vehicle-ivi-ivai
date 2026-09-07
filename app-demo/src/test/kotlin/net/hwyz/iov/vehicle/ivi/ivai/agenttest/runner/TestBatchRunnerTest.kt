@@ -61,15 +61,37 @@ class TestBatchRunnerTest {
         /** 按提交序号决定是否发送终态事件（默认全部发送）。 */
         var emitTerminal: (Int) -> Boolean = { true }
         var snapshotMissing = false
+        /** 终态后快照短暂缺失的次数（模拟「事件已到、快照未写」竞态，默认 0）。 */
+        var snapshotDelayedReads = 0
         /** 按提交序号覆盖快照终态（用于 NEED_DIALOGUE 等场景）。 */
         var snapshotTerminal: (Int) -> EvaluationTerminalStatus = { EvaluationTerminalStatus.SUCCEEDED }
+        /** awaitIdle 返回 false 的次数（模拟服务端活动 Turn 未释放）。 */
+        var busyCalls = 0
+        /** 强制取消后是否释放闸门（false = 强制取消也无效，服务端仍繁忙）。 */
+        var forceCancelResetsBusy = true
         val createdSessions = mutableListOf<String>()
         val submitted = mutableListOf<Pair<String, String>>()
         val cancelled = mutableListOf<String>()
+        val cancelActiveCalls = mutableListOf<String>()
         val snapshots = mutableMapOf<String, AgentEvaluationSnapshot>()
         private val channels = mutableMapOf<String, Channel<AgentEvent>>()
         private var sessionCounter = 0
         private var submittedCount = 0
+
+        override suspend fun awaitIdle(timeoutMs: Long): Boolean {
+            if (busyCalls > 0) {
+                busyCalls--
+                return false
+            }
+            return true
+        }
+
+        override fun cancelActiveRequest(): Boolean {
+            cancelActiveCalls += "force-cancel"
+            // 强制取消成功后活动 Turn 被释放；若服务端仍繁忙则闸门保持占用。
+            if (forceCancelResetsBusy) busyCalls = 0
+            return true
+        }
 
         override suspend fun createTestSession(): String {
             val id = "test-session-${sessionCounter++}"
@@ -103,7 +125,13 @@ class TestBatchRunnerTest {
         override fun observe(sessionId: String): Flow<AgentEvent> =
             (channels[sessionId] ?: Channel(Channel.UNLIMITED)).receiveAsFlow()
 
-        override suspend fun evaluationSnapshot(requestId: String): AgentEvaluationSnapshot? = snapshots[requestId]
+        override suspend fun evaluationSnapshot(requestId: String): AgentEvaluationSnapshot? {
+            if (snapshotDelayedReads > 0) {
+                snapshotDelayedReads--
+                return null
+            }
+            return snapshots[requestId]
+        }
 
         override suspend fun cancelRequest(requestId: String): Boolean {
             cancelled += requestId
@@ -192,6 +220,40 @@ class TestBatchRunnerTest {
         val (results, _) = runBatch(gateway, listOf(case("C-1"), case("C-2")))
         assertEquals(2, results.size)
         assertTrue(results.all { it.status == AgentTestCaseStatus.FAILED && it.errorCode == TestErrorCode.SUBMIT_FAILED })
+    }
+
+    @Test
+    fun `服务端持续繁忙 → IVAI-TEST-009 记失败且不提交`() = runTest {
+        val gateway = FakeGateway()
+        gateway.busyCalls = Int.MAX_VALUE
+        gateway.forceCancelResetsBusy = false // 强制取消也无效（服务端卡死）
+        val (results, _) = runBatch(gateway, listOf(case("C-1")))
+        assertEquals(1, results.size)
+        assertEquals(AgentTestCaseStatus.FAILED, results[0].status)
+        assertEquals(TestErrorCode.SERVICE_BUSY, results[0].errorCode)
+        // 未提交：服务端闸门未释放时不发请求。
+        assertTrue(gateway.submitted.isEmpty())
+        assertEquals(1, gateway.cancelActiveCalls.size)
+    }
+
+    @Test
+    fun `等待繁忙后强制取消恢复 → 正常执行`() = runTest {
+        val gateway = FakeGateway()
+        gateway.busyCalls = 1 // 首次 awaitIdle 繁忙 → 强制取消 → 恢复
+        val (results, _) = runBatch(gateway, listOf(case("C-1")))
+        assertEquals(1, gateway.cancelActiveCalls.size)
+        assertEquals(1, gateway.submitted.size)
+        assertEquals(AgentTestCaseStatus.PASSED, results[0].status)
+    }
+
+    @Test
+    fun `终态后快照短暂缺失 → 有界重试补齐而非 RESULT_MISSING`() = runTest {
+        val gateway = FakeGateway()
+        gateway.snapshotDelayedReads = 2 // 前两次读快照为 null，之后可读
+        val (results, _) = runBatch(gateway, listOf(case("C-1")))
+        assertEquals(1, results.size)
+        assertEquals(AgentTestCaseStatus.PASSED, results[0].status)
+        assertTrue(results[0].errorCode == null)
     }
 
     @Test

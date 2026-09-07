@@ -146,6 +146,15 @@ class AgentTestCr012IntegrationTest {
             return true
         }
 
+        // 进程内网关无全局单飞闸门（同步执行在 submit 内完成），等待恒为可用。
+        override suspend fun awaitIdle(timeoutMs: Long): Boolean = true
+
+        override fun cancelActiveRequest(): Boolean {
+            activeJobs.values.forEach { it.cancel() }
+            activeJobs.clear()
+            return true
+        }
+
         private fun buildGraph(model: ModelProvider): AgentWorkflow {
             val governedAdapter = MockGovernedToolAdapter()
             val registry = GovernanceWorkspace.registerAllStubs(ToolRegistry())

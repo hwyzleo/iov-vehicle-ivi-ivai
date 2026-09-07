@@ -47,8 +47,9 @@ class AgentEventWorkflowTest {
                 AgentEvent.UserSubmitted::class,
                 AgentEvent.ProcessingStarted::class,
                 AgentEvent.ToolExecutionStarted::class,
-                AgentEvent.ToolExecutionFinished::class,
-                AgentEvent.DebugInfo::class
+                // 先写测试快照（finish）再发终态事件：DebugInfo 先于 ToolExecutionFinished。
+                AgentEvent.DebugInfo::class,
+                AgentEvent.ToolExecutionFinished::class
             ),
             listener.events.map { it::class }
         )

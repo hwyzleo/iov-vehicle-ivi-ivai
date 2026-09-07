@@ -42,4 +42,15 @@ interface AgentCommandGateway {
 
     /** 取消活动请求（单条超时后继续下一条，IVAI-TEST-005）。 */
     suspend fun cancelRequest(requestId: String): Boolean
+
+    /**
+     * 等待服务端释放上一个活动 Turn；超时返回 false（IVAI-TEST-004 串行语义加固）。
+     *
+     * 批次提交下一条前必须先等闸门真正空闲：终态事件在 process 内部发出，而
+     * `activeTurn` 要等 process 完全返回才释放，事件到达 ≠ 闸门释放。
+     */
+    suspend fun awaitIdle(timeoutMs: Long): Boolean
+
+    /** 强制取消当前活动请求（不校验 requestId；阻塞调用未被中断时的兜底，IVAI-TEST-009）。 */
+    fun cancelActiveRequest(): Boolean
 }

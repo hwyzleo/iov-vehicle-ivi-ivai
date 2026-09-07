@@ -9,6 +9,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.job
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -256,6 +257,8 @@ class OpenAiCompatibleModelProvider(
                         var providerTimeMs: Long? = null
                         var gotContent = false
                         while (true) {
+                            // 取消加固：阻塞读流期间也能及时观察到协程取消（配合 call.cancel()）。
+                            coroutineContext.ensureActive()
                             val frame = readSseFrame(source) ?: break
                             val data = frame.trim()
                             if (data.isEmpty()) continue

@@ -48,6 +48,12 @@ class ServiceAgentCommandGatewayTest {
             cancelled += requestId
             return true
         }
+        override suspend fun awaitIdle(timeoutMs: Long): Boolean = true
+        override fun cancelActiveRequest(): Boolean {
+            cancelActiveCalls++
+            return true
+        }
+        var cancelActiveCalls = 0
         override fun evaluationSnapshot(requestId: String): AgentEvaluationSnapshot? = snapshot
     }
 
@@ -87,5 +93,16 @@ class ServiceAgentCommandGatewayTest {
         assertSame(support.snapshot, gateway.evaluationSnapshot("req-x"))
         gateway.cancelRequest("req-x")
         assertEquals(listOf("req-x"), support.cancelled)
+    }
+
+    @Test
+    fun `串行语义透传 - awaitIdle 与强制取消委托到测试支撑`() = runBlocking {
+        val client = RecordingClient()
+        val support = FakeTestSupport()
+        val gateway = ServiceAgentCommandGateway(client, support)
+
+        assertTrue(gateway.awaitIdle(1_000))
+        assertTrue(gateway.cancelActiveRequest())
+        assertEquals(1, support.cancelActiveCalls)
     }
 }

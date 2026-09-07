@@ -4,6 +4,7 @@ import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import net.hwyz.iov.vehicle.ivi.ivai.agent.evaluation.EvaluationTerminalStatus
@@ -91,6 +92,7 @@ class TestRunnerException(
 class TestBatchRunner(
     private val gateway: AgentCommandGateway,
     private val caseTimeoutMs: Long = DEFAULT_CASE_TIMEOUT_MS,
+    private val awaitIdleTimeoutMs: Long = DEFAULT_AWAIT_IDLE_TIMEOUT_MS,
     private val environmentAllowed: () -> Boolean = { BuildConfig.DEBUG }
 ) {
 
@@ -151,8 +153,26 @@ class TestBatchRunner(
         )
     }
 
-    /** 执行单条用例：隔离 Session → 提交 → 等待终态 → 取快照 → 评分。 */
+    /** 执行单条用例：等闸门释放 → 隔离 Session → 提交 → 等待终态 → 取快照 → 评分。 */
     private suspend fun runOne(runId: String, case: AgentTestCase): AgentTestCaseResult {
+        // 串行语义加固：终态事件在服务端 process 内部发出，而活动 Turn 闸门要等 process
+        // 完全返回（finally）才释放——事件到达 ≠ 闸门释放。提交下一条前必须先等闸门真正
+        // 空闲，否则全局单飞闸门会拒绝后续所有提交（大量 IVAI-TEST-004 批量失败）。
+        if (!gateway.awaitIdle(awaitIdleTimeoutMs)) {
+            // 可能是阻塞模型调用未被取消打断：强制取消当前活动请求后重试一次。
+            gateway.cancelActiveRequest()
+            if (!gateway.awaitIdle(awaitIdleTimeoutMs)) {
+                return AgentTestCaseResult(
+                    runId = runId,
+                    caseId = case.caseId,
+                    status = AgentTestCaseStatus.FAILED,
+                    terminalStatus = EvaluationTerminalStatus.FAILED,
+                    errorCode = TestErrorCode.SERVICE_BUSY,
+                    errorMessage = "Agent 服务活动 Turn 持续未释放，等待并强制取消后仍无法提交（IVAI-TEST-009）"
+                )
+            }
+        }
+
         val requestId = UUID.randomUUID().toString()
         val sessionId = gateway.createTestSession()
         val collector = ActualResultCollector(requestId)
@@ -179,7 +199,7 @@ class TestBatchRunner(
                         status = AgentTestCaseStatus.FAILED,
                         terminalStatus = EvaluationTerminalStatus.FAILED,
                         errorCode = TestErrorCode.SUBMIT_FAILED,
-                        errorMessage = "提交失败：Agent 服务不可用或已有活动 Turn"
+                        errorMessage = "提交失败：Agent 服务不可用（Agent 图未构建或服务未就绪）"
                     )
                 }
 
@@ -197,8 +217,20 @@ class TestBatchRunner(
                 }
 
                 // 结构化实际结果以快照契约为权威来源；缺失时用采集器兜底（IVAI-TEST-006）。
-                val snapshot = gateway.evaluationSnapshot(requestId)
-                val snapshotMissing = snapshot == null
+                // 终态事件与快照写入之间仍存在极小竞态窗口（workflow 已改为先写快照再发
+                // 终态；此处再做有界重试兜底，避免 006 型 RESULT_MISSING）。
+                var snapshot = gateway.evaluationSnapshot(requestId)
+                var snapshotMissing = snapshot == null
+                if (snapshotMissing) {
+                    repeat(SNAPSHOT_READ_RETRY_TIMES) {
+                        delay(SNAPSHOT_READ_RETRY_INTERVAL_MS)
+                        snapshot = gateway.evaluationSnapshot(requestId)
+                        if (snapshot != null) {
+                            snapshotMissing = false
+                            return@repeat
+                        }
+                    }
+                }
                 val actual = snapshot?.let {
                     ScoredActual(
                         finalTier = it.finalTier,
@@ -241,6 +273,14 @@ class TestBatchRunner(
 
     companion object {
         const val DEFAULT_CASE_TIMEOUT_MS = 30_000L
+
+        /** 提交下一条前等待服务端释放活动 Turn 的超时（串行语义加固）。 */
+        const val DEFAULT_AWAIT_IDLE_TIMEOUT_MS = 5_000L
+
+        /** 终态事件与快照写入竞态兜底：重试次数与间隔（合计约 1s）。 */
+        const val SNAPSHOT_READ_RETRY_TIMES = 20
+        const val SNAPSHOT_READ_RETRY_INTERVAL_MS = 50L
+
         const val MAX_SCORE_PER_CASE = 5
     }
 }
