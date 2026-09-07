@@ -1,5 +1,7 @@
 package net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain
 
+import kotlinx.serialization.Serializable
+
 /**
  * 建议业务领域（IVI-IVAI-REQ-CR-008 运行时分类模型 BD01~BD10）。
  *
@@ -9,7 +11,11 @@ package net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain
  *
  * [code] 为需求给定的 BDxx 编码，[label] 为中文名称；Tool ID、治理资产和
  * 可观测日志统一使用该编码作为稳定标识。
+ *
+ * CR-012：标记 @Serializable，供测试快照 / 测试用例资产按枚举名（如
+ * CABIN_COMFORT）反序列化。
  */
+@Serializable
 enum class BusinessDomainId(
     val code: String,
     val label: String

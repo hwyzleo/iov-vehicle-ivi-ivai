@@ -12,6 +12,7 @@ import android.util.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.BufferOverflow
@@ -26,6 +27,7 @@ import net.hwyz.iov.vehicle.ivi.ivai.adapter.mock.MockClimateToolAdapter
 import net.hwyz.iov.vehicle.ivi.ivai.adapter.mock.MockGovernedToolAdapter
 import net.hwyz.iov.vehicle.ivi.ivai.adapter.mock.MockVehicleState
 import net.hwyz.iov.vehicle.ivi.ivai.agent.event.AgentEvent
+import net.hwyz.iov.vehicle.ivi.ivai.agent.evaluation.AgentEvaluationSnapshot
 import net.hwyz.iov.vehicle.ivi.ivai.agent.capability.CapabilityPackSelector
 import net.hwyz.iov.vehicle.ivi.ivai.agent.domain.DomainRouter
 import net.hwyz.iov.vehicle.ivi.ivai.agent.policy.AgentPolicyEngine
@@ -106,6 +108,7 @@ import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.VehicleStateProvider
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
@@ -119,13 +122,20 @@ import java.util.concurrent.atomic.AtomicReference
  *  - enforces one active turn per session (concurrency strategy of CR-002)
  *  - keeps agent-core Android-free
  */
-class AgentService : Service(), AiAgentClient {
+class AgentService : Service(), AiAgentClient, AgentTestSupport {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val session = Session()
+    private var session = Session()
 
     /** One active turn per session; guards submit/confirm/cancel. */
     private val activeTurn = AtomicBoolean(false)
+
+    /** CR-012: 当前活动请求的 Job 与 requestId（供测试超时取消）。 */
+    private val activeJobRef = AtomicReference<Job?>(null)
+    private val activeRequestIdRef = AtomicReference<String?>(null)
+
+    /** CR-012: 按 requestId 汇聚的测试快照（仅 debug/test 写入；有界避免膨胀）。 */
+    private val evaluationSnapshots = ConcurrentHashMap<String, AgentEvaluationSnapshot>()
 
     private val _events = MutableSharedFlow<AgentEvent>(
         extraBufferCapacity = 64,
@@ -260,11 +270,16 @@ class AgentService : Service(), AiAgentClient {
     ): String? {
         val agent = agentRef.get() ?: return null
         if (!activeTurn.compareAndSet(false, true)) return null
+        // CR-012: 提交时捕获 Session，避免测试超时后 createTestSession 替换
+        // Session 导致在途请求用到新上下文（用例隔离）。
+        val sessionAtSubmit = session
         scope.launch {
+            activeRequestIdRef.set(requestId)
+            activeJobRef.set(coroutineContext[Job])
             try {
                 agent.process(
                     AgentInput(requestId = requestId, text = text, source = source, turnId = turnId),
-                    session
+                    sessionAtSubmit
                 )
             } catch (e: CancellationException) {
                 throw e
@@ -272,12 +287,14 @@ class AgentService : Service(), AiAgentClient {
                 log("submit failed: ${e.message}")
                 _events.tryEmit(
                     AgentEvent.TurnFailed(
-                        session.sessionId, turnId, requestId,
+                        sessionAtSubmit.sessionId, turnId, requestId,
                         message = "处理请求时发生错误，请重试",
                         errorCode = ServiceErrorCode.SERVICE_UNAVAILABLE, retryable = true
                     )
                 )
             } finally {
+                activeRequestIdRef.compareAndSet(requestId, null)
+                activeJobRef.set(null)
                 activeTurn.set(false)
             }
         }
@@ -379,6 +396,32 @@ class AgentService : Service(), AiAgentClient {
     )
 
     fun sessionId(): String = session.sessionId
+
+    // ------------------------------------------------------------------ CR-012 测试能力（仅 debug/test）
+
+    /** CR-012: 批次执行环境门禁（见 [AgentTestSupport]）。 */
+    override fun isTestEnvironmentAllowed(): Boolean = BuildConfig.DEBUG
+
+    /** CR-012: 创建隔离的测试 Session（见 [AgentTestSupport]）。 */
+    override fun createTestSession(): String {
+        if (!BuildConfig.DEBUG) return session.sessionId
+        if (activeTurn.get()) return session.sessionId
+        session = Session()
+        return session.sessionId
+    }
+
+    /** CR-012: 取消活动请求（见 [AgentTestSupport]）。 */
+    override fun cancelRequest(requestId: String): Boolean {
+        if (activeRequestIdRef.get() != requestId) return false
+        activeJobRef.get()?.cancel()
+        return true
+    }
+
+    /** CR-012: 按 requestId 读取测试快照（见 [AgentTestSupport]）。 */
+    override fun evaluationSnapshot(requestId: String): AgentEvaluationSnapshot? {
+        if (!BuildConfig.DEBUG) return null
+        return evaluationSnapshots[requestId]
+    }
 
     /**
      * Speech capability for the UI voice entry (CR-006 + CR-007). When the
@@ -552,6 +595,16 @@ class AgentService : Service(), AiAgentClient {
             telemetryRecorder = LoggingTelemetryRecorder { log(it) },
             lifecycleListener = ToolLifecycleLogger { log(it) },
             eventListener = { event -> _events.tryEmit(event) },
+            // CR-012: 测试快照仅在 debug/test 写入有界存储；普通聊天不消费。
+            evaluationListener = { snapshot ->
+                if (BuildConfig.DEBUG) {
+                    evaluationSnapshots[snapshot.requestId] = snapshot
+                    if (evaluationSnapshots.size > MAX_EVALUATION_SNAPSHOTS) {
+                        evaluationSnapshots.keys.firstOrNull()
+                            ?.let { evaluationSnapshots.remove(it) }
+                    }
+                }
+            },
             ragRuntimeManager = ragManager,
             knowledgeRetriever = knowledgeRetriever,
             knowledgeReranker = KnowledgeReranker(),
@@ -658,6 +711,9 @@ class AgentService : Service(), AiAgentClient {
 
     private companion object {
         const val TAG = "IVI-IVAI"
+
+        /** CR-012: 测试快照有界容量（防止调试会话长期运行导致内存膨胀）。 */
+        const val MAX_EVALUATION_SNAPSHOTS = 512
 
         /** Mock vehicle deployment metadata (CR-005 availability filtering). */
         val VEHICLE_MODEL: String? = null

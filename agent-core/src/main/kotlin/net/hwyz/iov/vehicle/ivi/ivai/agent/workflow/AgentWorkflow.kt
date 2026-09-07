@@ -2,11 +2,19 @@ package net.hwyz.iov.vehicle.ivi.ivai.agent.workflow
 
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
 import java.util.UUID
 import net.hwyz.iov.vehicle.ivi.ivai.agent.AgentState
 import net.hwyz.iov.vehicle.ivi.ivai.agent.capability.CapabilitySnapshot
+import net.hwyz.iov.vehicle.ivi.ivai.agent.domain.DomainCandidate
 import net.hwyz.iov.vehicle.ivi.ivai.agent.domain.DomainRouteDecision
 import net.hwyz.iov.vehicle.ivi.ivai.agent.error.ErrorCode
+import net.hwyz.iov.vehicle.ivi.ivai.agent.evaluation.ActualTarget
+import net.hwyz.iov.vehicle.ivi.ivai.agent.evaluation.AgentEvaluationSnapshot
+import net.hwyz.iov.vehicle.ivi.ivai.agent.evaluation.EvaluationSnapshotProjector
+import net.hwyz.iov.vehicle.ivi.ivai.agent.evaluation.SnapshotFacts
+import net.hwyz.iov.vehicle.ivi.ivai.agent.evaluation.TargetType
 import net.hwyz.iov.vehicle.ivi.ivai.agent.event.AgentEvent
 import net.hwyz.iov.vehicle.ivi.ivai.agent.event.AgentEventListener
 import net.hwyz.iov.vehicle.ivi.ivai.agent.event.AgentExecutionPath
@@ -62,6 +70,7 @@ import net.hwyz.iov.vehicle.ivi.ivai.retrieval.ToolRetrievalQuery
 import net.hwyz.iov.vehicle.ivi.ivai.retrieval.knowledge.KnowledgeCitationMapper
 import net.hwyz.iov.vehicle.ivi.ivai.retrieval.knowledge.KnowledgeReranker
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.ToolRegistry
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.BusinessDomainId
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.GovernanceWorkspace
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.ToolCatalogV1
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.WorkflowCatalogV1
@@ -167,6 +176,43 @@ private class ExecutionPathTracker(initialTier: IntentTier) {
 }
 
 /**
+ * CR-012: 本轮执行候选跟踪（领域 / 能力包 / 目标 / 规范化参数）。终态时投影为
+ * [AgentEvaluationSnapshot]；目标与参数在最终合法候选阶段（Schema 默认值 /
+ * Alias 预置 / 单位规范化后、实际执行前）冻结，执行失败不影响已确定的匹配事实。
+ */
+private class CandidateTrace {
+    var initialDomains: List<DomainCandidate> = emptyList()
+    var finalDomain: BusinessDomainId? = null
+    var selectedPackIds: Set<String> = emptySet()
+    var selectedTarget: ActualTarget? = null
+    var normalizedArguments: JsonObject? = null
+    var governanceVersion: String? = null
+    var candidateVersion: String? = null
+
+    fun reset(): CandidateTrace {
+        initialDomains = emptyList()
+        finalDomain = null
+        selectedPackIds = emptySet()
+        selectedTarget = null
+        normalizedArguments = null
+        governanceVersion = null
+        candidateVersion = null
+        return this
+    }
+
+    /** 从路由决策捕获领域 / 能力包事实。 */
+    fun capture(decision: TieredRouteDecision) {
+        val domain = decision.domain
+        initialDomains = domain?.candidates ?: emptyList()
+        finalDomain = domain?.topDomain
+        val snapshot = decision.capabilitySnapshot
+        selectedPackIds = snapshot?.selectedPackIds ?: emptySet()
+        governanceVersion = snapshot?.governanceVersion
+        candidateVersion = null
+    }
+}
+
+/**
  * Agent orchestration engine: drives the state machine from RECEIVED to a
  * terminal state, enforcing tiered intent routing (CR-005):
  *
@@ -196,6 +242,8 @@ class AgentWorkflow(
     private val lifecycleListener: ToolLifecycleListener? = null,
     private val idempotencyGuard: IdempotencyGuard = IdempotencyGuard(),
     private val eventListener: AgentEventListener? = null,
+    /** CR-012: 测试快照回调（仅 debug/test 接线消费；普通聊天不增加内部字段）。 */
+    private val evaluationListener: ((AgentEvaluationSnapshot) -> Unit)? = null,
     private val ragRuntimeManager: RagRuntimeManager? = null,
     private val knowledgeRetriever: KnowledgeRetriever? = null,
     private val knowledgeReranker: KnowledgeReranker? = null,
@@ -207,7 +255,11 @@ class AgentWorkflow(
 
     private val json = Json { ignoreUnknownKeys = true }
 
+    /** CR-012: 本轮候选跟踪（单活动 Turn 串行执行，共享实例安全）。 */
+    private val candidateTrace = CandidateTrace()
+
     suspend fun process(input: AgentInput, session: Session): AgentResult {
+        candidateTrace.reset()
         val turnStartNs = System.nanoTime()
         val timings = TurnTimings(input.submittedAtNs)
         timings.queueMs = msBetween(input.submittedAtNs, turnStartNs)
@@ -262,6 +314,9 @@ class AgentWorkflow(
         } else {
             tieredRouter.route(normalized, context)
         }
+
+        // CR-012: 记录本轮领域 / 能力包事实，供终态快照投影。
+        candidateTrace.capture(decision)
 
         return when (decision.tier) {
             IntentTier.L0_DETERMINISTIC_TOOL ->
@@ -664,6 +719,9 @@ class AgentWorkflow(
     ): AgentResult {
         val workflow = decision.workflow ?: return handleReject(input, session, decision, timings)
         record(input, session, AgentState.WORKFLOW_SELECTED)
+        // CR-012: Workflow 目标冻结（首期无业务参数）。
+        candidateTrace.selectedTarget = ActualTarget(TargetType.WORKFLOW, workflow.workflowId)
+        candidateTrace.normalizedArguments = buildJsonObject { }
         val runtime = workflowRuntime
         if (runtime == null) {
             return turnFailed(
@@ -886,6 +944,7 @@ class AgentWorkflow(
      * mismatched confirmationId is rejected WITHOUT executing the tool.
      */
     suspend fun confirm(confirmationId: String, session: Session): AgentResult {
+        candidateTrace.reset()
         val pending = session.pendingTask
         if (pending == null || !pending.needConfirmation || pending.confirmationId != confirmationId) {
             return rejectConfirmation(session, "确认已失效或已被处理")
@@ -907,6 +966,7 @@ class AgentWorkflow(
      * stale / mismatched ids are rejected without side effects.
      */
     suspend fun cancel(confirmationId: String, session: Session): AgentResult {
+        candidateTrace.reset()
         val pending = session.pendingTask
         if (pending == null || !pending.needConfirmation || pending.confirmationId != confirmationId) {
             return rejectConfirmation(session, "确认已失效或已被处理")
@@ -919,6 +979,23 @@ class AgentWorkflow(
         record(input, session, AgentState.REJECTED, route = AgentRoute.LOCAL_TOOL.name)
         val timings = TurnTimings(input.submittedAtNs)
         timings.endToEndMs = msSince(input.submittedAtNs)
+        // CR-012: 取消是终态之一（CANCELLED），仍需投影快照供测试采集。
+        evaluationListener?.invoke(
+            EvaluationSnapshotProjector.project(
+                SnapshotFacts(
+                    requestId = input.requestId,
+                    sessionId = session.sessionId,
+                    executionPath = pending.executionPath,
+                    initialDomains = candidateTrace.initialDomains,
+                    finalDomain = candidateTrace.finalDomain,
+                    selectedCapabilityPackIds = candidateTrace.selectedPackIds,
+                    state = AgentState.REJECTED,
+                    route = AgentRoute.LOCAL_TOOL,
+                    pendingConfirmation = false,
+                    cancelled = true
+                )
+            )
+        )
         return AgentResult(
             requestId = input.requestId,
             sessionId = session.sessionId,
@@ -1218,6 +1295,12 @@ class AgentWorkflow(
         val values = validator.applyDefaultsAndNormalize(tool, jsonArgsToValues(intent.arguments))
         val toolName = tool.name ?: toolId
 
+        // CR-012: 目标与参数在最终合法候选阶段冻结（Schema 默认值 / Alias 预置 /
+        // 单位规范化后的 canonical 参数）。即使 Mock Adapter 执行失败，已确定的目标
+        // 和参数仍保留在快照中；执行失败状态单独记录，不改变匹配事实。
+        candidateTrace.selectedTarget = ActualTarget(TargetType.TOOL, toolId)
+        candidateTrace.normalizedArguments = JsonObject(valuesToJsonArgs(values))
+
         // Idempotency check: same (requestId, toolId, args) is never re-executed.
         val key = idempotencyGuard.keyFor(input.requestId, toolId, values)
         val cached = idempotencyGuard.find(key)
@@ -1453,6 +1536,16 @@ class AgentWorkflow(
             )
         )
 
+        // CR-012: 终态投影测试快照（脱敏契约；仅 debug/test 接线消费）。
+        emitEvaluationSnapshot(
+            input = input,
+            session = session,
+            state = state,
+            route = route,
+            executionStatus = executionResult?.status,
+            executionPath = executionPath
+        )
+
         val dispatchStartNs = System.nanoTime()
         emitDebugInfo(
             input, session, state, route, parsedOutput, executionResult, errorCode,
@@ -1485,6 +1578,38 @@ class AgentWorkflow(
                 schemaPassed = schemaPassed
             ),
             executionPath = executionPath
+        )
+    }
+
+    /** CR-012: 终态投影测试快照（脱敏；不包含 Prompt/思维链/密钥/原始响应）。 */
+    private fun emitEvaluationSnapshot(
+        input: AgentInput,
+        session: Session,
+        state: AgentState,
+        route: AgentRoute?,
+        executionStatus: ExecutionStatus?,
+        executionPath: AgentExecutionPath?
+    ) {
+        evaluationListener?.invoke(
+            EvaluationSnapshotProjector.project(
+                SnapshotFacts(
+                    requestId = input.requestId,
+                    sessionId = session.sessionId,
+                    executionPath = executionPath,
+                    initialDomains = candidateTrace.initialDomains,
+                    finalDomain = candidateTrace.finalDomain,
+                    selectedCapabilityPackIds = candidateTrace.selectedPackIds,
+                    selectedTarget = candidateTrace.selectedTarget,
+                    normalizedArguments = candidateTrace.normalizedArguments,
+                    state = state,
+                    route = route,
+                    executionStatus = executionStatus,
+                    pendingConfirmation = session.pendingConfirmationId != null,
+                    reasonCode = executionPath?.finalReasonCode,
+                    governanceVersion = candidateTrace.governanceVersion,
+                    candidateVersion = candidateTrace.candidateVersion
+                )
+            )
         )
     }
 

@@ -30,6 +30,7 @@ import net.hwyz.iov.vehicle.ivi.ivai.service.AgentService
 import net.hwyz.iov.vehicle.ivi.ivai.speech.api.SpeechCapability
 import net.hwyz.iov.vehicle.ivi.ivai.demo.BuildConfig
 import net.hwyz.iov.vehicle.ivi.ivai.ui.settings.SettingsActivity
+import net.hwyz.iov.vehicle.ivi.ivai.ui.testcase.AgentTestActivity
 
 /**
  * Classic Android-View chatbot screen (IVI-IVAI-DSN-CR-002 + CR-006).
@@ -117,6 +118,16 @@ class ChatActivity : ComponentActivity() {
         // 统一设置入口：本地模型配置 / 语音识别配置 / 提示词信息 / 本车功能 / 检索增强RAG设置 都从设置中心进入。
         findViewById<Button>(R.id.settingsButton).setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
+        }
+        // CR-012: 测试用例入口——仅 Debug 构建显示（Release 默认隐藏入口，Runner 另有环境门禁）。
+        val testButton = findViewById<Button>(R.id.testButton)
+        if (BuildConfig.DEBUG) {
+            testButton.visibility = View.VISIBLE
+            testButton.setOnClickListener {
+                startActivity(Intent(this, AgentTestActivity::class.java))
+            }
+        } else {
+            testButton.visibility = View.GONE
         }
         // 打包时间：便于确认设备上的 APK 是否最新（BuildConfig.BUILD_TIME_MS 为打包时刻时间戳）。
         val buildTimeText = findViewById<TextView>(R.id.buildTimeText)

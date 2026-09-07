@@ -1,5 +1,6 @@
 package net.hwyz.iov.vehicle.ivi.ivai.agent.domain
 
+import kotlinx.serialization.Serializable
 import net.hwyz.iov.vehicle.ivi.ivai.agent.router.AgentContext
 import net.hwyz.iov.vehicle.ivi.ivai.agent.router.NormalizedInput
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.ToolRegistry
@@ -11,7 +12,10 @@ import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.SemanticFeature
  * 领域预路由输出（IVI-IVAI-DSN-CR-008）。DomainRouter 只产生「受控候选」：
  * 输出 Top-N 业务领域 + 操作类型 + 歧义/否定/多意图标记，**不选择最终 Tool，
  * 也不直接执行**；最终执行权始终位于端侧 Tool Runtime。
+ *
+ * CR-012：标记 @Serializable，供测试快照 initialDomains 序列化。
  */
+@Serializable
 data class DomainCandidate(
     val domainId: BusinessDomainId,
     val score: Double,
@@ -204,13 +208,17 @@ class DomainRouter(
                 "座椅", "通风", "循环", "制热", "制冷", "有点冷", "太热", "露营",
                 "升高", "调高", "调低", "升温", "降温",
                 // CR-010：舒适类隐式表达（“帮我舒服一点”）→ 座舱舒适领域 → L1 消歧。
-                "舒服", "舒适", "有点闷", "难受"
+                "舒服", "舒适", "有点闷", "难受",
+                // CR-012：空调风向表达 → 座舱舒适领域。
+                "吹玻璃", "吹脚", "吹腿", "吹脸", "前挡", "起雾", "风向"
             ),
             BusinessDomainId.BODY_CONTROL to listOf(
-                "车门", "门锁", "车窗", "天窗", "灯光", "灯", "雨刮", "后视镜", "尾门", "门"
+                "车门", "门锁", "车窗", "天窗", "灯光", "灯", "雨刮", "后视镜", "尾门"
             ),
             BusinessDomainId.VEHICLE_DRIVING_CONFIG to listOf(
-                "驾驶模式", "动能回收", "转向手感", "辅助驾驶", "ADAS", "个性化", "车辆设置", "限速"
+                "驾驶模式", "动能回收", "转向手感", "辅助驾驶", "ADAS", "个性化", "车辆设置", "限速",
+                // CR-012：能量回收表达（词表“动能回收”不匹配口语“能量回收/回收/电门”）。
+                "能量回收", "回收", "电门"
             ),
             BusinessDomainId.ENERGY to listOf(
                 "充电", "电量", "续航", "能耗", "放电", "电池", "补能", "快充"
@@ -225,7 +233,10 @@ class DomainRouter(
                 "电话", "拨号", "通讯录", "联系人", "短信", "消息", "通话", "呼叫"
             ),
             BusinessDomainId.MEDIA_ENTERTAINMENT to listOf(
-                "音乐", "电台", "广播", "视频", "电影", "播放", "歌", "频道", "有声"
+                "音乐", "电台", "广播", "视频", "电影", "播放", "歌", "频道", "有声",
+                // CR-012：重新播放/循环表达 → 媒体娱乐领域（“循环”与 BD01 空调循环
+                // 歧义，用“单曲循环/列表循环”等更具体信号压过）。
+                "歌曲", "从头播放", "重新播放", "重新放", "重放", "再播", "换歌", "单曲循环", "列表循环"
             ),
             BusinessDomainId.APP_SYSTEM to listOf(
                 "应用", "桌面", "系统设置", "蓝牙", "wifi", "网络", "商店", "app"

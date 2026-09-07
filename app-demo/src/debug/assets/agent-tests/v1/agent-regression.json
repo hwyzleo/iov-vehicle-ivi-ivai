@@ -1,0 +1,67 @@
+{
+  "suiteId": "ivai-agent-regression-v1",
+  "schemaVersion": 1,
+  "governanceVersion": "ivai-governance-v1-draft",
+  "cases": [
+    {
+      "caseId": "CLIMATE-POWER-001",
+      "description": "明确打开空调 → L0 直达 climate.power.set（enabled=true）",
+      "tags": ["L0", "climate"],
+      "enabled": true,
+      "input": "打开空调",
+      "expectedTier": "L0_DETERMINISTIC_TOOL",
+      "expectedDomain": "CABIN_COMFORT",
+      "expectedCapabilityPack": "cabin.climate",
+      "expectedTarget": { "type": "TOOL", "id": "climate.power.set" },
+      "expectedArguments": { "enabled": true }
+    },
+    {
+      "caseId": "CLIMATE-ADJUST-001",
+      "description": "表达 Alias「主驾升温」→ L0 直达调节温度（zone=driver + direction=increase 预置）",
+      "tags": ["L0", "climate", "alias"],
+      "enabled": true,
+      "input": "主驾升温",
+      "expectedTier": "L0_DETERMINISTIC_TOOL",
+      "expectedDomain": "CABIN_COMFORT",
+      "expectedCapabilityPack": "cabin.climate",
+      "expectedTarget": { "type": "TOOL", "id": "climate.temperature.adjust" },
+      "expectedArguments": { "zone": "driver", "direction": "increase" }
+    },
+    {
+      "caseId": "CLIMATE-ADJUST-002",
+      "description": "槽位抽取：主驾温度调高两度 → step=2（中文数字）",
+      "tags": ["L0", "climate", "slots"],
+      "enabled": true,
+      "input": "把主驾温度调高两度",
+      "expectedTier": "L0_DETERMINISTIC_TOOL",
+      "expectedDomain": "CABIN_COMFORT",
+      "expectedCapabilityPack": "cabin.climate",
+      "expectedTarget": { "type": "TOOL", "id": "climate.temperature.adjust" },
+      "expectedArguments": { "zone": "driver", "direction": "increase", "step": 2 }
+    },
+    {
+      "caseId": "CLIMATE-COLD-001",
+      "description": "隐式表达「我有点冷」→ L1 消歧；不产生确定性目标时目标/参数维度不匹配（回归看层级/领域/能力包）",
+      "tags": ["L1", "climate", "implicit"],
+      "enabled": true,
+      "input": "我有点冷",
+      "expectedTier": "L1_LOCAL_TOOL_REASONING",
+      "expectedDomain": "CABIN_COMFORT",
+      "expectedCapabilityPack": "cabin.climate",
+      "expectedTarget": null,
+      "expectedArguments": {}
+    },
+    {
+      "caseId": "DISABLED-SAMPLE-001",
+      "description": "示例：enabled=false 的用例显示但本轮跳过",
+      "tags": ["sample"],
+      "enabled": false,
+      "input": "打开空调",
+      "expectedTier": "L0_DETERMINISTIC_TOOL",
+      "expectedDomain": "CABIN_COMFORT",
+      "expectedCapabilityPack": "cabin.climate",
+      "expectedTarget": { "type": "TOOL", "id": "climate.power.set" },
+      "expectedArguments": { "enabled": true }
+    }
+  ]
+}

@@ -19,6 +19,11 @@
             </intent-filter>
         </activity>
 
+        <!-- CR-012: 本地 Agent 回归测试用例页（入口仅在 Debug 显示；Release 无资产且 Runner 门禁拒绝）。 -->
+        <activity
+            android:name="net.hwyz.iov.vehicle.ivi.ivai.ui.testcase.AgentTestActivity"
+            android:exported="false" />
+
         <activity
             android:name="net.hwyz.iov.vehicle.ivi.ivai.ui.config.ModelConfigActivity"
             android:exported="false"

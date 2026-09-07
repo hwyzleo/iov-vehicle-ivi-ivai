@@ -57,6 +57,8 @@ tasks.withType<Test>().configureEach {
 dependencies {
     implementation(project(":service-ai-agent"))
     implementation(project(":speech-input"))
+    // CR-012: 测试资产模型 / 评分器直接引用 tool-registry 的 BusinessDomainId。
+    implementation(project(":tool-registry"))
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
 

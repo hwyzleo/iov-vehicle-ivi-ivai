@@ -153,18 +153,43 @@ class TieredIntentRouter(
                 // 隐式/强上下文表达属于正常 L1，不记录缺口。
                 val coverageGap = isExplicitToolCommand(domainDecision, input) &&
                     l0Reason == RouteReasonCode.L0_NO_MATCH
-                toolDomainDecision(
-                    reasonCode = l0Reason,
-                    input = input,
-                    context = context,
-                    domain = domainDecision,
-                    snapshot = snapshot,
-                    observability = observability(
-                        snapshot,
-                        fallbackReason = if (coverageGap) "DETERMINISTIC_COVERAGE_MISSING" else null,
-                        errorCode = if (coverageGap) ErrorCodeString.ROUTE_COVERAGE_MISSING else null // IVAI-ROUTE-004
-                    )
+                val observability = observability(
+                    snapshot,
+                    fallbackReason = if (coverageGap) "DETERMINISTIC_COVERAGE_MISSING" else null,
+                    errorCode = if (coverageGap) ErrorCodeString.ROUTE_COVERAGE_MISSING else null // IVAI-ROUTE-004
                 )
+                // CR-012/CR-005：L0 未命中后恢复分层区分——规划/开放（L3）、
+                // 知识问答（L2）、工具领域（L1）、其余开放（L3）。使 L2/L3 层级在
+                // 受管路径下可被路由区分（执行层仍为预留桩，finalTier 正确）。
+                when {
+                    hasPlanningSignal(input.normalized) -> TieredRouteDecision(
+                        tier = IntentTier.L3_CLOUD_AI,
+                        confidence = 0.5,
+                        reasonCode = RouteReasonCode.L3_OPEN_DOMAIN,
+                        domain = domainDecision,
+                        capabilitySnapshot = snapshot,
+                        observability = observability
+                    )
+                    domainClassifier.classify(input) == IntentDomain.KNOWLEDGE ->
+                        knowledgeDecision(input, domainDecision, snapshot)
+                    domainClassifier.classify(input) == IntentDomain.TOOL ->
+                        toolDomainDecision(
+                            reasonCode = l0Reason,
+                            input = input,
+                            context = context,
+                            domain = domainDecision,
+                            snapshot = snapshot,
+                            observability = observability
+                        )
+                    else -> TieredRouteDecision(
+                        tier = IntentTier.L3_CLOUD_AI,
+                        confidence = 0.5,
+                        reasonCode = RouteReasonCode.L3_OPEN_DOMAIN,
+                        domain = domainDecision,
+                        capabilitySnapshot = snapshot,
+                        observability = observability
+                    )
+                }
             }
         }
     }
@@ -220,6 +245,10 @@ class TieredIntentRouter(
         }
         return matched.singleOrNull()
     }
+
+    /** CR-012：规划 / 实时 / 推荐 / 比较等开放复杂请求标记 → L3。 */
+    private fun hasPlanningSignal(normalized: String): Boolean =
+        DEFAULT_PLANNING_KEYWORDS.any { normalized.contains(it) }
 
     /** CR-010 可观测性构造。 */
     private fun observability(
@@ -393,6 +422,13 @@ class TieredIntentRouter(
             net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.OperationType.CONFIGURE,
             net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.OperationType.NAVIGATE_UI,
             net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.OperationType.PLAYBACK
+        )
+
+        /** CR-012: 规划动词标记（仅在 L0 未命中后生效）→ L3 开放/规划请求。
+         * 只取明确的规划动词，避开连接词（结合/根据/实时）与工具名易含词
+         * （个性化/自动/建议等），避免误伤“设置个性化档案”“设置自动空调”。 */
+        val DEFAULT_PLANNING_KEYWORDS = listOf(
+            "推荐", "规划", "比较", "分析", "评估", "权衡", "优化", "策划", "制定"
         )
     }
 }
