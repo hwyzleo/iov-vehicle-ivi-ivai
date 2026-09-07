@@ -40,7 +40,7 @@ class L0FastIntentMatcherTest {
         assertEquals(true, unique.candidate.arguments["enabled"])
         assertEquals(CandidateSource.L0_RULE, unique.candidate.source)
         assertEquals("L0_UNIQUE_MATCH", unique.reasonCode)
-        assertEquals("L0.power.set.on", unique.matchedPatternId)
+        assertEquals("L0.climate.power.set.on", unique.matchedPatternId)
         assertEquals("climate.power.set", unique.canonicalToolId)
         assertFalse("climate.power_on" in registry.toolIds(), "旧空调 ID 不应再作为独立可执行定义")
     }
@@ -52,7 +52,7 @@ class L0FastIntentMatcherTest {
         val unique = result as FastIntentMatchResult.Unique
         assertEquals("climate.power.set", unique.candidate.toolId)
         assertEquals(false, unique.candidate.arguments["enabled"])
-        assertEquals("L0.power.set.off", unique.matchedPatternId)
+        assertEquals("L0.climate.power.set.off", unique.matchedPatternId)
     }
 
     @Test
@@ -67,7 +67,7 @@ class L0FastIntentMatcherTest {
 
     @Test
     fun `空调设成25度抽取温度`() = runTest {
-        val result = match("空调设成25度")
+        val result = match("主驾空调设成25度")
         assertTrue(result is FastIntentMatchResult.Unique)
         val unique = result as FastIntentMatchResult.Unique
         assertEquals("climate.temperature.set", unique.candidate.toolId)
@@ -76,7 +76,7 @@ class L0FastIntentMatcherTest {
 
     @Test
     fun `温度调高一点唯一匹配 adjust 且 direction=increase`() = runTest {
-        val result = match("温度调高一点")
+        val result = match("主驾温度调高一点")
         assertTrue(result is FastIntentMatchResult.Unique)
         val unique = result as FastIntentMatchResult.Unique
         assertEquals("climate.temperature.adjust", unique.candidate.toolId)
@@ -85,14 +85,14 @@ class L0FastIntentMatcherTest {
 
     @Test
     fun `温度调低一点匹配 adjust 且 direction=decrease`() = runTest {
-        val result = match("温度调低一点")
+        val result = match("主驾温度调低一点")
         assertTrue(result is FastIntentMatchResult.Unique)
         assertEquals("decrease", (result as FastIntentMatchResult.Unique).candidate.arguments["direction"])
     }
 
     @Test
     fun `调高两度抽取中文数字步进 step=2`() = runTest {
-        val result = match("温度调高两度")
+        val result = match("主驾温度调高两度")
         assertTrue(result is FastIntentMatchResult.Unique)
         val unique = result as FastIntentMatchResult.Unique
         assertEquals("climate.temperature.adjust", unique.candidate.toolId)
@@ -102,21 +102,21 @@ class L0FastIntentMatcherTest {
 
     @Test
     fun `调高 2 度抽取阿拉伯数字步进 step=2`() = runTest {
-        val result = match("温度调高2度")
+        val result = match("主驾温度调高2度")
         assertTrue(result is FastIntentMatchResult.Unique)
         assertEquals(2, (result as FastIntentMatchResult.Unique).candidate.arguments["step"])
     }
 
     @Test
     fun `调节两档抽取步进 step=2`() = runTest {
-        val result = match("温度调高两档")
+        val result = match("主驾温度调高两档")
         assertTrue(result is FastIntentMatchResult.Unique)
         assertEquals(2, (result as FastIntentMatchResult.Unique).candidate.arguments["step"])
     }
 
     @Test
     fun `越界数值不作为步进（调高到26度为绝对设定）`() = runTest {
-        val result = match("温度调高到26度")
+        val result = match("主驾温度调高到26度")
         assertTrue(result is FastIntentMatchResult.Unique)
         val unique = result as FastIntentMatchResult.Unique
         assertEquals("climate.temperature.adjust", unique.candidate.toolId)
@@ -124,12 +124,22 @@ class L0FastIntentMatcherTest {
     }
 
     @Test
-    fun `打开座椅按摩唯一匹配 seat_massage_set 且 enabled=true`() = runTest {
-        val result = match("打开座椅按摩")
+    fun `打开主驾座椅按摩唯一匹配 seat_massage_set 且 enabled=true`() = runTest {
+        val result = match("打开主驾座椅按摩")
         assertTrue(result is FastIntentMatchResult.Unique)
         val unique = result as FastIntentMatchResult.Unique
         assertEquals("seat.massage.set", unique.candidate.toolId)
         assertEquals(true, unique.candidate.arguments["enabled"])
+    }
+
+    @Test
+    fun `打开座椅按摩缺 position 返回 MissingArguments`() = runTest {
+        // CR-013：seat.massage.set 的 position 为必填槽位，未指明位置 → 缺参进入 L1/追问。
+        val result = match("打开座椅按摩")
+        assertTrue(result is FastIntentMatchResult.MissingArguments)
+        val missing = result as FastIntentMatchResult.MissingArguments
+        assertEquals("seat.massage.set", missing.toolId)
+        assertTrue(missing.missing.contains("position"))
     }
 
     @Test
@@ -147,7 +157,7 @@ class L0FastIntentMatcherTest {
         assertEquals("climate.temperature.adjust", unique.candidate.toolId)
         assertEquals("driver", unique.candidate.arguments["zone"])
         assertEquals("increase", unique.candidate.arguments["direction"])
-        assertEquals("L0.temperature.adjust.expression.driver_up", unique.matchedPatternId)
+        assertEquals("L0.climate.temperature.adjust.driver_up", unique.matchedPatternId)
     }
 
     @Test
@@ -236,6 +246,91 @@ class L0FastIntentMatcherTest {
         )
         val confirmMatcher = DefaultFastIntentMatcher(confirmRegistry)
         assertTrue(confirmMatcher.match(TextNormalizer.normalize("打开空调"), context) is FastIntentMatchResult.NoMatch)
+    }
+
+    // ---------------------------------------------------------------- CR-013
+
+    @Test
+    fun `我不想打开空调全局否定不产生 L0 候选`() = runTest {
+        val result = match("我不想打开空调")
+        assertTrue(result is FastIntentMatchResult.NoMatch, "全局否定必须拦截，不得因包含“打开空调”子串产生 L0")
+    }
+
+    @Test
+    fun `打开空调设置页面是导航意图不得命中空调电源控制`() = runTest {
+        val result = match("打开空调设置页面")
+        assertFalse(result is FastIntentMatchResult.Unique, "NAVIGATE_UI 表达不得命中空调电源控制")
+    }
+
+    @Test
+    fun `为什么前挡除雾是知识问题不触发除霜车控`() = runTest {
+        val result = match("为什么前挡除雾时通常要让风吹向玻璃")
+        assertFalse(result is FastIntentMatchResult.Unique, "知识问题不得触发除霜控制 L0")
+    }
+
+    @Test
+    fun `NOT_SUPPORTED Tool 无规则不产生 L0 候选`() = runTest {
+        // media.playback.play 为 NOT_SUPPORTED，不得有规则/不得命中 L0。
+        assertTrue(match("播放媒体") is FastIntentMatchResult.NoMatch)
+    }
+
+    @Test
+    fun `NEEDS_REVIEW Tool 无规则不产生 L0 候选`() = runTest {
+        // vehicle.drive_mode.set 为 NEEDS_REVIEW（词表未闭合），不生成生产规则。
+        assertTrue(match("设置驾驶模式") is FastIntentMatchResult.NoMatch)
+    }
+
+    @Test
+    fun `显式槽位与规则预置矛盾返回 ArgumentConflict IVAI-ROUTE-005`() = runTest {
+        // 构造：规则预置 zone=driver，但文本显式“副驾” → 矛盾，不得静默决胜。
+        val conflictTool = net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.ToolDefinition(
+            toolId = "climate.conflict.test",
+            functionId = null,
+            name = "矛盾测试",
+            description = "test",
+            positiveExamples = listOf(),
+            negativeExamples = listOf(),
+            selectionPriority = 1,
+            parameterSchema = """{"type":"object","properties":{},"required":[]}""",
+            policy = net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.ToolPolicy(),
+            execution = net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.ToolExecutionBinding(
+                adapterId = "test", methodId = "test"
+            ),
+            deterministicRules = listOf(
+                net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.DeterministicIntentRule(
+                    ruleId = "L0.conflict",
+                    toolId = "climate.conflict.test",
+                    exactPhrases = listOf("打开空调"),
+                    slotPatterns = listOf(
+                        net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.SlotPattern(
+                            name = "zone",
+                            type = net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.SlotType.POSITION,
+                            required = false,
+                            aliases = mapOf("副驾" to "passenger")
+                        )
+                    ),
+                    presetArguments = mapOf("zone" to "driver")
+                )
+            )
+        )
+        val conflictMatcher = DefaultFastIntentMatcher(ToolRegistry().register(conflictTool))
+        val result = conflictMatcher.match(TextNormalizer.normalize("副驾打开空调"), context)
+        assertTrue(result is FastIntentMatchResult.ArgumentConflict, "显式槽位与预置矛盾应返回 ArgumentConflict")
+        val conflict = result as FastIntentMatchResult.ArgumentConflict
+        assertEquals("zone", conflict.conflictingArgument)
+        assertEquals("explicit_slot", conflict.sources["zone"])
+    }
+
+    @Test
+    fun `L0 唯一命中暴露 matchedRuleIds 与 argumentSources 可观测性`() = runTest {
+        val result = match("主驾打开空调")
+        assertTrue(result is FastIntentMatchResult.Unique)
+        val unique = result as FastIntentMatchResult.Unique
+        assertEquals("L0.climate.power.set.on", unique.matchedPatternId)
+        assertTrue(unique.matchedRuleIds.contains("L0.climate.power.set.on"))
+        assertEquals("driver", unique.candidate.arguments["zone"])
+        assertEquals("explicit_slot", unique.argumentSources["zone"])
+        assertEquals("rule_preset", unique.argumentSources["enabled"])
     }
 
     private fun climateTool(toolId: String, exactPhrases: List<String>) =

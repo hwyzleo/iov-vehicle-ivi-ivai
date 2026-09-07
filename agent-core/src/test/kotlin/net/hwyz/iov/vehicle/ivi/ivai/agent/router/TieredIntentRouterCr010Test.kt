@@ -53,18 +53,26 @@ class TieredIntentRouterCr010Test {
         assertNull(decision.retrievalQuery, "L0 不触发 Retrieval")
         // 可观测性
         assertEquals("climate.power.set", decision.observability?.canonicalToolId)
-        assertEquals("L0.power.set.on", decision.observability?.matchedPatternId)
+        assertEquals("L0.climate.power.set.on", decision.observability?.matchedPatternId)
         assertNotNull(decision.observability?.runtimeCandidateToolIdsHash)
         assertEquals("DEVELOPMENT_STUB", decision.observability?.governanceRuntimeMode)
         assertTrue(decision.observability?.selectedPackIds?.contains("cabin.climate") == true)
     }
 
     @Test
-    fun `打开座椅按摩唯一匹配 seat_massage_set 走 L0`() {
-        val decision = route("打开座椅按摩")
+    fun `打开主驾座椅按摩唯一匹配 seat_massage_set 走 L0`() {
+        val decision = route("打开主驾座椅按摩")
         assertL0(decision, "seat.massage.set")
         assertEquals(true, decision.directCandidate!!.arguments["enabled"])
         assertNull(decision.retrievalQuery)
+    }
+
+    @Test
+    fun `打开座椅按摩缺 position 走 L1 追问`() {
+        // CR-013：position 为必填槽位，未指明位置 → 缺参进入 L1/追问。
+        val decision = route("打开座椅按摩")
+        assertEquals(IntentTier.L1_LOCAL_TOOL_REASONING, decision.tier)
+        assertNull(decision.directCandidate)
     }
 
     @Test
@@ -92,8 +100,8 @@ class TieredIntentRouterCr010Test {
 
     @Test
     fun `同一 Tool 明确表达走 L0 隐式表达走 L1 不固化层级`() {
-        // 明确表达 → L0（climate.temperature.adjust）
-        assertL0(route("温度调高一点"), "climate.temperature.adjust")
+        // 明确表达 → L0（climate.temperature.adjust，需指明位置以补全必填 zone）
+        assertL0(route("主驾温度调高一点"), "climate.temperature.adjust")
         // 隐式表达 → L1（最终仍可能选择同一 Tool，但层级不同）
         val implicit = route("我有点冷")
         assertEquals(IntentTier.L1_LOCAL_TOOL_REASONING, implicit.tier)

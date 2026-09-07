@@ -82,6 +82,24 @@ object Cr010ErrorCodes {
 }
 
 /**
+ * CR-013 错误码（IVI-IVAI-DSN-CR-013 错误码表新增/细化）：
+ *
+ * | 错误码 | 含义 |
+ * | IVAI-ROUTE-003 | 多个 canonical Tool/Workflow 确定性冲突（细化：跨 Tool 全局判定） |
+ * | IVAI-ROUTE-004 | SUPPORTED Tool 的规则缺失、失效或覆盖退化（细化：仅 SUPPORTED 记缺口） |
+ * | IVAI-ROUTE-005 | 槽位、Alias、预置参数或默认值存在不可安全消解的矛盾 |
+ * | IVAI-GOV-005 | L0资格、规则、评审状态、版本或Hash不一致 |
+ * | IVAI-GOV-006 | NOT_SUPPORTED/NEEDS_REVIEW Profile 被非法加入生产 Matcher |
+ */
+object Cr013ErrorCodes {
+    const val ROUTE_CONFLICT = "IVAI-ROUTE-003"
+    const val ROUTE_COVERAGE_MISSING = "IVAI-ROUTE-004"
+    const val ROUTE_ARGUMENT_CONFLICT = "IVAI-ROUTE-005"
+    const val GOV_L0_INCONSISTENT = "IVAI-GOV-005"
+    const val GOV_L0_ILLEGAL_MATCHER = "IVAI-GOV-006"
+}
+
+/**
  * 统一运行时能力集合（IVI-IVAI-DSN-CR-010）。
  *
  * 选中 Capability Pack 后，全部 APPROVED + enabled + 唯一有效 Binding 的 Tool
@@ -97,11 +115,26 @@ data class RuntimeCapabilitySet(
     /** CR-010 旧 ID → canonical 迁移版本（旧空调 P0 集迁移）。 */
     val migrationVersion: String? = null,
     /** 本次候选中被开发桩豁免放行的 DRAFT Tool（仅 STUB）。 */
-    val stubExemptedToolIds: Set<String> = emptySet()
+    val stubExemptedToolIds: Set<String> = emptySet(),
+    /**
+     * CR-013 L0 确定性候选集：= runtimeCandidateToolIds ∩（SUPPORTED + Profile
+     * APPROVED + 版本/Hash 有效）。仅供 FastIntentMatcher 使用；NOT_SUPPORTED /
+     * NEEDS_REVIEW Tool 仍保留在 [runtimeCandidateToolIds]（L1 合法候选）。
+     */
+    val deterministicCandidateToolIds: Set<String> = emptySet(),
+    /** CR-013 确定性目录版本（DeterministicIntentCatalog.ruleVersion）。 */
+    val deterministicCatalogVersion: String = "v0",
+    /** CR-013 确定性目录内容 Hash（DeterministicIntentCatalog.contentHash）。 */
+    val deterministicCatalogHash: String? = null
 ) {
     /** 稳定可复现的候选集 Hash（可观测性 / 一致性校验，CR-010）。 */
     val runtimeCandidateToolIdsHash: String by lazy {
         stableHash(runtimeCandidateToolIds)
+    }
+
+    /** CR-013 确定性候选集 Hash（与确定性目录 Hash 区分）。 */
+    val deterministicCandidateToolIdsHash: String by lazy {
+        stableHash(deterministicCandidateToolIds)
     }
 
     companion object {

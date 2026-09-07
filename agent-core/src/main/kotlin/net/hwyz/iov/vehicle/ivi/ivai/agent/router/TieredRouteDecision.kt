@@ -37,7 +37,7 @@ data class TieredRouteDecision(
 )
 
 /**
- * CR-010 路由可观测性：统一候选集、确定性匹配与治理模式的现场信息。
+ * CR-010 + CR-013 路由可观测性：统一候选集、确定性匹配、参数来源与治理模式现场信息。
  * 不参与路由决策，仅供调试、评测与治理覆盖建设。
  */
 data class RouteObservability(
@@ -50,7 +50,16 @@ data class RouteObservability(
     val deterministicFallbackReason: String? = null,
     val governanceRuntimeMode: String? = null,
     val runtimeExceptionId: String? = null,
-    val errorCode: String? = null
+    val errorCode: String? = null,
+    // ---- CR-013 L0 治理可观测性 ----
+    val deterministicSupport: String? = null,
+    val ruleVersion: String? = null,
+    val matchedRuleIds: List<String> = emptyList(),
+    val deterministicCandidateCount: Int? = null,
+    val canonicalCandidateCount: Int? = null,
+    val argumentSources: Map<String, String> = emptyMap(),
+    val deterministicConflictIds: Set<String> = emptySet(),
+    val deterministicCatalogHash: String? = null
 )
 
 /** Common reason codes produced by the tiered router (CR-005 + CR-008). */
@@ -61,6 +70,8 @@ object RouteReasonCode {
     const val L0_NEGATED = "L0_NEGATED"
     const val L0_MULTI_INTENT = "L0_MULTI_INTENT"
     const val L0_NO_MATCH = "L0_NO_MATCH"
+    // CR-013：显式槽位与预置/Alias 参数矛盾（IVAI-ROUTE-005）。
+    const val L0_ARGUMENT_CONFLICT = "L0_ARGUMENT_CONFLICT"
     const val L1_TOOL_DOMAIN = "L1_TOOL_DOMAIN"
     const val L1_TOOL_FALLBACK_CANDIDATES = "L1_TOOL_FALLBACK_CANDIDATES"
     const val L2_KNOWLEDGE_DOMAIN = "L2_KNOWLEDGE_DOMAIN"

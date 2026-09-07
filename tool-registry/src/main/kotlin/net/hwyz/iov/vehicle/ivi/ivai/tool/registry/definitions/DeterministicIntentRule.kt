@@ -18,6 +18,16 @@ import kotlinx.serialization.Serializable
  *  - 唯一 canonical Tool + 必填参数完整 + 无否定/多意图/同优先级冲突 + Policy
  *    允许直达 → L0；否则进入 L1 检索与本地模型。
  */
+/**
+ * 六类业务字段 + 稳定 [ruleId]（IVI-IVAI-DSN-CR-013）：
+ *  - [exactPhrases]：确定性词法触发器（子串命中后仍需对象/动作/否定/多意图/
+ *    OperationType/冲突校验，不等于可直接执行）；
+ *  - [synonymPatterns]：受控正则；
+ *  - [slotPatterns]：槽位抽取模板；
+ *  - [negativePatterns]：命中任一即否定该规则；
+ *  - [presetArguments]：规则预置参数（“打开空调”→ enabled=true）；
+ *  - [priority]：仅用于比较可兼容规则的特异性，不得静默决胜跨 canonical 冲突。
+ */
 data class DeterministicIntentRule(
     val ruleId: String,
     val toolId: String,
@@ -57,7 +67,11 @@ enum class SlotType {
     STEP,
 
     /** A generic integer. */
-    NUMERIC
+    NUMERIC,
+
+    /** A time range (e.g. 打开记录回放). CR-013：固定短语可直达但时间
+     * 需自然语言解析时标为可选，Matcher 不做时间抽取。 */
+    TIME
 }
 
 /** Version range constraint for rule applicability (nullable bound = unbounded).

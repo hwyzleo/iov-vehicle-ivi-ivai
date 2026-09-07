@@ -37,9 +37,15 @@ class RuntimeAssemblyException(
 ) : RuntimeException(message)
 
 /**
- * 默认装配器实现（IVI-IVAI-DSN-CR-010）。
+ * 默认装配器实现（IVI-IVAI-DSN-CR-010 + CR-013）。
+ *
+ * CR-013：确定性候选集 = 运行时合法候选 ∩ 治理 Profile 投影（SUPPORTED +
+ * Profile APPROVED + 版本/Hash 有效），不是手工维护的固定白名单。
  */
-class DefaultRuntimeCapabilityAssembler : RuntimeCapabilityAssembler {
+class DefaultRuntimeCapabilityAssembler(
+    private val deterministicCatalog: DeterministicIntentCatalog =
+        DeterministicIntentCatalog.build()
+) : RuntimeCapabilityAssembler {
 
     override fun assemble(
         catalog: GovernanceCatalog,
@@ -134,7 +140,12 @@ class DefaultRuntimeCapabilityAssembler : RuntimeCapabilityAssembler {
             runtimeCandidateWorkflowIds = workflowCandidates,
             governanceVersion = selectedPacks.maxOfOrNull { it.governanceVersion } ?: "0",
             migrationVersion = MIGRATION_VERSION,
-            stubExemptedToolIds = stubExempted
+            stubExemptedToolIds = stubExempted,
+            // CR-013：确定性候选 = 运行时合法候选 ∩ 治理 Profile 投影。
+            deterministicCandidateToolIds =
+                canonicalCandidates.intersect(deterministicCatalog.productionToolIds),
+            deterministicCatalogVersion = deterministicCatalog.ruleVersion,
+            deterministicCatalogHash = deterministicCatalog.contentHash
         )
     }
 

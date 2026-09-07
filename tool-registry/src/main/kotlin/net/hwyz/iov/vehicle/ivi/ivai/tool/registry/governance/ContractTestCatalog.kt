@@ -1,5 +1,6 @@
 package net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance
 
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.DeterministicSupport
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.BusinessDomainId
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.OperationType
 
@@ -27,27 +28,29 @@ data class ContractTestSpec(
 )
 
 /**
- * IVAI Contract Test Catalog v1（IVI-IVAI-DSN-CR-009 + CR-010 规范性附录）。
+ * IVAI Contract Test Catalog v1（IVI-IVAI-DSN-CR-009 + CR-010 + CR-013 规范性附录）。
  *
- * 当前包含 1,506 条测试：
+ * 当前包含 1,991 条测试：
  *  - Domain：50 = 10 个业务领域 × 路由、OperationType、歧义、否定和跨领域 5 类
- *  - Tool：1280 = 160 Tool × 正向、Alias、缺参、边界、Policy/Binding、执行保护、
+ *  - Tool：1760 = 160 Tool × 正向、Alias、缺参、边界、Policy/Binding、执行保护、
  *    确定性直达（DET_L0）、确定性歧义（DET_AMBIGUOUS）8 类
- *    （CR-010：DET_L0 验证“唯一匹配走 L0”，无元数据的 Tool 记录为
- *    DETERMINISTIC_COVERAGE_MISSING 治理缺口；DET_AMBIGUOUS 验证 IVAI-ROUTE-003）
+ *    + CR-013 确定性冲突（DET_CONFLICT）、参数优先级/矛盾（DET_ARG）、
+ *    降级类型（DET_DEGRADE）3 类
  *  - Workflow：144 = 18 Workflow × 成功、缺参、不可用、取消、失败、补偿、幂等、恢复 8 类
- *  - Governance：32 = 状态、Binding、Hash/签名、引用、Schema、循环依赖、数量、
+ *  - Governance：37 = 状态、Binding、Hash/签名、引用、Schema、循环依赖、数量、
  *    覆盖率、评测、回滚 10 类 × 2 + CR-010 新错误码 6 类（TC-GOV-021～026）
  *    + CR-011 RAG 错误码 6 类（TC-GOV-027～032）
+ *    + CR-013 L0 资格 / 规则编译 / 跨 Tool 冲突 / 参数优先级 / 降级类型 5 类
+ *    （TC-GOV-033～037）
  *
  * 测试允许通过数据驱动方式生成，但每条结果必须可追溯。
  */
 object ContractTestCatalog {
 
     private const val DOMAIN_CATEGORIES = 5
-    private const val TOOL_CATEGORIES = 8
+    private const val TOOL_CATEGORIES = 11
     private const val WORKFLOW_CATEGORIES = 8
-    private const val GOVERNANCE_TESTS = 32
+    private const val GOVERNANCE_TESTS = 37
 
     val domainTests: List<ContractTestSpec> by lazy {
         val domains = BusinessDomainId.entries
@@ -70,7 +73,9 @@ object ContractTestCatalog {
 
     val toolTests: List<ContractTestSpec> by lazy {
         val categories = listOf(
-            "POS", "ALIAS", "MISSING", "BOUNDARY", "POLICY", "EXEC", "DET_L0", "DET_AMBIGUOUS"
+            "POS", "ALIAS", "MISSING", "BOUNDARY", "POLICY", "EXEC", "DET_L0", "DET_AMBIGUOUS",
+            // CR-013：跨 Tool/Workflow 确定性冲突 / 参数优先级与矛盾 / 降级类型。
+            "DET_CONFLICT", "DET_ARG", "DET_DEGRADE"
         )
         ToolCatalogV1.ALL.flatMap { tool ->
             categories.map { category ->
@@ -141,7 +146,13 @@ object ContractTestCatalog {
             "IVAI-RAG-003",                                // 029
             "IVAI-RAG-004",                                // 030
             "IVAI-RAG-005",                                // 031
-            "IVAI-RAG-006"                                 // 032
+            "IVAI-RAG-006",                                // 032
+            // CR-013 L0 治理：L0资格 / 规则编译 / 跨 Tool 冲突 / 参数优先级 / 降级类型
+            Cr013ErrorCodes.GOV_L0_INCONSISTENT,            // 033 (IVAI-GOV-005)
+            Cr013ErrorCodes.GOV_L0_INCONSISTENT,            // 034 (IVAI-GOV-005 规则编译失败)
+            Cr013ErrorCodes.ROUTE_CONFLICT,                 // 035 (IVAI-ROUTE-003 跨 Tool 冲突)
+            Cr013ErrorCodes.ROUTE_ARGUMENT_CONFLICT,        // 036 (IVAI-ROUTE-005 参数矛盾)
+            Cr013ErrorCodes.GOV_L0_ILLEGAL_MATCHER          // 037 (IVAI-GOV-006 降级类型)
         )
         codes.mapIndexed { index, code ->
             ContractTestSpec(
@@ -159,9 +170,9 @@ object ContractTestCatalog {
         domainTests + toolTests + workflowTests + governanceTests
     }
 
-    const val expectedTotal: Int = 1506
+    const val expectedTotal: Int = 1991
 
-    /** 分层统计（50 / 1280 / 144 / 26）。 */
+    /** 分层统计（50 / 1760 / 144 / 37）。 */
     fun layerCounts(): Map<ContractTestType, Int> = mapOf(
         ContractTestType.DOMAIN to domainTests.size,
         ContractTestType.TOOL to toolTests.size,
@@ -185,12 +196,46 @@ object ContractTestCatalog {
         "BOUNDARY" -> "OUT_OF_RANGE"
         "POLICY" -> if (tool.policySummary.startsWith("HIGH")) "NEEDS_CONFIRMATION" else "POLICY_ALLOWED"
         "EXEC" -> "IVAI-EXEC-001"
-        // CR-010：具备确定性画像 → 明确表达唯一匹配走 L0；否则记录治理覆盖缺口（非天生 L1）。
-        "DET_L0" -> if (ToolAliasCatalog.profileFor(tool.toolId) != null) "L0_UNIQUE_MATCH" else "DETERMINISTIC_COVERAGE_MISSING"
+        // CR-010/CR-013：DET_L0 唯一匹配走 L0（SUPPORTED 且规则完整）；NOT_SUPPORTED /
+        // NEEDS_REVIEW 正常进入 L1，不记录 DETERMINISTIC_COVERAGE_MISSING 缺口。
+        "DET_L0" -> l0Support(tool.toolId).let { support ->
+            when (support) {
+                DeterministicSupport.SUPPORTED -> "L0_UNIQUE_MATCH"
+                DeterministicSupport.NOT_SUPPORTED -> "L1_LEGAL_CANDIDATE"
+                DeterministicSupport.NEEDS_REVIEW -> "L1_LEGAL_CANDIDATE"
+            }
+        }
         // CR-010：确定性匹配冲突，不能唯一确定 Tool → IVAI-ROUTE-003。
         "DET_AMBIGUOUS" -> Cr010ErrorCodes.ROUTE_CONFLICT
+        // CR-013：跨 Tool/Workflow 冲突判定（有冲突集 → 可能产生 DETERMINISTIC_CONFLICT）。
+        "DET_CONFLICT" -> if (l0ConflictSet(tool.toolId).isNotEmpty()) {
+            Cr013ErrorCodes.ROUTE_CONFLICT
+        } else {
+            "DETERMINISTIC_SINGLETON"
+        }
+        // CR-013：参数合并优先级与矛盾检测（显式槽位 vs 预置 → IVAI-ROUTE-005）。
+        "DET_ARG" -> if (l0Support(tool.toolId) == DeterministicSupport.SUPPORTED) {
+            Cr013ErrorCodes.ROUTE_ARGUMENT_CONFLICT
+        } else {
+            "NOT_L0_CANDIDATE"
+        }
+        // CR-013：降级类型（NOT_SUPPORTED/NEEDS_REVIEW 保留 L1，非法入 Matcher → GOV-006）。
+        "DET_DEGRADE" -> when (l0Support(tool.toolId)) {
+            DeterministicSupport.SUPPORTED -> "L0_ENABLED"
+            DeterministicSupport.NOT_SUPPORTED -> "L1_LEGAL_CANDIDATE"
+            DeterministicSupport.NEEDS_REVIEW -> "L1_LEGAL_CANDIDATE"
+        }
         else -> "UNKNOWN"
     }
+
+    /** Lazy 获取确定性目录（避免循环依赖 / 重复构建）。 */
+    private val l0Catalog: DeterministicIntentCatalog by lazy { DeterministicIntentCatalog.build() }
+
+    private fun l0Support(toolId: String): DeterministicSupport =
+        l0Catalog.profileFor(toolId)?.support ?: DeterministicSupport.NOT_SUPPORTED
+
+    private fun l0ConflictSet(toolId: String): Set<String> =
+        l0Catalog.profileFor(toolId)?.conflictToolIds ?: emptySet()
 
     private fun expectedWorkflowReason(category: String): String = when (category) {
         "POS" -> "WORKFLOW_SUCCEEDED"

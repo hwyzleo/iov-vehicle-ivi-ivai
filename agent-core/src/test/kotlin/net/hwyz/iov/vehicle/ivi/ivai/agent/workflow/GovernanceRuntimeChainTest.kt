@@ -6,6 +6,7 @@ import net.hwyz.iov.vehicle.ivi.ivai.agent.session.Session
 import net.hwyz.iov.vehicle.ivi.ivai.agent.testutil.CollectingAgentEventListener
 import net.hwyz.iov.vehicle.ivi.ivai.agent.testutil.StubModelProvider
 import net.hwyz.iov.vehicle.ivi.ivai.agent.testutil.TestGraph
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.DeterministicIntentCatalog
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.ToolAliasCatalog
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.ToolCatalogV1
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.ExecutionStatus
@@ -44,13 +45,14 @@ class GovernanceRuntimeChainTest {
 
     @Test
     fun `LOW 与 MEDIUM 风险 Tool 经模型返回后由 Mock 桩成功执行`() = runTest {
+        val l0Catalog = DeterministicIntentCatalog.build()
         val lowAndMedium = ToolCatalogV1.ALL.filter {
             !it.policySummary.startsWith("HIGH") &&
                 !containsSafetyKeyword(it.name) &&
-                // CR-010: 具备 DeterministicMatchProfile 的 Tool（空调 4 canonical + 座椅按摩）
-                // 由请求级确定性匹配走 L0（不调用模型），由 L0 契约测试覆盖；本测试验证
+                // CR-010/CR-013：具备生产启用 L0 Profile 的 Tool（SUPPORTED + 规则）由
+                // 请求级确定性匹配走 L0（不调用模型），由 L0 契约测试覆盖；本测试验证
                 // L1 模型路径，排除 L0 项可避免模型响应队列漂移（L0 不消费队列）。
-                !ToolAliasCatalog.PROFILES.containsKey(it.toolId)
+                !l0Catalog.profileFor(it.toolId)?.productionEnabled!!
         }
         assertTrue(lowAndMedium.size > 0, "应存在 LOW/MEDIUM 风险 Tool")
 

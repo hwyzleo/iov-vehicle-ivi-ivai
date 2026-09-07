@@ -7,6 +7,7 @@ import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.GovernanceStatus
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.OperationType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -177,6 +178,57 @@ class RuntimeCapabilityAssemblerTest {
         assertEquals(result1.runtimeCandidateToolIdsHash, result2.runtimeCandidateToolIdsHash)
         assertEquals(4, result1.runtimeCandidateToolIds.size)
         assertEquals(setOf(packId), result1.selectedPackIds)
+    }
+
+    // ------------------------------------------------------------------ CR-013 L0 确定性候选
+
+    @Test
+    fun `deterministicCandidateToolIds 是运行时合法候选的 SUPPORTED 治理投影`() {
+        // climate.power.set 为 SUPPORTED；media.playback.play 为 NOT_SUPPORTED
+        // （两者都 APPROVED + BOUND 进入 runtimeCandidate）。
+        val tools = listOf(
+            governed("climate.power.set", GovernanceStatus.APPROVED, BindingStatus.BOUND),
+            governed("climate.temperature.set"),
+            governed("climate.temperature.adjust"),
+            governed("climate.status.query"),
+            governed("media.playback.play", GovernanceStatus.APPROVED, BindingStatus.BOUND),
+            governed("vehicle.drive_mode.set", GovernanceStatus.APPROVED, BindingStatus.BOUND)
+        )
+        val pack2 = CapabilityPack(
+            packId = "media.audio",
+            domainId = BusinessDomainId.MEDIA_ENTERTAINMENT,
+            name = "媒体",
+            toolIds = setOf("media.playback.play"),
+            governanceVersion = "1.0",
+            status = GovernanceStatus.APPROVED
+        )
+        val pack3 = CapabilityPack(
+            packId = "vehicle.driving_config",
+            domainId = BusinessDomainId.VEHICLE_DRIVING_CONFIG,
+            name = "驾驶配置",
+            toolIds = setOf("vehicle.drive_mode.set"),
+            governanceVersion = "1.0",
+            status = GovernanceStatus.APPROVED
+        )
+        val fullCatalog = GovernanceCatalog(
+            packs = listOf(pack(tools), pack2, pack3),
+            tools = tools,
+            workflows = emptyList()
+        )
+        val result = assembler.assemble(
+            fullCatalog,
+            ToolAliasCatalog,
+            env(selected = setOf(packId, "media.audio", "vehicle.driving_config"))
+        )
+        // 全部进入运行时合法候选（L1 边界不变）。
+        assertTrue("climate.power.set" in result.runtimeCandidateToolIds)
+        assertTrue("media.playback.play" in result.runtimeCandidateToolIds, "NOT_SUPPORTED 必须保留 L1 合法候选")
+        assertTrue("vehicle.drive_mode.set" in result.runtimeCandidateToolIds, "NEEDS_REVIEW 必须保留 L1 合法候选")
+        // 仅 SUPPORTED 进入确定性候选。
+        assertEquals(setOf("climate.power.set"), result.deterministicCandidateToolIds)
+        assertEquals("ivai-l0-rules-v1-draft", result.deterministicCatalogVersion)
+        assertNotNull(result.deterministicCatalogHash)
+        assertTrue(result.deterministicCandidateToolIds.all { it in result.runtimeCandidateToolIds })
     }
 
     private fun stubExemption(scope: Set<String>, startVersion: String = "0.0.0", endVersion: String? = "99.0.0") =

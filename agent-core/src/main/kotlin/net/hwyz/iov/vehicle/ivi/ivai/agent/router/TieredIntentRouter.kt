@@ -98,11 +98,19 @@ class TieredIntentRouter(
             return legacyRoute(input, context, domainDecision, snapshot)
         }
 
-        // CR-010: L0 scoped to the unified canonical candidate set (no L0 whitelist).
-        val scopedMatcher = if (snapshot.runtimeCandidateToolIds.isEmpty() || registry == null) {
+        // CR-010 + CR-013: L0 scoped to the deterministic candidate set.
+        // CR-013：deterministicCandidateToolIds = runtimeCandidate ∩ 治理 Profile
+        // 投影；NOT_SUPPORTED / NEEDS_REVIEW Tool 不进入 Matcher，但仍保留在 L1
+        // runtimeCandidateToolIds。旧路径（无确定性集合）回退统一候选集。
+        val l0Scope: Set<String>? = when {
+            snapshot.deterministicCandidateToolIds.isNotEmpty() -> snapshot.deterministicCandidateToolIds
+            snapshot.runtimeCandidateToolIds.isNotEmpty() -> snapshot.runtimeCandidateToolIds
+            else -> null
+        }
+        val scopedMatcher = if (l0Scope == null || registry == null) {
             matcher
         } else {
-            DefaultFastIntentMatcher(registry, snapshot.runtimeCandidateToolIds)
+            DefaultFastIntentMatcher(registry, l0Scope)
         }
         return when (val match = scopedMatcher.match(input, context)) {
             is FastIntentMatchResult.Unique -> TieredRouteDecision(
@@ -117,7 +125,10 @@ class TieredIntentRouter(
                     matchedToolIds = match.matchedToolIds,
                     patternId = match.matchedPatternId,
                     canonicalToolId = match.canonicalToolId ?: match.candidate.toolId,
-                    errorCode = null
+                    errorCode = null,
+                    matchedRuleIds = match.matchedRuleIds,
+                    argumentSources = match.argumentSources,
+                    deterministicSupport = "SUPPORTED"
                 )
             )
             is FastIntentMatchResult.Ambiguous -> toolDomainDecision(
@@ -129,7 +140,24 @@ class TieredIntentRouter(
                 observability = observability(
                     snapshot,
                     matchedToolIds = match.matchedToolIds,
-                    errorCode = ErrorCodeString.ROUTE_CONFLICT // IVAI-ROUTE-003
+                    errorCode = ErrorCodeString.ROUTE_CONFLICT, // IVAI-ROUTE-003
+                    matchedRuleIds = match.matchedRuleIds
+                )
+            )
+            is FastIntentMatchResult.ArgumentConflict -> toolDomainDecision(
+                // CR-013：显式槽位与预置/Alias 矛盾，不得静默决胜（IVAI-ROUTE-005）。
+                reasonCode = RouteReasonCode.L0_ARGUMENT_CONFLICT,
+                input = input,
+                context = context,
+                domain = domainDecision,
+                snapshot = snapshot,
+                missingToolId = match.toolId,
+                missingArguments = listOf(match.conflictingArgument),
+                observability = observability(
+                    snapshot,
+                    canonicalToolId = match.toolId,
+                    errorCode = ErrorCodeString.ROUTE_ARGUMENT_CONFLICT,
+                    argumentSources = match.sources
                 )
             )
             is FastIntentMatchResult.MissingArguments -> toolDomainDecision(
@@ -148,11 +176,14 @@ class TieredIntentRouter(
                     input.hasMultiIntent -> RouteReasonCode.L0_MULTI_INTENT
                     else -> RouteReasonCode.L0_NO_MATCH
                 }
-                // CR-010：高频明确表达没有确定性匹配元数据 → 记录治理缺口
-                // DETERMINISTIC_COVERAGE_MISSING（IVAI-ROUTE-004），仍走 L1；
-                // 隐式/强上下文表达属于正常 L1，不记录缺口。
+                // CR-010 + CR-013：高频明确表达没有确定性匹配元数据 → 记录治理缺口
+                // DETERMINISTIC_COVERAGE_MISSING（IVAI-ROUTE-004），仍走 L1。
+                // CR-013：缺口只针对 SUPPORTED Tool 的规则缺失/失效/覆盖退化；
+                // NOT_SUPPORTED / NEEDS_REVIEW Tool 的常用表达属于合法 L1（REQ-131），
+                // 不记录缺口。隐式/强上下文表达同样不记录。
                 val coverageGap = isExplicitToolCommand(domainDecision, input) &&
-                    l0Reason == RouteReasonCode.L0_NO_MATCH
+                    l0Reason == RouteReasonCode.L0_NO_MATCH &&
+                    isSupportedCoverageCandidate(input)
                 val observability = observability(
                     snapshot,
                     fallbackReason = if (coverageGap) "DETERMINISTIC_COVERAGE_MISSING" else null,
@@ -199,6 +230,19 @@ class TieredIntentRouter(
         if (input.hasNegation || input.hasMultiIntent) return false
         if (domain.semanticFeatures.contains(SemanticFeature.IMPLICIT_EXPRESSION)) return false
         return domain.operationType in EXPLICIT_OPERATION_TYPES
+    }
+
+    /**
+     * CR-013：该显式表达是否可能属于 SUPPORTED Tool 的覆盖缺口。
+     * NOT_SUPPORTED / NEEDS_REVIEW Tool（无生产规则）的正例属于合法 L1 表达，
+     * 匹配到任一此类正例 → 不是缺口（REQ-131）；否则可能是 SUPPORTED 规则缺口。
+     */
+    private fun isSupportedCoverageCandidate(input: NormalizedInput): Boolean {
+        val reg = registry ?: return true
+        val nonSupportedPositiveExamples = reg.all()
+            .filter { it.deterministicRules.isEmpty() }
+            .flatMap { it.positiveExamples }
+        return nonSupportedPositiveExamples.none { input.normalized.contains(it) }
     }
 
     /** 领域 / 能力包限定后的 L1 工具领域决策。 */
@@ -250,14 +294,17 @@ class TieredIntentRouter(
     private fun hasPlanningSignal(normalized: String): Boolean =
         DEFAULT_PLANNING_KEYWORDS.any { normalized.contains(it) }
 
-    /** CR-010 可观测性构造。 */
+    /** CR-010 + CR-013 可观测性构造。 */
     private fun observability(
         snapshot: CapabilitySnapshot?,
         matchedToolIds: Set<String> = emptySet(),
         patternId: String? = null,
         canonicalToolId: String? = null,
         fallbackReason: String? = null,
-        errorCode: String? = null
+        errorCode: String? = null,
+        matchedRuleIds: List<String> = emptyList(),
+        argumentSources: Map<String, String> = emptyMap(),
+        deterministicSupport: String? = null
     ): RouteObservability = RouteObservability(
         selectedPackIds = snapshot?.selectedPackIds ?: emptySet(),
         runtimeCandidateToolIdsHash = snapshot?.runtimeCandidateToolIdsHash,
@@ -266,7 +313,15 @@ class TieredIntentRouter(
         canonicalToolId = canonicalToolId,
         deterministicFallbackReason = fallbackReason,
         governanceRuntimeMode = snapshot?.governanceRuntimeMode,
-        errorCode = errorCode
+        errorCode = errorCode,
+        deterministicSupport = deterministicSupport,
+        ruleVersion = snapshot?.deterministicCatalogVersion,
+        matchedRuleIds = matchedRuleIds,
+        deterministicCandidateCount = snapshot?.deterministicCandidateToolIds?.size,
+        canonicalCandidateCount = snapshot?.runtimeCandidateToolIds?.size,
+        argumentSources = argumentSources,
+        deterministicConflictIds = matchedToolIds,
+        deterministicCatalogHash = snapshot?.deterministicCatalogHash
     )
 
     /** 旧链路（未注入 CR-008 组件时的完整路由，CR-005 行为不变）。 */
@@ -313,6 +368,24 @@ class TieredIntentRouter(
                     missingToolId = match.toolId,
                     missingArguments = match.missing,
                     observability = observability(snapshot, canonicalToolId = match.toolId)
+                )
+            }
+            // CR-013：显式槽位与预置/Alias 矛盾 → IVAI-ROUTE-005（旧链路同样不静默决胜）。
+            is FastIntentMatchResult.ArgumentConflict -> {
+                return toolDomainDecisionLegacy(
+                    reasonCode = RouteReasonCode.L0_ARGUMENT_CONFLICT,
+                    input = input,
+                    context = context,
+                    domain = domain,
+                    snapshot = snapshot,
+                    missingToolId = match.toolId,
+                    missingArguments = listOf(match.conflictingArgument),
+                    observability = observability(
+                        snapshot,
+                        canonicalToolId = match.toolId,
+                        errorCode = ErrorCodeString.ROUTE_ARGUMENT_CONFLICT,
+                        argumentSources = match.sources
+                    )
                 )
             }
             FastIntentMatchResult.NoMatch -> {
@@ -433,7 +506,7 @@ class TieredIntentRouter(
     }
 }
 
-/** CR-010 错误码字符串常量（与 ErrorCode 枚举码一致，避免循环依赖 agent-core 内部引用）。 */
+/** CR-010 + CR-013 错误码字符串常量（与 ErrorCode 枚举码一致，避免循环依赖 agent-core 内部引用）。 */
 object ErrorCodeString {
     const val CAP_CANONICAL_UNCLOSED = "IVAI-CAP-003"
     const val ROUTE_CONFLICT = "IVAI-ROUTE-003"
@@ -441,4 +514,7 @@ object ErrorCodeString {
     const val GOV_DRAFT_PROMOTED = "IVAI-GOV-003"
     const val GOV_STUB_EXEMPTION_INVALID = "IVAI-GOV-004"
     const val ALIAS_CONFLICT = "IVAI-ALIAS-001"
+    const val ROUTE_ARGUMENT_CONFLICT = "IVAI-ROUTE-005"
+    const val GOV_L0_INCONSISTENT = "IVAI-GOV-005"
+    const val GOV_L0_ILLEGAL_MATCHER = "IVAI-GOV-006"
 }

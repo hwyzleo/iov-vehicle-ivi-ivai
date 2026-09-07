@@ -1,0 +1,6905 @@
+{
+  "ruleVersion": "ivai-l0-rules-v1-draft",
+  "tools": [
+    {
+      "toolId": "information.reminder.manage",
+      "support": "NOT_SUPPORTED",
+      "supportReason": "必须解析唯一reminderId及动作对象",
+      "rules": [],
+      "positiveExamples": [
+        "管理提醒"
+      ],
+      "negativeExamples": [
+        "明确执行管理提醒"
+      ],
+      "conflictToolIds": [
+        "information.reminder.create",
+        "information.reminder.query"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "information.reminder.create",
+      "support": "NOT_SUPPORTED",
+      "supportReason": "标题、时间和重复规则需要自然语言时间解析",
+      "rules": [],
+      "positiveExamples": [
+        "创建提醒"
+      ],
+      "negativeExamples": [
+        "明确执行创建提醒"
+      ],
+      "conflictToolIds": [
+        "information.reminder.manage",
+        "information.reminder.query"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "information.reminder.query",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.information.reminder.query.query",
+          "exactPhrases": [
+            "查询提醒",
+            "查看提醒",
+            "提醒状态",
+            "查一下提醒"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "打开",
+            "关闭",
+            "设置"
+          ],
+          "priority": 5,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "查询提醒",
+        "查看提醒",
+        "提醒状态"
+      ],
+      "negativeExamples": [
+        "设置提醒",
+        "打开提醒"
+      ],
+      "conflictToolIds": [
+        "information.reminder.create",
+        "information.reminder.manage"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "information.calendar.event.query",
+      "support": "NOT_SUPPORTED",
+      "supportReason": "必须解析唯一eventId及日程上下文",
+      "rules": [],
+      "positiveExamples": [
+        "查询日程详情"
+      ],
+      "negativeExamples": [
+        "明确执行查询日程详情"
+      ],
+      "conflictToolIds": [
+        "information.calendar.query"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "information.calendar.query",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.information.calendar.query.query",
+          "exactPhrases": [
+            "查询日历",
+            "查看日历",
+            "日历状态",
+            "查一下日历"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "打开",
+            "关闭",
+            "设置"
+          ],
+          "priority": 5,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "查询日历",
+        "查看日历",
+        "日历状态"
+      ],
+      "negativeExamples": [
+        "设置日历",
+        "打开日历"
+      ],
+      "conflictToolIds": [
+        "information.calendar.event.query"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "information.weather.query",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.information.weather.query.query",
+          "exactPhrases": [
+            "查询天气",
+            "查看天气",
+            "天气状态",
+            "查一下天气"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "打开",
+            "关闭",
+            "设置"
+          ],
+          "priority": 5,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "查询天气",
+        "查看天气",
+        "天气状态"
+      ],
+      "negativeExamples": [
+        "设置天气",
+        "打开天气"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "system.voice.set",
+      "support": "NEEDS_REVIEW",
+      "supportReason": "必填枚举 item 尚缺少批准的中文值别名表，暂不启用L0",
+      "rules": [],
+      "positiveExamples": [
+        "设置语音系统"
+      ],
+      "negativeExamples": [
+        "未明确item的设置语音系统"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "NEEDS_REVIEW"
+    },
+    {
+      "toolId": "system.bluetooth.device.connect",
+      "support": "NOT_SUPPORTED",
+      "supportReason": "必须解析唯一deviceId及扫描结果上下文",
+      "rules": [],
+      "positiveExamples": [
+        "连接蓝牙设备"
+      ],
+      "negativeExamples": [
+        "明确执行连接蓝牙设备"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "system.network.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象、动作和参数模式稳定，可由受控规则唯一解析",
+      "rules": [
+        {
+          "ruleId": "L0.system.network.set.wifi_on",
+          "exactPhrases": [
+            "打开WiFi",
+            "开启无线网络"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "type": "wifi",
+            "enabled": true
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.system.network.set.wifi_off",
+          "exactPhrases": [
+            "关闭WiFi",
+            "关掉无线网络"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "type": "wifi",
+            "enabled": false
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.system.network.set.bt_on",
+          "exactPhrases": [
+            "打开蓝牙"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "type": "bluetooth",
+            "enabled": true
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.system.network.set.bt_off",
+          "exactPhrases": [
+            "关闭蓝牙"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "type": "bluetooth",
+            "enabled": false
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.system.network.set.hotspot_on",
+          "exactPhrases": [
+            "打开热点",
+            "开启车载热点"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "type": "hotspot",
+            "enabled": true
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.system.network.set.hotspot_off",
+          "exactPhrases": [
+            "关闭热点",
+            "关掉车载热点"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "type": "hotspot",
+            "enabled": false
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "打开WiFi",
+        "关闭蓝牙",
+        "开启车载热点"
+      ],
+      "negativeExamples": [
+        "搜索蓝牙设备",
+        "我不想打开热点"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "system.display.set",
+      "support": "NEEDS_REVIEW",
+      "supportReason": "亮度、主题、屏幕开关混合在同一Tool，需先定义动作分支与至少一项约束",
+      "rules": [],
+      "positiveExamples": [
+        "设置屏幕"
+      ],
+      "negativeExamples": [
+        "不得仅凭“设置屏幕”宽泛短语直达执行"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "NEEDS_REVIEW"
+    },
+    {
+      "toolId": "system.ui.back",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.system.ui.back.command",
+          "exactPhrases": [
+            "页面返回"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "页面返回"
+      ],
+      "negativeExamples": [
+        "我不想页面返回"
+      ],
+      "conflictToolIds": [
+        "system.ui.navigate"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "system.ui.navigate",
+      "support": "NOT_SUPPORTED",
+      "supportReason": "domainId/pageTarget目标集合随车型版本变化",
+      "rules": [],
+      "positiveExamples": [
+        "页面定位"
+      ],
+      "negativeExamples": [
+        "明确执行页面定位"
+      ],
+      "conflictToolIds": [
+        "system.ui.back"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "system.app.search",
+      "support": "NOT_SUPPORTED",
+      "supportReason": "开放应用查询文本",
+      "rules": [],
+      "positiveExamples": [
+        "搜索应用"
+      ],
+      "negativeExamples": [
+        "明确执行搜索应用"
+      ],
+      "conflictToolIds": [
+        "system.app.close",
+        "system.app.open"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "system.app.close",
+      "support": "NOT_SUPPORTED",
+      "supportReason": "必须解析唯一appId及当前应用上下文",
+      "rules": [],
+      "positiveExamples": [
+        "关闭应用"
+      ],
+      "negativeExamples": [
+        "明确执行关闭应用"
+      ],
+      "conflictToolIds": [
+        "system.app.open",
+        "system.app.search"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "system.app.open",
+      "support": "NOT_SUPPORTED",
+      "supportReason": "必须解析唯一appId并处理同名应用",
+      "rules": [],
+      "positiveExamples": [
+        "打开应用"
+      ],
+      "negativeExamples": [
+        "明确执行打开应用"
+      ],
+      "conflictToolIds": [
+        "system.app.close",
+        "system.app.search"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "media.audio_track.set",
+      "support": "NEEDS_REVIEW",
+      "supportReason": "language/trackId均为可选，缺少至少一项必填约束和音轨词表",
+      "rules": [],
+      "positiveExamples": [
+        "设置音轨"
+      ],
+      "negativeExamples": [
+        "不得仅凭“设置音轨”宽泛短语直达执行"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "NEEDS_REVIEW"
+    },
+    {
+      "toolId": "media.subtitle.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.media.subtitle.set.on",
+          "exactPhrases": [
+            "打开字幕",
+            "开启字幕"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "enabled": true
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "关闭",
+            "关掉"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.media.subtitle.set.off",
+          "exactPhrases": [
+            "关闭字幕",
+            "关掉字幕"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "enabled": false
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "打开",
+            "开启"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "打开字幕",
+        "开启字幕",
+        "关闭字幕",
+        "关掉字幕"
+      ],
+      "negativeExamples": [
+        "我不想打开字幕",
+        "查看字幕状态"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "media.video.quality.set",
+      "support": "NEEDS_REVIEW",
+      "supportReason": "必填枚举 quality 尚缺少批准的中文值别名表，暂不启用L0",
+      "rules": [],
+      "positiveExamples": [
+        "设置视频清晰度"
+      ],
+      "negativeExamples": [
+        "未明确quality的设置视频清晰度"
+      ],
+      "conflictToolIds": [
+        "media.video.cast.set",
+        "media.video.episode.set",
+        "media.video.fullscreen.set",
+        "media.video.play",
+        "media.video.search",
+        "media.video.status.query"
+      ],
+      "reviewStatus": "NEEDS_REVIEW"
+    },
+    {
+      "toolId": "media.video.status.query",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.media.video.status.query.query",
+          "exactPhrases": [
+            "查询视频状态",
+            "查看视频状态",
+            "视频状态状态",
+            "查一下视频状态"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "打开",
+            "关闭",
+            "设置"
+          ],
+          "priority": 5,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "查询视频状态",
+        "查看视频状态",
+        "视频怎么样"
+      ],
+      "negativeExamples": [
+        "设置视频状态",
+        "打开视频状态"
+      ],
+      "conflictToolIds": [
+        "media.video.cast.set",
+        "media.video.episode.set",
+        "media.video.fullscreen.set",
+        "media.video.play",
+        "media.video.quality.set",
+        "media.video.search"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "media.video.fullscreen.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.media.video.fullscreen.set.on",
+          "exactPhrases": [
+            "打开视频全屏",
+            "开启视频全屏"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "enabled": true
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "关闭",
+            "关掉"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.media.video.fullscreen.set.off",
+          "exactPhrases": [
+            "关闭视频全屏",
+            "关掉视频全屏"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "enabled": false
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "打开",
+            "开启"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "打开视频全屏",
+        "开启视频全屏",
+        "关闭视频全屏",
+        "关掉视频全屏"
+      ],
+      "negativeExamples": [
+        "我不想打开视频全屏",
+        "查看视频全屏状态"
+      ],
+      "conflictToolIds": [
+        "media.video.cast.set",
+        "media.video.episode.set",
+        "media.video.play",
+        "media.video.quality.set",
+        "media.video.search",
+        "media.video.status.query"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "media.video.cast.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象、动作和参数模式稳定，可由受控规则唯一解析",
+      "rules": [
+        {
+          "ruleId": "L0.media.video.cast.set.rear_on",
+          "exactPhrases": [
+            "打开后排视频投屏",
+            "投屏到后排"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "target": "rear",
+            "enabled": true
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.media.video.cast.set.all_off",
+          "exactPhrases": [
+            "关闭视频投屏",
+            "停止全部投屏"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "target": "all",
+            "enabled": false
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "打开后排视频投屏",
+        "关闭视频投屏"
+      ],
+      "negativeExamples": [
+        "搜索视频",
+        "我不想打开投屏"
+      ],
+      "conflictToolIds": [
+        "media.video.episode.set",
+        "media.video.fullscreen.set",
+        "media.video.play",
+        "media.video.quality.set",
+        "media.video.search",
+        "media.video.status.query"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "media.video.episode.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.media.video.episode.set.set_numeric",
+          "exactPhrases": [
+            "视频集数调到",
+            "设置视频集数",
+            "视频集数设为"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "NUMERIC",
+              "argument": "episode",
+              "required": true
+            }
+          ],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "查询",
+            "多少"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "视频集数调到第2集",
+        "设置视频集数第2集"
+      ],
+      "negativeExamples": [
+        "查询视频集数",
+        "我不想设置视频集数"
+      ],
+      "conflictToolIds": [
+        "media.video.cast.set",
+        "media.video.fullscreen.set",
+        "media.video.play",
+        "media.video.quality.set",
+        "media.video.search",
+        "media.video.status.query"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "media.video.play",
+      "support": "NOT_SUPPORTED",
+      "supportReason": "必须解析唯一contentId",
+      "rules": [],
+      "positiveExamples": [
+        "播放视频"
+      ],
+      "negativeExamples": [
+        "明确执行播放视频"
+      ],
+      "conflictToolIds": [
+        "media.video.cast.set",
+        "media.video.episode.set",
+        "media.video.fullscreen.set",
+        "media.video.quality.set",
+        "media.video.search",
+        "media.video.status.query"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "media.video.search",
+      "support": "NOT_SUPPORTED",
+      "supportReason": "开放视频查询文本",
+      "rules": [],
+      "positiveExamples": [
+        "搜索视频"
+      ],
+      "negativeExamples": [
+        "明确执行搜索视频"
+      ],
+      "conflictToolIds": [
+        "media.video.cast.set",
+        "media.video.episode.set",
+        "media.video.fullscreen.set",
+        "media.video.play",
+        "media.video.quality.set",
+        "media.video.status.query"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "media.audio.status.query",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.media.audio.status.query.query",
+          "exactPhrases": [
+            "查询音频播放状态",
+            "查看音频播放状态",
+            "音频播放状态状态",
+            "查一下音频播放状态"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "打开",
+            "关闭",
+            "设置"
+          ],
+          "priority": 5,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "查询音频播放状态",
+        "查看音频播放状态",
+        "音频播放怎么样"
+      ],
+      "negativeExamples": [
+        "设置音频播放状态",
+        "打开音频播放状态"
+      ],
+      "conflictToolIds": [
+        "media.audio.play_by_filter",
+        "media.audio.search"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "media.radio.tune",
+      "support": "NOT_SUPPORTED",
+      "supportReason": "台标、频率和stationId需要实体规范化及冲突处理",
+      "rules": [],
+      "positiveExamples": [
+        "播放电台"
+      ],
+      "negativeExamples": [
+        "明确执行播放电台"
+      ],
+      "conflictToolIds": [
+        "media.radio.search"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "media.radio.search",
+      "support": "NOT_SUPPORTED",
+      "supportReason": "开放电台查询文本",
+      "rules": [],
+      "positiveExamples": [
+        "搜索电台"
+      ],
+      "negativeExamples": [
+        "明确执行搜索电台"
+      ],
+      "conflictToolIds": [
+        "media.radio.tune"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "media.audio.play_by_filter",
+      "support": "NOT_SUPPORTED",
+      "supportReason": "条件组合与内容选择属于开放检索",
+      "rules": [],
+      "positiveExamples": [
+        "按条件播放音频"
+      ],
+      "negativeExamples": [
+        "明确执行按条件播放音频"
+      ],
+      "conflictToolIds": [
+        "media.audio.search",
+        "media.audio.status.query"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "media.audio.search",
+      "support": "NOT_SUPPORTED",
+      "supportReason": "开放音乐查询文本",
+      "rules": [],
+      "positiveExamples": [
+        "搜索音乐音频"
+      ],
+      "negativeExamples": [
+        "明确执行搜索音乐音频"
+      ],
+      "conflictToolIds": [
+        "media.audio.play_by_filter",
+        "media.audio.status.query"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "media.volume.adjust",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.media.volume.adjust.up",
+          "exactPhrases": [
+            "媒体音量调高",
+            "调高媒体音量",
+            "增加媒体音量"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "POSITION",
+              "argument": "zone",
+              "required": false,
+              "aliases": "vehicle_position_v1"
+            },
+            {
+              "slot": "STEP",
+              "argument": "step",
+              "required": true
+            }
+          ],
+          "presetArguments": {
+            "direction": "increase"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "调低",
+            "降低"
+          ],
+          "priority": 5,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.media.volume.adjust.down",
+          "exactPhrases": [
+            "媒体音量调低",
+            "调低媒体音量",
+            "降低媒体音量"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "POSITION",
+              "argument": "zone",
+              "required": false,
+              "aliases": "vehicle_position_v1"
+            },
+            {
+              "slot": "STEP",
+              "argument": "step",
+              "required": true
+            }
+          ],
+          "presetArguments": {
+            "direction": "decrease"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "调高",
+            "增加"
+          ],
+          "priority": 5,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "媒体音量调高",
+        "媒体音量调低"
+      ],
+      "negativeExamples": [
+        "我不想媒体音量调高",
+        "查询媒体音量"
+      ],
+      "conflictToolIds": [
+        "media.volume.set"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "media.volume.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.media.volume.set.set_numeric",
+          "exactPhrases": [
+            "媒体音量调到",
+            "设置媒体音量",
+            "媒体音量设为"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "POSITION",
+              "argument": "zone",
+              "required": false,
+              "aliases": "vehicle_position_v1"
+            },
+            {
+              "slot": "NUMERIC",
+              "argument": "value",
+              "required": true
+            }
+          ],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "查询",
+            "多少"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "媒体音量调到50",
+        "设置媒体音量50"
+      ],
+      "negativeExamples": [
+        "查询媒体音量",
+        "我不想设置媒体音量"
+      ],
+      "conflictToolIds": [
+        "media.volume.adjust"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "media.playback.mode.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.media.playback.mode.set.sequence",
+          "exactPhrases": [
+            "播放模式顺序播放",
+            "设置播放模式为顺序播放"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "mode": "sequence"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.media.playback.mode.set.repeat_one",
+          "exactPhrases": [
+            "播放模式单曲循环",
+            "设置播放模式为单曲循环"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "mode": "repeat_one"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.media.playback.mode.set.repeat_all",
+          "exactPhrases": [
+            "播放模式列表循环",
+            "设置播放模式为列表循环"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "mode": "repeat_all"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.media.playback.mode.set.shuffle",
+          "exactPhrases": [
+            "播放模式随机播放",
+            "设置播放模式为随机播放"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "mode": "shuffle"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "播放模式顺序播放",
+        "播放模式单曲循环",
+        "播放模式列表循环"
+      ],
+      "negativeExamples": [
+        "查询播放模式",
+        "我不想设置播放模式"
+      ],
+      "conflictToolIds": [
+        "media.playback.next",
+        "media.playback.pause",
+        "media.playback.play",
+        "media.playback.previous",
+        "media.playback.resume",
+        "media.playback.seek",
+        "media.playback.stop"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "media.playback.seek",
+      "support": "NEEDS_REVIEW",
+      "supportReason": "positionSec/offsetSec均可选，缺少绝对跳转与相对快进的互斥规则",
+      "rules": [],
+      "positiveExamples": [
+        "跳转播放位置"
+      ],
+      "negativeExamples": [
+        "不得仅凭“跳转播放位置”宽泛短语直达执行"
+      ],
+      "conflictToolIds": [
+        "media.playback.mode.set",
+        "media.playback.next",
+        "media.playback.pause",
+        "media.playback.play",
+        "media.playback.previous",
+        "media.playback.resume",
+        "media.playback.stop"
+      ],
+      "reviewStatus": "NEEDS_REVIEW"
+    },
+    {
+      "toolId": "media.playback.previous",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.media.playback.previous.command",
+          "exactPhrases": [
+            "播放上一个"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "播放上一个"
+      ],
+      "negativeExamples": [
+        "我不想播放上一个"
+      ],
+      "conflictToolIds": [
+        "media.playback.mode.set",
+        "media.playback.next",
+        "media.playback.pause",
+        "media.playback.play",
+        "media.playback.resume",
+        "media.playback.seek",
+        "media.playback.stop"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "media.playback.next",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.media.playback.next.command",
+          "exactPhrases": [
+            "播放下一个"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "播放下一个"
+      ],
+      "negativeExamples": [
+        "我不想播放下一个"
+      ],
+      "conflictToolIds": [
+        "media.playback.mode.set",
+        "media.playback.pause",
+        "media.playback.play",
+        "media.playback.previous",
+        "media.playback.resume",
+        "media.playback.seek",
+        "media.playback.stop"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "media.playback.stop",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.media.playback.stop.command",
+          "exactPhrases": [
+            "停止播放",
+            "结束播放"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "停止播放",
+        "结束播放"
+      ],
+      "negativeExamples": [
+        "我不想停止播放",
+        "查询播放"
+      ],
+      "conflictToolIds": [
+        "media.playback.mode.set",
+        "media.playback.next",
+        "media.playback.pause",
+        "media.playback.play",
+        "media.playback.previous",
+        "media.playback.resume",
+        "media.playback.seek"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "media.playback.resume",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.media.playback.resume.command",
+          "exactPhrases": [
+            "继续播放",
+            "恢复播放"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "继续播放",
+        "恢复播放"
+      ],
+      "negativeExamples": [
+        "我不想继续播放",
+        "查询播放"
+      ],
+      "conflictToolIds": [
+        "media.playback.mode.set",
+        "media.playback.next",
+        "media.playback.pause",
+        "media.playback.play",
+        "media.playback.previous",
+        "media.playback.seek",
+        "media.playback.stop"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "media.playback.pause",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.media.playback.pause.command",
+          "exactPhrases": [
+            "暂停播放",
+            "先停一下播放"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "暂停播放",
+        "先停一下播放"
+      ],
+      "negativeExamples": [
+        "我不想暂停播放",
+        "查询播放"
+      ],
+      "conflictToolIds": [
+        "media.playback.mode.set",
+        "media.playback.next",
+        "media.playback.play",
+        "media.playback.previous",
+        "media.playback.resume",
+        "media.playback.seek",
+        "media.playback.stop"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "media.playback.play",
+      "support": "NOT_SUPPORTED",
+      "supportReason": "内容、来源和媒体类型可能依赖开放检索",
+      "rules": [],
+      "positiveExamples": [
+        "播放媒体"
+      ],
+      "negativeExamples": [
+        "明确执行播放媒体"
+      ],
+      "conflictToolIds": [
+        "media.playback.mode.set",
+        "media.playback.next",
+        "media.playback.pause",
+        "media.playback.previous",
+        "media.playback.resume",
+        "media.playback.seek",
+        "media.playback.stop"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "communication.message.read",
+      "support": "NOT_SUPPORTED",
+      "supportReason": "会话选择与未读范围依赖上下文",
+      "rules": [],
+      "positiveExamples": [
+        "读取消息"
+      ],
+      "negativeExamples": [
+        "明确执行读取消息"
+      ],
+      "conflictToolIds": [
+        "communication.message.send"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "communication.call.control",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.communication.call.control.mute",
+          "exactPhrases": [
+            "控制通话静音",
+            "设置控制通话为静音"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "action": "mute"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.communication.call.control.unmute",
+          "exactPhrases": [
+            "控制通话取消静音",
+            "设置控制通话为取消静音"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "action": "unmute"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.communication.call.control.speaker_on",
+          "exactPhrases": [
+            "控制通话打开扬声器",
+            "设置控制通话为打开扬声器"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "action": "speaker_on"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.communication.call.control.speaker_off",
+          "exactPhrases": [
+            "控制通话关闭扬声器",
+            "设置控制通话为关闭扬声器"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "action": "speaker_off"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.communication.call.control.hold",
+          "exactPhrases": [
+            "控制通话保持通话",
+            "设置控制通话为保持通话"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "action": "hold"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.communication.call.control.resume",
+          "exactPhrases": [
+            "控制通话恢复通话",
+            "设置控制通话为恢复通话"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "action": "resume"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "控制通话静音",
+        "控制通话取消静音",
+        "控制通话打开扬声器"
+      ],
+      "negativeExamples": [
+        "查询控制通话",
+        "我不想设置控制通话"
+      ],
+      "conflictToolIds": [
+        "communication.call.answer",
+        "communication.call.end",
+        "communication.call.reject",
+        "communication.call.start"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "communication.message.send",
+      "support": "NOT_SUPPORTED",
+      "supportReason": "联系人与自由文本内容均需语义/实体解析",
+      "rules": [],
+      "positiveExamples": [
+        "发送消息"
+      ],
+      "negativeExamples": [
+        "明确执行发送消息"
+      ],
+      "conflictToolIds": [
+        "communication.message.read"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "communication.call.end",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.communication.call.end.command",
+          "exactPhrases": [
+            "结束通话"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "结束通话"
+      ],
+      "negativeExamples": [
+        "我不想结束通话",
+        "查询通话"
+      ],
+      "conflictToolIds": [
+        "communication.call.answer",
+        "communication.call.control",
+        "communication.call.reject",
+        "communication.call.start"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "communication.call.reject",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.communication.call.reject.command",
+          "exactPhrases": [
+            "拒接来电"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "拒接来电"
+      ],
+      "negativeExamples": [
+        "我不想拒接来电",
+        "查询来电"
+      ],
+      "conflictToolIds": [
+        "communication.call.answer",
+        "communication.call.control",
+        "communication.call.end",
+        "communication.call.start"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "communication.call.answer",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.communication.call.answer.command",
+          "exactPhrases": [
+            "接听来电"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "接听来电"
+      ],
+      "negativeExamples": [
+        "我不想接听来电",
+        "查询来电"
+      ],
+      "conflictToolIds": [
+        "communication.call.control",
+        "communication.call.end",
+        "communication.call.reject",
+        "communication.call.start"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "communication.call.start",
+      "support": "NOT_SUPPORTED",
+      "supportReason": "联系人或号码需要实体解析与歧义处理",
+      "rules": [],
+      "positiveExamples": [
+        "发起通话"
+      ],
+      "negativeExamples": [
+        "明确执行发起通话"
+      ],
+      "conflictToolIds": [
+        "communication.call.answer",
+        "communication.call.control",
+        "communication.call.end",
+        "communication.call.reject"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "communication.contact.search",
+      "support": "NOT_SUPPORTED",
+      "supportReason": "开放联系人查询文本",
+      "rules": [],
+      "positiveExamples": [
+        "搜索联系人"
+      ],
+      "negativeExamples": [
+        "明确执行搜索联系人"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "navigation.favorite.set",
+      "support": "NOT_SUPPORTED",
+      "supportReason": "需要唯一poiId及收藏对象解析",
+      "rules": [],
+      "positiveExamples": [
+        "管理地点收藏"
+      ],
+      "negativeExamples": [
+        "明确执行管理地点收藏"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "navigation.route.query",
+      "support": "SUPPORTED",
+      "supportReason": "对象、动作和参数模式稳定，可由受控规则唯一解析",
+      "rules": [
+        {
+          "ruleId": "L0.navigation.route.query.eta",
+          "exactPhrases": [
+            "还有多久到",
+            "查询到达时间",
+            "什么时候到"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "item": "eta"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.navigation.route.query.distance",
+          "exactPhrases": [
+            "还有多远",
+            "查询剩余距离"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "item": "distance"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.navigation.route.query.traffic",
+          "exactPhrases": [
+            "查询路线拥堵",
+            "路上堵不堵"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "item": "traffic"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.navigation.route.query.next_turn",
+          "exactPhrases": [
+            "下一步怎么走",
+            "查询下一转向"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "item": "next_turn"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "还有多久到",
+        "还有多远",
+        "下一步怎么走"
+      ],
+      "negativeExamples": [
+        "开始导航",
+        "停止导航"
+      ],
+      "conflictToolIds": [
+        "navigation.route.option.set",
+        "navigation.route.pause",
+        "navigation.route.resume",
+        "navigation.route.select",
+        "navigation.route.start",
+        "navigation.route.stop"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "navigation.location.query",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.navigation.location.query.query",
+          "exactPhrases": [
+            "查询当前位置",
+            "查看当前位置",
+            "当前位置状态",
+            "查一下当前位置"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "打开",
+            "关闭",
+            "设置"
+          ],
+          "priority": 5,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "查询当前位置",
+        "查看当前位置",
+        "当前位置状态"
+      ],
+      "negativeExamples": [
+        "设置当前位置",
+        "打开当前位置"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "navigation.traffic.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.navigation.traffic.set.on",
+          "exactPhrases": [
+            "打开路况显示",
+            "开启路况显示"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "enabled": true
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "关闭",
+            "关掉"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.navigation.traffic.set.off",
+          "exactPhrases": [
+            "关闭路况显示",
+            "关掉路况显示"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "enabled": false
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "打开",
+            "开启"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "打开路况显示",
+        "开启路况显示",
+        "关闭路况显示",
+        "关掉路况显示"
+      ],
+      "negativeExamples": [
+        "我不想打开路况显示",
+        "查看路况显示状态"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "navigation.map.view.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象、动作和参数模式稳定，可由受控规则唯一解析",
+      "rules": [
+        {
+          "ruleId": "L0.navigation.map.view.set.2d",
+          "exactPhrases": [
+            "地图切换二维",
+            "地图显示2D",
+            "切到二维地图"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "mode": "2d"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.navigation.map.view.set.3d",
+          "exactPhrases": [
+            "地图切换三维",
+            "地图显示3D",
+            "切到三维地图"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "mode": "3d"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "地图显示2D",
+        "地图显示3D"
+      ],
+      "negativeExamples": [
+        "查询地图状态",
+        "放大地图"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "navigation.nearby.search",
+      "support": "NOT_SUPPORTED",
+      "supportReason": "开放类别与范围搜索，交由L1实体检索",
+      "rules": [],
+      "positiveExamples": [
+        "搜索附近地点"
+      ],
+      "negativeExamples": [
+        "明确执行搜索附近地点"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "navigation.poi.detail.query",
+      "support": "NOT_SUPPORTED",
+      "supportReason": "需要唯一poiId，上下文指代不可由固定规则可靠确定",
+      "rules": [],
+      "positiveExamples": [
+        "查询 POI 详情"
+      ],
+      "negativeExamples": [
+        "明确执行查询 POI 详情"
+      ],
+      "conflictToolIds": [
+        "navigation.poi.search"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "navigation.poi.search",
+      "support": "NOT_SUPPORTED",
+      "supportReason": "开放POI查询文本，交由L1检索",
+      "rules": [],
+      "positiveExamples": [
+        "搜索 POI"
+      ],
+      "negativeExamples": [
+        "明确执行搜索 POI"
+      ],
+      "conflictToolIds": [
+        "navigation.poi.detail.query"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "navigation.work.start",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.navigation.work.start.command",
+          "exactPhrases": [
+            "导航去公司"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "导航去公司"
+      ],
+      "negativeExamples": [
+        "我不想导航去公司",
+        "查询去公司"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "navigation.home.start",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.navigation.home.start.command",
+          "exactPhrases": [
+            "导航回家"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "导航回家"
+      ],
+      "negativeExamples": [
+        "我不想导航回家",
+        "查询回家"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "navigation.waypoint.reorder",
+      "support": "NOT_SUPPORTED",
+      "supportReason": "需要完整有序waypointId集合",
+      "rules": [],
+      "positiveExamples": [
+        "调整途经点顺序"
+      ],
+      "negativeExamples": [
+        "明确执行调整途经点顺序"
+      ],
+      "conflictToolIds": [
+        "navigation.waypoint.add",
+        "navigation.waypoint.remove"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "navigation.waypoint.remove",
+      "support": "NOT_SUPPORTED",
+      "supportReason": "需要唯一waypointId及路线上下文",
+      "rules": [],
+      "positiveExamples": [
+        "删除途经点"
+      ],
+      "negativeExamples": [
+        "明确执行删除途经点"
+      ],
+      "conflictToolIds": [
+        "navigation.waypoint.add",
+        "navigation.waypoint.reorder"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "navigation.route.select",
+      "support": "NOT_SUPPORTED",
+      "supportReason": "需要运行时routeId与候选路线上下文",
+      "rules": [],
+      "positiveExamples": [
+        "选择备选路线"
+      ],
+      "negativeExamples": [
+        "明确执行选择备选路线"
+      ],
+      "conflictToolIds": [
+        "navigation.route.option.set",
+        "navigation.route.pause",
+        "navigation.route.query",
+        "navigation.route.resume",
+        "navigation.route.start",
+        "navigation.route.stop"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "navigation.waypoint.add",
+      "support": "NOT_SUPPORTED",
+      "supportReason": "需要唯一poiId及插入位置上下文",
+      "rules": [],
+      "positiveExamples": [
+        "添加途经点"
+      ],
+      "negativeExamples": [
+        "明确执行添加途经点"
+      ],
+      "conflictToolIds": [
+        "navigation.waypoint.remove",
+        "navigation.waypoint.reorder"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "navigation.route.option.set",
+      "support": "NEEDS_REVIEW",
+      "supportReason": "多个可选布尔偏好可能组合，需先固化互斥与默认语义",
+      "rules": [],
+      "positiveExamples": [
+        "设置路线偏好"
+      ],
+      "negativeExamples": [
+        "不得仅凭“设置路线偏好”宽泛短语直达执行"
+      ],
+      "conflictToolIds": [
+        "navigation.route.pause",
+        "navigation.route.query",
+        "navigation.route.resume",
+        "navigation.route.select",
+        "navigation.route.start",
+        "navigation.route.stop"
+      ],
+      "reviewStatus": "NEEDS_REVIEW"
+    },
+    {
+      "toolId": "navigation.route.resume",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.navigation.route.resume.command",
+          "exactPhrases": [
+            "继续导航",
+            "恢复导航"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "继续导航",
+        "恢复导航"
+      ],
+      "negativeExamples": [
+        "我不想继续导航",
+        "查询导航"
+      ],
+      "conflictToolIds": [
+        "navigation.route.option.set",
+        "navigation.route.pause",
+        "navigation.route.query",
+        "navigation.route.select",
+        "navigation.route.start",
+        "navigation.route.stop"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "navigation.route.pause",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.navigation.route.pause.command",
+          "exactPhrases": [
+            "暂停导航",
+            "先停一下导航"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "暂停导航",
+        "先停一下导航"
+      ],
+      "negativeExamples": [
+        "我不想暂停导航",
+        "查询导航"
+      ],
+      "conflictToolIds": [
+        "navigation.route.option.set",
+        "navigation.route.query",
+        "navigation.route.resume",
+        "navigation.route.select",
+        "navigation.route.start",
+        "navigation.route.stop"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "navigation.route.stop",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.navigation.route.stop.command",
+          "exactPhrases": [
+            "结束导航"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "结束导航"
+      ],
+      "negativeExamples": [
+        "我不想结束导航",
+        "查询导航"
+      ],
+      "conflictToolIds": [
+        "navigation.route.option.set",
+        "navigation.route.pause",
+        "navigation.route.query",
+        "navigation.route.resume",
+        "navigation.route.select",
+        "navigation.route.start"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "navigation.destination.set",
+      "support": "NOT_SUPPORTED",
+      "supportReason": "目的地需要POI/地址/坐标实体解析，不能仅靠有限确定性规则唯一确定",
+      "rules": [],
+      "positiveExamples": [
+        "设置导航目的地"
+      ],
+      "negativeExamples": [
+        "明确执行设置导航目的地"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "navigation.route.start",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.navigation.route.start.command",
+          "exactPhrases": [
+            "开始导航",
+            "启动导航"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "开始导航",
+        "启动导航"
+      ],
+      "negativeExamples": [
+        "我不想开始导航",
+        "查询导航"
+      ],
+      "conflictToolIds": [
+        "navigation.route.option.set",
+        "navigation.route.pause",
+        "navigation.route.query",
+        "navigation.route.resume",
+        "navigation.route.select",
+        "navigation.route.stop"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "imaging.transparent_chassis.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.imaging.transparent_chassis.set.on",
+          "exactPhrases": [
+            "打开透明底盘",
+            "开启透明底盘"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "enabled": true
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "关闭",
+            "关掉"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.imaging.transparent_chassis.set.off",
+          "exactPhrases": [
+            "关闭透明底盘",
+            "关掉透明底盘"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "enabled": false
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "打开",
+            "开启"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "打开透明底盘",
+        "开启透明底盘",
+        "关闭透明底盘",
+        "关掉透明底盘"
+      ],
+      "negativeExamples": [
+        "我不想打开透明底盘",
+        "查看透明底盘状态"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "imaging.status.query",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.imaging.status.query.query",
+          "exactPhrases": [
+            "查询影像记录状态",
+            "查看影像记录状态",
+            "影像记录状态状态",
+            "查一下影像记录状态"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "打开",
+            "关闭",
+            "设置"
+          ],
+          "priority": 5,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "查询影像记录状态",
+        "查看影像记录状态",
+        "影像记录怎么样"
+      ],
+      "negativeExamples": [
+        "设置影像记录状态",
+        "打开影像记录状态"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "imaging.dvr.playback.open",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.imaging.dvr.playback.open.command",
+          "exactPhrases": [
+            "打开记录回放",
+            "开启记录回放"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "TIME",
+              "argument": "timeRange",
+              "required": false
+            }
+          ],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "打开记录回放",
+        "开启记录回放"
+      ],
+      "negativeExamples": [
+        "我不想打开记录回放",
+        "查询记录回放"
+      ],
+      "conflictToolIds": [
+        "imaging.dvr.capture",
+        "imaging.dvr.record.set"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "imaging.dvr.capture",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.imaging.dvr.capture.command",
+          "exactPhrases": [
+            "行车记录抓拍"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "行车记录抓拍"
+      ],
+      "negativeExamples": [
+        "我不想行车记录抓拍"
+      ],
+      "conflictToolIds": [
+        "imaging.dvr.playback.open",
+        "imaging.dvr.record.set"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "imaging.avm.open",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.imaging.avm.open.command",
+          "exactPhrases": [
+            "打开环视影像",
+            "开启环视影像"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "打开环视影像",
+        "开启环视影像"
+      ],
+      "negativeExamples": [
+        "我不想打开环视影像",
+        "查询环视影像"
+      ],
+      "conflictToolIds": [
+        "imaging.avm.close"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "imaging.dvr.record.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.imaging.dvr.record.set.start",
+          "exactPhrases": [
+            "开始行车记录",
+            "打开行车记录",
+            "启动行车记录"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "recording": true
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "停止",
+            "关闭"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.imaging.dvr.record.set.stop",
+          "exactPhrases": [
+            "停止行车记录",
+            "关闭行车记录"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "recording": false
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "开始",
+            "打开"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "开始行车记录",
+        "停止行车记录"
+      ],
+      "negativeExamples": [
+        "打开行车记录回放",
+        "我不想开始行车记录"
+      ],
+      "conflictToolIds": [
+        "imaging.dvr.capture",
+        "imaging.dvr.playback.open"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "imaging.avm.close",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.imaging.avm.close.command",
+          "exactPhrases": [
+            "关闭环视影像",
+            "关掉环视影像"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "关闭环视影像",
+        "关掉环视影像"
+      ],
+      "negativeExamples": [
+        "我不想关闭环视影像",
+        "查询环视影像"
+      ],
+      "conflictToolIds": [
+        "imaging.avm.open"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "imaging.camera.view.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.imaging.camera.view.set.front",
+          "exactPhrases": [
+            "摄像头视角前挡",
+            "设置摄像头视角为前挡"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "view": "front"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.imaging.camera.view.set.rear",
+          "exactPhrases": [
+            "摄像头视角后挡",
+            "设置摄像头视角为后挡"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "view": "rear"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.imaging.camera.view.set.left",
+          "exactPhrases": [
+            "摄像头视角左侧",
+            "设置摄像头视角为左侧"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "view": "left"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.imaging.camera.view.set.right",
+          "exactPhrases": [
+            "摄像头视角右侧",
+            "设置摄像头视角为右侧"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "view": "right"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.imaging.camera.view.set.top",
+          "exactPhrases": [
+            "摄像头视角俯视",
+            "设置摄像头视角为俯视"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "view": "top"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "摄像头视角前挡",
+        "摄像头视角后挡",
+        "摄像头视角左侧"
+      ],
+      "negativeExamples": [
+        "查询摄像头视角",
+        "我不想设置摄像头视角"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "energy.regeneration.set",
+      "support": "NEEDS_REVIEW",
+      "supportReason": "必填枚举 mode 尚缺少批准的中文值别名表，暂不启用L0",
+      "rules": [],
+      "positiveExamples": [
+        "设置发电/增程策略"
+      ],
+      "negativeExamples": [
+        "未明确mode的设置发电/增程策略"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "NEEDS_REVIEW"
+    },
+    {
+      "toolId": "energy.consumption.query",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.energy.consumption.query.query",
+          "exactPhrases": [
+            "查询能耗",
+            "查看能耗",
+            "能耗状态",
+            "查一下能耗"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "打开",
+            "关闭",
+            "设置"
+          ],
+          "priority": 5,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "查询能耗",
+        "查看能耗",
+        "能耗状态"
+      ],
+      "negativeExamples": [
+        "设置能耗",
+        "打开能耗"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "energy.charge.stop",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.energy.charge.stop.command",
+          "exactPhrases": [
+            "停止充电",
+            "结束充电"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "停止充电",
+        "结束充电"
+      ],
+      "negativeExamples": [
+        "我不想停止充电",
+        "查询充电"
+      ],
+      "conflictToolIds": [
+        "energy.charge.limit.set",
+        "energy.charge.schedule.set",
+        "energy.charge.start",
+        "energy.charge.status.query"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "energy.discharge.stop",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.energy.discharge.stop.command",
+          "exactPhrases": [
+            "停止对外放电",
+            "结束对外放电"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "停止对外放电",
+        "结束对外放电"
+      ],
+      "negativeExamples": [
+        "我不想停止对外放电",
+        "查询对外放电"
+      ],
+      "conflictToolIds": [
+        "energy.discharge.start"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "energy.battery.status.query",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.energy.battery.status.query.query",
+          "exactPhrases": [
+            "查询电池状态",
+            "查看电池状态",
+            "电池状态状态",
+            "查一下电池状态"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "打开",
+            "关闭",
+            "设置"
+          ],
+          "priority": 5,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "查询电池状态",
+        "查看电池状态",
+        "电池怎么样"
+      ],
+      "negativeExamples": [
+        "设置电池状态",
+        "打开电池状态"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "energy.discharge.start",
+      "support": "NEEDS_REVIEW",
+      "supportReason": "放电类型与功率限制需要产品词汇和安全评审",
+      "rules": [],
+      "positiveExamples": [
+        "开始对外放电"
+      ],
+      "negativeExamples": [
+        "不得仅凭“开始对外放电”宽泛短语直达执行"
+      ],
+      "conflictToolIds": [
+        "energy.discharge.stop"
+      ],
+      "reviewStatus": "NEEDS_REVIEW"
+    },
+    {
+      "toolId": "energy.charge.status.query",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.energy.charge.status.query.query",
+          "exactPhrases": [
+            "查询充电状态",
+            "查看充电状态",
+            "充电状态状态",
+            "查一下充电状态"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "打开",
+            "关闭",
+            "设置"
+          ],
+          "priority": 5,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "查询充电状态",
+        "查看充电状态",
+        "充电怎么样"
+      ],
+      "negativeExamples": [
+        "设置充电状态",
+        "打开充电状态"
+      ],
+      "conflictToolIds": [
+        "energy.charge.limit.set",
+        "energy.charge.schedule.set",
+        "energy.charge.start",
+        "energy.charge.stop"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "energy.charge.schedule.set",
+      "support": "NEEDS_REVIEW",
+      "supportReason": "预约起止时间与重复规则需要自然语言时间解析",
+      "rules": [],
+      "positiveExamples": [
+        "设置预约充电"
+      ],
+      "negativeExamples": [
+        "不得仅凭“设置预约充电”宽泛短语直达执行"
+      ],
+      "conflictToolIds": [
+        "energy.charge.limit.set",
+        "energy.charge.start",
+        "energy.charge.status.query",
+        "energy.charge.stop"
+      ],
+      "reviewStatus": "NEEDS_REVIEW"
+    },
+    {
+      "toolId": "energy.charge.limit.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.energy.charge.limit.set.set_numeric",
+          "exactPhrases": [
+            "充电上限调到",
+            "设置充电上限",
+            "充电上限设为"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "NUMERIC",
+              "argument": "percent",
+              "required": true
+            }
+          ],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "查询",
+            "多少"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "充电上限调到50%",
+        "设置充电上限50%"
+      ],
+      "negativeExamples": [
+        "查询充电上限",
+        "我不想设置充电上限"
+      ],
+      "conflictToolIds": [
+        "energy.charge.schedule.set",
+        "energy.charge.start",
+        "energy.charge.status.query",
+        "energy.charge.stop"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "energy.charge.start",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.energy.charge.start.command",
+          "exactPhrases": [
+            "开始充电",
+            "启动充电"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "开始充电",
+        "启动充电"
+      ],
+      "negativeExamples": [
+        "我不想开始充电",
+        "查询充电"
+      ],
+      "conflictToolIds": [
+        "energy.charge.limit.set",
+        "energy.charge.schedule.set",
+        "energy.charge.status.query",
+        "energy.charge.stop"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "adas.status.query",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.adas.status.query.query",
+          "exactPhrases": [
+            "查询 ADAS 状态",
+            "查看ADAS 状态",
+            "ADAS 状态状态",
+            "查一下ADAS 状态"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "打开",
+            "关闭",
+            "设置"
+          ],
+          "priority": 5,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "查询 ADAS 状态",
+        "查看ADAS 状态",
+        "ADAS 怎么样"
+      ],
+      "negativeExamples": [
+        "设置ADAS 状态",
+        "打开ADAS 状态"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "adas.parking_assist.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.adas.parking_assist.set.on",
+          "exactPhrases": [
+            "打开泊车辅助",
+            "开启泊车辅助"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "enabled": true
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "关闭",
+            "关掉"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.adas.parking_assist.set.off",
+          "exactPhrases": [
+            "关闭泊车辅助",
+            "关掉泊车辅助"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "enabled": false
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "打开",
+            "开启"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "打开泊车辅助",
+        "开启泊车辅助",
+        "关闭泊车辅助",
+        "关掉泊车辅助"
+      ],
+      "negativeExamples": [
+        "我不想打开泊车辅助",
+        "查看泊车辅助状态"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "adas.collision_warning.set",
+      "support": "NEEDS_REVIEW",
+      "supportReason": "必填枚举 mode 尚缺少批准的中文值别名表，暂不启用L0",
+      "rules": [],
+      "positiveExamples": [
+        "设置碰撞预警"
+      ],
+      "negativeExamples": [
+        "未明确mode的设置碰撞预警"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "NEEDS_REVIEW"
+    },
+    {
+      "toolId": "adas.lane_centering.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.adas.lane_centering.set.on",
+          "exactPhrases": [
+            "打开车道居中",
+            "开启车道居中"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "enabled": true
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "关闭",
+            "关掉"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.adas.lane_centering.set.off",
+          "exactPhrases": [
+            "关闭车道居中",
+            "关掉车道居中"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "enabled": false
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "打开",
+            "开启"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "打开车道居中",
+        "开启车道居中",
+        "关闭车道居中",
+        "关掉车道居中"
+      ],
+      "negativeExamples": [
+        "我不想打开车道居中",
+        "查看车道居中状态"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "adas.lane_change.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.adas.lane_change.set.on",
+          "exactPhrases": [
+            "打开自动变道",
+            "开启自动变道"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "enabled": true
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "关闭",
+            "关掉"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.adas.lane_change.set.off",
+          "exactPhrases": [
+            "关闭自动变道",
+            "关掉自动变道"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "enabled": false
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "打开",
+            "开启"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "打开自动变道",
+        "开启自动变道",
+        "关闭自动变道",
+        "关掉自动变道"
+      ],
+      "negativeExamples": [
+        "我不想打开自动变道",
+        "查看自动变道状态"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "adas.speed.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.adas.speed.set.set_numeric",
+          "exactPhrases": [
+            "辅助驾驶速度调到",
+            "设置辅助驾驶速度",
+            "辅助驾驶速度设为"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "NUMERIC",
+              "argument": "speed",
+              "required": true
+            }
+          ],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "查询",
+            "多少"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "辅助驾驶速度调到80公里每小时",
+        "设置辅助驾驶速度80公里每小时"
+      ],
+      "negativeExamples": [
+        "查询辅助驾驶速度",
+        "我不想设置辅助驾驶速度"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "adas.distance.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.adas.distance.set.set_numeric",
+          "exactPhrases": [
+            "跟车距离调到",
+            "设置跟车距离",
+            "跟车距离设为"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "NUMERIC",
+              "argument": "level",
+              "required": true
+            }
+          ],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "查询",
+            "多少"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "跟车距离调到2档",
+        "设置跟车距离2档"
+      ],
+      "negativeExamples": [
+        "查询跟车距离",
+        "我不想设置跟车距离"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "adas.mode.set",
+      "support": "NEEDS_REVIEW",
+      "supportReason": "必填枚举 feature,mode 尚缺少批准的中文值别名表，暂不启用L0",
+      "rules": [],
+      "positiveExamples": [
+        "设置 ADAS 模式"
+      ],
+      "negativeExamples": [
+        "未明确feature的设置 ADAS 模式"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "NEEDS_REVIEW"
+    },
+    {
+      "toolId": "adas.sensitivity.set",
+      "support": "NEEDS_REVIEW",
+      "supportReason": "必填枚举 feature,level 尚缺少批准的中文值别名表，暂不启用L0",
+      "rules": [],
+      "positiveExamples": [
+        "设置 ADAS 灵敏度"
+      ],
+      "negativeExamples": [
+        "未明确feature的设置 ADAS 灵敏度"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "NEEDS_REVIEW"
+    },
+    {
+      "toolId": "adas.feature.set",
+      "support": "NEEDS_REVIEW",
+      "supportReason": "必填枚举 feature 尚缺少批准的中文值别名表，暂不启用L0",
+      "rules": [],
+      "positiveExamples": [
+        "设置 ADAS 功能"
+      ],
+      "negativeExamples": [
+        "未明确feature的设置 ADAS 功能"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "NEEDS_REVIEW"
+    },
+    {
+      "toolId": "vehicle.setting.query",
+      "support": "NEEDS_REVIEW",
+      "supportReason": "必填items数组尚无批准查询项词表",
+      "rules": [],
+      "positiveExamples": [
+        "查询车辆设置"
+      ],
+      "negativeExamples": [
+        "不得仅凭“查询车辆设置”宽泛短语直达执行"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "NEEDS_REVIEW"
+    },
+    {
+      "toolId": "vehicle.one_pedal.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.vehicle.one_pedal.set.on",
+          "exactPhrases": [
+            "打开单踏板模式",
+            "开启单踏板模式"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "enabled": true
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "关闭",
+            "关掉"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.vehicle.one_pedal.set.off",
+          "exactPhrases": [
+            "关闭单踏板模式",
+            "关掉单踏板模式"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "enabled": false
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "打开",
+            "开启"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "打开单踏板模式",
+        "开启单踏板模式",
+        "关闭单踏板模式",
+        "关掉单踏板模式"
+      ],
+      "negativeExamples": [
+        "我不想打开单踏板模式",
+        "查看单踏板模式状态"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "vehicle.mode.query",
+      "support": "NEEDS_REVIEW",
+      "supportReason": "必填modeType枚举尚无批准别名表",
+      "rules": [],
+      "positiveExamples": [
+        "查询车辆模式"
+      ],
+      "negativeExamples": [
+        "不得仅凭“查询车辆模式”宽泛短语直达执行"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "NEEDS_REVIEW"
+    },
+    {
+      "toolId": "vehicle.speed_limit_alert.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.vehicle.speed_limit_alert.set.on",
+          "exactPhrases": [
+            "打开限速提醒",
+            "开启限速提醒"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "NUMERIC",
+              "argument": "threshold",
+              "required": false
+            }
+          ],
+          "presetArguments": {
+            "enabled": true
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "关闭",
+            "关掉"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.vehicle.speed_limit_alert.set.off",
+          "exactPhrases": [
+            "关闭限速提醒",
+            "关掉限速提醒"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "NUMERIC",
+              "argument": "threshold",
+              "required": false
+            }
+          ],
+          "presetArguments": {
+            "enabled": false
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "打开",
+            "开启"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "打开限速提醒",
+        "开启限速提醒",
+        "关闭限速提醒",
+        "关掉限速提醒"
+      ],
+      "negativeExamples": [
+        "我不想打开限速提醒",
+        "查看限速提醒状态"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "vehicle.welcome_mode.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.vehicle.welcome_mode.set.on",
+          "exactPhrases": [
+            "打开迎宾模式",
+            "开启迎宾模式"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "enabled": true
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "关闭",
+            "关掉"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.vehicle.welcome_mode.set.off",
+          "exactPhrases": [
+            "关闭迎宾模式",
+            "关掉迎宾模式"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "enabled": false
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "打开",
+            "开启"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "打开迎宾模式",
+        "开启迎宾模式",
+        "关闭迎宾模式",
+        "关掉迎宾模式"
+      ],
+      "negativeExamples": [
+        "我不想打开迎宾模式",
+        "查看迎宾模式状态"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "vehicle.personalization.profile.set",
+      "support": "NOT_SUPPORTED",
+      "supportReason": "必填参数 profileId 依赖实体、自由文本或运行时上下文解析",
+      "rules": [],
+      "positiveExamples": [
+        "切换个性化配置"
+      ],
+      "negativeExamples": [
+        "仅凭短语直接执行切换个性化配置"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "vehicle.maintenance_mode.set",
+      "support": "NEEDS_REVIEW",
+      "supportReason": "必填枚举 system 尚缺少批准的中文值别名表，暂不启用L0",
+      "rules": [],
+      "positiveExamples": [
+        "设置维修模式"
+      ],
+      "negativeExamples": [
+        "未明确system的设置维修模式"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "NEEDS_REVIEW"
+    },
+    {
+      "toolId": "vehicle.offroad.mode.set",
+      "support": "NEEDS_REVIEW",
+      "supportReason": "必填枚举 mode 尚缺少批准的中文值别名表，暂不启用L0",
+      "rules": [],
+      "positiveExamples": [
+        "设置越野模式"
+      ],
+      "negativeExamples": [
+        "未明确mode的设置越野模式"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "NEEDS_REVIEW"
+    },
+    {
+      "toolId": "vehicle.trailer_mode.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.vehicle.trailer_mode.set.on",
+          "exactPhrases": [
+            "打开牵引模式",
+            "开启牵引模式"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "enabled": true
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "关闭",
+            "关掉"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.vehicle.trailer_mode.set.off",
+          "exactPhrases": [
+            "关闭牵引模式",
+            "关掉牵引模式"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "enabled": false
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "打开",
+            "开启"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "打开牵引模式",
+        "开启牵引模式",
+        "关闭牵引模式",
+        "关掉牵引模式"
+      ],
+      "negativeExamples": [
+        "我不想打开牵引模式",
+        "查看牵引模式状态"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "vehicle.offroad_cruise.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.vehicle.offroad_cruise.set.on",
+          "exactPhrases": [
+            "打开越野巡航",
+            "开启越野巡航"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "NUMERIC",
+              "argument": "speed",
+              "required": false
+            }
+          ],
+          "presetArguments": {
+            "enabled": true
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "关闭",
+            "关掉"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.vehicle.offroad_cruise.set.off",
+          "exactPhrases": [
+            "关闭越野巡航",
+            "关掉越野巡航"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "NUMERIC",
+              "argument": "speed",
+              "required": false
+            }
+          ],
+          "presetArguments": {
+            "enabled": false
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "打开",
+            "开启"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "打开越野巡航",
+        "开启越野巡航",
+        "关闭越野巡航",
+        "关掉越野巡航"
+      ],
+      "negativeExamples": [
+        "我不想打开越野巡航",
+        "查看越野巡航状态"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "vehicle.acceleration.mode.set",
+      "support": "NEEDS_REVIEW",
+      "supportReason": "必填枚举 mode 尚缺少批准的中文值别名表，暂不启用L0",
+      "rules": [],
+      "positiveExamples": [
+        "设置加速响应"
+      ],
+      "negativeExamples": [
+        "未明确mode的设置加速响应"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "NEEDS_REVIEW"
+    },
+    {
+      "toolId": "vehicle.hill_descent.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.vehicle.hill_descent.set.on",
+          "exactPhrases": [
+            "打开陡坡缓降",
+            "开启陡坡缓降"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "enabled": true
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "关闭",
+            "关掉"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.vehicle.hill_descent.set.off",
+          "exactPhrases": [
+            "关闭陡坡缓降",
+            "关掉陡坡缓降"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "enabled": false
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "打开",
+            "开启"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "打开陡坡缓降",
+        "开启陡坡缓降",
+        "关闭陡坡缓降",
+        "关掉陡坡缓降"
+      ],
+      "negativeExamples": [
+        "我不想打开陡坡缓降",
+        "查看陡坡缓降状态"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "vehicle.brake_regen.set",
+      "support": "NEEDS_REVIEW",
+      "supportReason": "必填枚举 level 尚缺少批准的中文值别名表，暂不启用L0",
+      "rules": [],
+      "positiveExamples": [
+        "设置能量回收"
+      ],
+      "negativeExamples": [
+        "未明确level的设置能量回收"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "NEEDS_REVIEW"
+    },
+    {
+      "toolId": "vehicle.suspension.height.set",
+      "support": "NEEDS_REVIEW",
+      "supportReason": "必填枚举 level 尚缺少批准的中文值别名表，暂不启用L0",
+      "rules": [],
+      "positiveExamples": [
+        "设置悬架高度"
+      ],
+      "negativeExamples": [
+        "未明确level的设置悬架高度"
+      ],
+      "conflictToolIds": [
+        "vehicle.suspension.mode.set"
+      ],
+      "reviewStatus": "NEEDS_REVIEW"
+    },
+    {
+      "toolId": "vehicle.suspension.mode.set",
+      "support": "NEEDS_REVIEW",
+      "supportReason": "必填枚举 mode 尚缺少批准的中文值别名表，暂不启用L0",
+      "rules": [],
+      "positiveExamples": [
+        "设置悬架模式"
+      ],
+      "negativeExamples": [
+        "未明确mode的设置悬架模式"
+      ],
+      "conflictToolIds": [
+        "vehicle.suspension.height.set"
+      ],
+      "reviewStatus": "NEEDS_REVIEW"
+    },
+    {
+      "toolId": "vehicle.steering_mode.set",
+      "support": "NEEDS_REVIEW",
+      "supportReason": "必填枚举 mode 尚缺少批准的中文值别名表，暂不启用L0",
+      "rules": [],
+      "positiveExamples": [
+        "设置转向模式"
+      ],
+      "negativeExamples": [
+        "未明确mode的设置转向模式"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "NEEDS_REVIEW"
+    },
+    {
+      "toolId": "vehicle.energy_mode.set",
+      "support": "NEEDS_REVIEW",
+      "supportReason": "必填枚举 mode 尚缺少批准的中文值别名表，暂不启用L0",
+      "rules": [],
+      "positiveExamples": [
+        "设置能源模式"
+      ],
+      "negativeExamples": [
+        "未明确mode的设置能源模式"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "NEEDS_REVIEW"
+    },
+    {
+      "toolId": "vehicle.drive_mode.set",
+      "support": "NEEDS_REVIEW",
+      "supportReason": "必填枚举 mode 尚缺少批准的中文值别名表，暂不启用L0",
+      "rules": [],
+      "positiveExamples": [
+        "设置驾驶模式"
+      ],
+      "negativeExamples": [
+        "未明确mode的设置驾驶模式"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "NEEDS_REVIEW"
+    },
+    {
+      "toolId": "body.mirror.adjust",
+      "support": "NEEDS_REVIEW",
+      "supportReason": "direction与step词汇、左右镜目标组合尚未固化",
+      "rules": [],
+      "positiveExamples": [
+        "调节后视镜"
+      ],
+      "negativeExamples": [
+        "不得仅凭“调节后视镜”宽泛短语直达执行"
+      ],
+      "conflictToolIds": [
+        "body.mirror.fold.set"
+      ],
+      "reviewStatus": "NEEDS_REVIEW"
+    },
+    {
+      "toolId": "body.mirror.fold.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.body.mirror.fold.set.fold",
+          "exactPhrases": [
+            "折叠后视镜",
+            "收起后视镜"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "target": "all",
+            "folded": true
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "展开"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.body.mirror.fold.set.unfold",
+          "exactPhrases": [
+            "展开后视镜",
+            "打开后视镜"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "target": "all",
+            "folded": false
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "折叠",
+            "收起"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "折叠后视镜",
+        "展开后视镜"
+      ],
+      "negativeExamples": [
+        "我不想折叠后视镜",
+        "调节左后视镜"
+      ],
+      "conflictToolIds": [
+        "body.mirror.adjust"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "body.washer.activate",
+      "support": "SUPPORTED",
+      "supportReason": "对象、动作和参数模式稳定，可由受控规则唯一解析",
+      "rules": [
+        {
+          "ruleId": "L0.body.washer.activate.front",
+          "exactPhrases": [
+            "喷前挡玻璃水",
+            "清洗前挡风玻璃"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "target": "front"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.body.washer.activate.rear",
+          "exactPhrases": [
+            "喷后挡玻璃水",
+            "清洗后挡风玻璃"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "target": "rear"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "喷前挡玻璃水",
+        "喷后挡玻璃水"
+      ],
+      "negativeExamples": [
+        "查询玻璃水余量",
+        "我不想喷玻璃水"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "body.wiper.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象、动作和参数模式稳定，可由受控规则唯一解析",
+      "rules": [
+        {
+          "ruleId": "L0.body.wiper.set.off",
+          "exactPhrases": [
+            "关闭雨刮",
+            "雨刮停止"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "target": "front",
+            "mode": "off"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.body.wiper.set.auto",
+          "exactPhrases": [
+            "雨刮自动模式",
+            "打开自动雨刮"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "target": "front",
+            "mode": "auto"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.body.wiper.set.intermittent",
+          "exactPhrases": [
+            "雨刮间歇模式"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "target": "front",
+            "mode": "intermittent"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.body.wiper.set.continuous",
+          "exactPhrases": [
+            "雨刮连续模式"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "target": "front",
+            "mode": "continuous"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "关闭雨刮",
+        "打开自动雨刮",
+        "雨刮间歇模式"
+      ],
+      "negativeExamples": [
+        "查询雨刮状态",
+        "我不想打开雨刮"
+      ],
+      "conflictToolIds": [
+        "body.wiper.single_sweep"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "body.wiper.single_sweep",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.body.wiper.single_sweep.front",
+          "exactPhrases": [
+            "雨刮单次刮刷前挡",
+            "设置雨刮单次刮刷为前挡"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "target": "front"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.body.wiper.single_sweep.rear",
+          "exactPhrases": [
+            "雨刮单次刮刷后挡",
+            "设置雨刮单次刮刷为后挡"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "target": "rear"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "雨刮单次刮刷前挡",
+        "雨刮单次刮刷后挡"
+      ],
+      "negativeExamples": [
+        "查询雨刮单次刮刷",
+        "我不想设置雨刮单次刮刷"
+      ],
+      "conflictToolIds": [
+        "body.wiper.set"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "body.light.status.query",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.body.light.status.query.query",
+          "exactPhrases": [
+            "查询灯光状态",
+            "查看灯光状态",
+            "灯光状态状态",
+            "查一下灯光状态"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "打开",
+            "关闭",
+            "设置"
+          ],
+          "priority": 5,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "查询灯光状态",
+        "查看灯光状态",
+        "灯光怎么样"
+      ],
+      "negativeExamples": [
+        "设置灯光状态",
+        "打开灯光状态"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "body.reading_light.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.body.reading_light.set.on",
+          "exactPhrases": [
+            "打开主驾阅读灯",
+            "打开副驾阅读灯",
+            "打开驾驶位阅读灯",
+            "打开副驾驶阅读灯",
+            "打开后排阅读灯",
+            "打开全车阅读灯",
+            "开启主驾阅读灯",
+            "开启副驾阅读灯",
+            "开启驾驶位阅读灯",
+            "开启副驾驶阅读灯",
+            "开启后排阅读灯",
+            "开启全车阅读灯"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "POSITION",
+              "argument": "position",
+              "required": true,
+              "aliases": "vehicle_position_v1"
+            },
+            {
+              "slot": "NUMERIC",
+              "argument": "brightness",
+              "required": false
+            }
+          ],
+          "presetArguments": {
+            "enabled": true
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "关闭",
+            "关掉"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.body.reading_light.set.off",
+          "exactPhrases": [
+            "关闭主驾阅读灯",
+            "关闭副驾阅读灯",
+            "关闭驾驶位阅读灯",
+            "关闭副驾驶阅读灯",
+            "关闭后排阅读灯",
+            "关闭全车阅读灯",
+            "关掉主驾阅读灯",
+            "关掉副驾阅读灯",
+            "关掉驾驶位阅读灯",
+            "关掉副驾驶阅读灯",
+            "关掉后排阅读灯",
+            "关掉全车阅读灯"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "POSITION",
+              "argument": "position",
+              "required": true,
+              "aliases": "vehicle_position_v1"
+            },
+            {
+              "slot": "NUMERIC",
+              "argument": "brightness",
+              "required": false
+            }
+          ],
+          "presetArguments": {
+            "enabled": false
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "打开",
+            "开启"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "打开主驾阅读灯",
+        "打开副驾阅读灯",
+        "关闭主驾阅读灯",
+        "关闭副驾阅读灯"
+      ],
+      "negativeExamples": [
+        "我不想打开主驾阅读灯",
+        "查看阅读灯状态"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "body.sunroof.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象、动作和参数模式稳定，可由受控规则唯一解析",
+      "rules": [
+        {
+          "ruleId": "L0.body.sunroof.set.open",
+          "exactPhrases": [
+            "打开天窗",
+            "开启天窗"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "target": "open"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.body.sunroof.set.close",
+          "exactPhrases": [
+            "关闭天窗",
+            "关上天窗"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "target": "close"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.body.sunroof.set.vent",
+          "exactPhrases": [
+            "天窗通风",
+            "天窗翘起"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "target": "vent"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "打开天窗",
+        "关闭天窗",
+        "天窗通风"
+      ],
+      "negativeExamples": [
+        "查看天窗状态",
+        "我不想打开天窗"
+      ],
+      "conflictToolIds": [
+        "body.sunroof.adjust"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "body.ambient_light.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.body.ambient_light.set.on",
+          "exactPhrases": [
+            "打开氛围灯",
+            "开启氛围灯"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "POSITION",
+              "argument": "zone",
+              "required": false,
+              "aliases": "vehicle_position_v1"
+            },
+            {
+              "slot": "NUMERIC",
+              "argument": "brightness",
+              "required": false
+            }
+          ],
+          "presetArguments": {
+            "enabled": true
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "关闭",
+            "关掉"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.body.ambient_light.set.off",
+          "exactPhrases": [
+            "关闭氛围灯",
+            "关掉氛围灯"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "POSITION",
+              "argument": "zone",
+              "required": false,
+              "aliases": "vehicle_position_v1"
+            },
+            {
+              "slot": "NUMERIC",
+              "argument": "brightness",
+              "required": false
+            }
+          ],
+          "presetArguments": {
+            "enabled": false
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "打开",
+            "开启"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "打开氛围灯",
+        "开启氛围灯",
+        "关闭氛围灯",
+        "关掉氛围灯"
+      ],
+      "negativeExamples": [
+        "我不想打开氛围灯",
+        "查看氛围灯状态"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "body.exterior_light.mode.set",
+      "support": "NEEDS_REVIEW",
+      "supportReason": "必填枚举 light,mode 尚缺少批准的中文值别名表，暂不启用L0",
+      "rules": [],
+      "positiveExamples": [
+        "设置外灯模式"
+      ],
+      "negativeExamples": [
+        "未明确light的设置外灯模式"
+      ],
+      "conflictToolIds": [
+        "body.exterior_light.set"
+      ],
+      "reviewStatus": "NEEDS_REVIEW"
+    },
+    {
+      "toolId": "body.exterior_light.set",
+      "support": "NEEDS_REVIEW",
+      "supportReason": "必填light枚举尚无批准的灯光中文别名表",
+      "rules": [],
+      "positiveExamples": [
+        "设置外部灯光"
+      ],
+      "negativeExamples": [
+        "不得仅凭“设置外部灯光”宽泛短语直达执行"
+      ],
+      "conflictToolIds": [
+        "body.exterior_light.mode.set"
+      ],
+      "reviewStatus": "NEEDS_REVIEW"
+    },
+    {
+      "toolId": "body.tailgate.status.query",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.body.tailgate.status.query.query",
+          "exactPhrases": [
+            "查询尾门状态",
+            "查看尾门状态",
+            "尾门状态状态",
+            "查一下尾门状态"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "打开",
+            "关闭",
+            "设置"
+          ],
+          "priority": 5,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "查询尾门状态",
+        "查看尾门状态",
+        "尾门怎么样"
+      ],
+      "negativeExamples": [
+        "设置尾门状态",
+        "打开尾门状态"
+      ],
+      "conflictToolIds": [
+        "body.tailgate.set"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "body.lock.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.body.lock.set.lock",
+          "exactPhrases": [
+            "锁车",
+            "车辆上锁",
+            "锁上车门"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "scope": "all",
+            "locked": true
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "解锁"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.body.lock.set.unlock",
+          "exactPhrases": [
+            "解锁车辆",
+            "车辆解锁",
+            "打开门锁"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "scope": "all",
+            "locked": false
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "锁车",
+            "上锁"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "锁车",
+        "解锁车辆"
+      ],
+      "negativeExamples": [
+        "我不想锁车",
+        "查看门锁状态"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "body.tailgate.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象、动作和参数模式稳定，可由受控规则唯一解析",
+      "rules": [
+        {
+          "ruleId": "L0.body.tailgate.set.open",
+          "exactPhrases": [
+            "打开尾门",
+            "开启后备箱"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "target": "open"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.body.tailgate.set.close",
+          "exactPhrases": [
+            "关闭尾门",
+            "关上后备箱"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "target": "close"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.body.tailgate.set.stop",
+          "exactPhrases": [
+            "停止尾门",
+            "尾门停止"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "target": "stop"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "打开尾门",
+        "关闭尾门",
+        "停止尾门"
+      ],
+      "negativeExamples": [
+        "查询尾门状态",
+        "我不想打开尾门"
+      ],
+      "conflictToolIds": [
+        "body.tailgate.status.query"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "body.child_lock.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象、动作和参数模式稳定，可由受控规则唯一解析",
+      "rules": [
+        {
+          "ruleId": "L0.body.child_lock.set.left_on",
+          "exactPhrases": [
+            "打开左侧儿童锁",
+            "左侧儿童锁上锁"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "position": "left",
+            "enabled": true
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.body.child_lock.set.right_on",
+          "exactPhrases": [
+            "打开右侧儿童锁",
+            "右侧儿童锁上锁"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "position": "right",
+            "enabled": true
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.body.child_lock.set.all_off",
+          "exactPhrases": [
+            "关闭儿童锁",
+            "解除全部儿童锁"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "position": "all",
+            "enabled": false
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "打开左侧儿童锁",
+        "打开右侧儿童锁",
+        "关闭儿童锁"
+      ],
+      "negativeExamples": [
+        "查看儿童锁状态",
+        "我不想打开儿童锁"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "body.door.status.query",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.body.door.status.query.query",
+          "exactPhrases": [
+            "查询车门状态",
+            "查看车门状态",
+            "车门状态状态",
+            "查一下车门状态"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "POSITION",
+              "argument": "positions",
+              "required": false,
+              "aliases": "vehicle_position_v1"
+            }
+          ],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "打开",
+            "关闭",
+            "设置"
+          ],
+          "priority": 5,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "查询车门状态",
+        "查看车门状态",
+        "车门怎么样"
+      ],
+      "negativeExamples": [
+        "设置车门状态",
+        "打开车门状态"
+      ],
+      "conflictToolIds": [
+        "body.door.close",
+        "body.door.open"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "body.door.close",
+      "support": "SUPPORTED",
+      "supportReason": "对象、动作和参数模式稳定，可由受控规则唯一解析",
+      "rules": [
+        {
+          "ruleId": "L0.body.door.close.close",
+          "exactPhrases": [
+            "关闭左前车门",
+            "关闭右前车门",
+            "关闭左后车门",
+            "关闭右后车门",
+            "关闭全部车门"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "POSITION",
+              "argument": "positions",
+              "required": true,
+              "aliases": "door_position_aliases_v1"
+            }
+          ],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "关闭左前车门",
+        "关闭右后车门"
+      ],
+      "negativeExamples": [
+        "查询车门状态",
+        "我不想关闭车门"
+      ],
+      "conflictToolIds": [
+        "body.door.open",
+        "body.door.status.query"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "body.door.open",
+      "support": "SUPPORTED",
+      "supportReason": "对象、动作和参数模式稳定，可由受控规则唯一解析",
+      "rules": [
+        {
+          "ruleId": "L0.body.door.open.open",
+          "exactPhrases": [
+            "打开左前车门",
+            "打开右前车门",
+            "打开左后车门",
+            "打开右后车门",
+            "打开全部车门"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "POSITION",
+              "argument": "positions",
+              "required": true,
+              "aliases": "door_position_aliases_v1"
+            }
+          ],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "打开左前车门",
+        "打开右后车门"
+      ],
+      "negativeExamples": [
+        "查询车门状态",
+        "我不想打开车门"
+      ],
+      "conflictToolIds": [
+        "body.door.close",
+        "body.door.status.query"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "body.sunshade.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象、动作和参数模式稳定，可由受控规则唯一解析",
+      "rules": [
+        {
+          "ruleId": "L0.body.sunshade.set.set",
+          "exactPhrases": [
+            "遮阳帘打开到",
+            "遮阳帘调到",
+            "设置遮阳帘开度"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "NUMERIC",
+              "argument": "percentage",
+              "required": true
+            }
+          ],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "遮阳帘打开到50%",
+        "遮阳帘调到30%"
+      ],
+      "negativeExamples": [
+        "查询遮阳帘状态",
+        "我不想调遮阳帘"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "body.sunroof.adjust",
+      "support": "NEEDS_REVIEW",
+      "supportReason": "direction与stepPercent词汇尚未固化",
+      "rules": [],
+      "positiveExamples": [
+        "调节天窗"
+      ],
+      "negativeExamples": [
+        "不得仅凭“调节天窗”宽泛短语直达执行"
+      ],
+      "conflictToolIds": [
+        "body.sunroof.set"
+      ],
+      "reviewStatus": "NEEDS_REVIEW"
+    },
+    {
+      "toolId": "body.roof.status.query",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.body.roof.status.query.query",
+          "exactPhrases": [
+            "查询天窗遮阳帘状态",
+            "查看天窗遮阳帘状态",
+            "天窗遮阳帘状态状态",
+            "查一下天窗遮阳帘状态"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "打开",
+            "关闭",
+            "设置"
+          ],
+          "priority": 5,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "查询天窗遮阳帘状态",
+        "查看天窗遮阳帘状态",
+        "天窗遮阳帘怎么样"
+      ],
+      "negativeExamples": [
+        "设置天窗遮阳帘状态",
+        "打开天窗遮阳帘状态"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "body.window.status.query",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.body.window.status.query.query",
+          "exactPhrases": [
+            "查询车窗状态",
+            "查看车窗状态",
+            "车窗状态状态",
+            "查一下车窗状态"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "POSITION",
+              "argument": "positions",
+              "required": false,
+              "aliases": "vehicle_position_v1"
+            }
+          ],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "打开",
+            "关闭",
+            "设置"
+          ],
+          "priority": 5,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "查询车窗状态",
+        "查看车窗状态",
+        "车窗怎么样"
+      ],
+      "negativeExamples": [
+        "设置车窗状态",
+        "打开车窗状态"
+      ],
+      "conflictToolIds": [
+        "body.window.adjust",
+        "body.window.set"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "body.window.adjust",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.body.window.adjust.up",
+          "exactPhrases": [
+            "车窗调高",
+            "调高车窗",
+            "增加车窗"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "POSITION",
+              "argument": "positions",
+              "required": true,
+              "aliases": "vehicle_position_v1"
+            }
+          ],
+          "presetArguments": {
+            "direction": "increase"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "调低",
+            "降低"
+          ],
+          "priority": 5,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.body.window.adjust.down",
+          "exactPhrases": [
+            "车窗调低",
+            "调低车窗",
+            "降低车窗"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "POSITION",
+              "argument": "positions",
+              "required": true,
+              "aliases": "vehicle_position_v1"
+            }
+          ],
+          "presetArguments": {
+            "direction": "decrease"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "调高",
+            "增加"
+          ],
+          "priority": 5,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "车窗调高",
+        "车窗调低"
+      ],
+      "negativeExamples": [
+        "我不想车窗调高",
+        "查询车窗"
+      ],
+      "conflictToolIds": [
+        "body.window.set",
+        "body.window.status.query"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "body.window.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象、动作和参数模式稳定，可由受控规则唯一解析",
+      "rules": [
+        {
+          "ruleId": "L0.body.window.set.open",
+          "exactPhrases": [
+            "打开左前车窗",
+            "打开右前车窗",
+            "打开左后车窗",
+            "打开右后车窗",
+            "打开全部车窗"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "POSITION",
+              "argument": "positions",
+              "required": true,
+              "aliases": "window_position_aliases_v1"
+            }
+          ],
+          "presetArguments": {
+            "target": "open"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.body.window.set.close",
+          "exactPhrases": [
+            "关闭左前车窗",
+            "关闭右前车窗",
+            "关闭左后车窗",
+            "关闭右后车窗",
+            "关闭全部车窗"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "POSITION",
+              "argument": "positions",
+              "required": true,
+              "aliases": "window_position_aliases_v1"
+            }
+          ],
+          "presetArguments": {
+            "target": "close"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "打开左前车窗",
+        "关闭全部车窗"
+      ],
+      "negativeExamples": [
+        "查询车窗状态",
+        "我不想打开车窗"
+      ],
+      "conflictToolIds": [
+        "body.window.adjust",
+        "body.window.status.query"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "refrigerator.status.query",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.refrigerator.status.query.query",
+          "exactPhrases": [
+            "查询冰箱状态",
+            "查看冰箱状态",
+            "冰箱状态状态",
+            "查一下冰箱状态"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "打开",
+            "关闭",
+            "设置"
+          ],
+          "priority": 5,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "查询冰箱状态",
+        "查看冰箱状态",
+        "冰箱怎么样"
+      ],
+      "negativeExamples": [
+        "设置冰箱状态",
+        "打开冰箱状态"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "refrigerator.temperature.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.refrigerator.temperature.set.set_numeric",
+          "exactPhrases": [
+            "冰箱温度调到",
+            "设置冰箱温度",
+            "冰箱温度设为"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "TEMPERATURE",
+              "argument": "temperature",
+              "required": true
+            }
+          ],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "查询",
+            "多少"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "冰箱温度调到24度",
+        "设置冰箱温度24度"
+      ],
+      "negativeExamples": [
+        "查询冰箱温度",
+        "我不想设置冰箱温度"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "seat.massage.mode.set",
+      "support": "NEEDS_REVIEW",
+      "supportReason": "必填枚举 position,mode 尚缺少批准的中文值别名表，暂不启用L0",
+      "rules": [],
+      "positiveExamples": [
+        "设置按摩模式"
+      ],
+      "negativeExamples": [
+        "未明确position的设置按摩模式"
+      ],
+      "conflictToolIds": [
+        "seat.massage.set"
+      ],
+      "reviewStatus": "NEEDS_REVIEW"
+    },
+    {
+      "toolId": "steering.heating.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.steering.heating.set.on",
+          "exactPhrases": [
+            "打开方向盘加热",
+            "开启方向盘加热"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "NUMERIC",
+              "argument": "level",
+              "required": false
+            }
+          ],
+          "presetArguments": {
+            "enabled": true
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "关闭",
+            "关掉"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.steering.heating.set.off",
+          "exactPhrases": [
+            "关闭方向盘加热",
+            "关掉方向盘加热"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "NUMERIC",
+              "argument": "level",
+              "required": false
+            }
+          ],
+          "presetArguments": {
+            "enabled": false
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "打开",
+            "开启"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "打开方向盘加热",
+        "开启方向盘加热",
+        "关闭方向盘加热",
+        "关掉方向盘加热"
+      ],
+      "negativeExamples": [
+        "我不想打开方向盘加热",
+        "查看方向盘加热状态"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "refrigerator.mode.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.refrigerator.mode.set.cool",
+          "exactPhrases": [
+            "冰箱模式制冷",
+            "设置冰箱模式为制冷"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "mode": "cool"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.refrigerator.mode.set.freeze",
+          "exactPhrases": [
+            "冰箱模式冷冻",
+            "设置冰箱模式为冷冻"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "mode": "freeze"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.refrigerator.mode.set.warm_milk",
+          "exactPhrases": [
+            "冰箱模式温奶",
+            "设置冰箱模式为温奶"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "mode": "warm_milk"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.refrigerator.mode.set.fresh",
+          "exactPhrases": [
+            "冰箱模式保鲜",
+            "设置冰箱模式为保鲜"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "mode": "fresh"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "冰箱模式制冷",
+        "冰箱模式冷冻",
+        "冰箱模式温奶"
+      ],
+      "negativeExamples": [
+        "查询冰箱模式",
+        "我不想设置冰箱模式"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "seat.comfort.status.query",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.seat.comfort.status.query.query",
+          "exactPhrases": [
+            "查询座椅舒适状态",
+            "查看座椅舒适状态",
+            "座椅舒适状态状态",
+            "查一下座椅舒适状态"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "POSITION",
+              "argument": "position",
+              "required": false,
+              "aliases": "vehicle_position_v1"
+            }
+          ],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "打开",
+            "关闭",
+            "设置"
+          ],
+          "priority": 5,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "查询座椅舒适状态",
+        "查看座椅舒适状态",
+        "座椅舒适怎么样"
+      ],
+      "negativeExamples": [
+        "设置座椅舒适状态",
+        "打开座椅舒适状态"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "seat.massage.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.seat.massage.set.on",
+          "exactPhrases": [
+            "打开座椅按摩",
+            "开启座椅按摩",
+            "打开按摩",
+            "座椅按摩打开",
+            "打开主驾座椅按摩",
+            "打开副驾座椅按摩"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "POSITION",
+              "argument": "position",
+              "required": true,
+              "aliases": "vehicle_position_v1"
+            },
+            {
+              "slot": "NUMERIC",
+              "argument": "level",
+              "required": false
+            }
+          ],
+          "presetArguments": {
+            "enabled": true
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "关闭",
+            "关掉",
+            "关上"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.seat.massage.set.off",
+          "exactPhrases": [
+            "关闭座椅按摩",
+            "关掉座椅按摩",
+            "关闭按摩",
+            "关闭主驾座椅按摩",
+            "关闭副驾座椅按摩"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "POSITION",
+              "argument": "position",
+              "required": true,
+              "aliases": "vehicle_position_v1"
+            },
+            {
+              "slot": "NUMERIC",
+              "argument": "level",
+              "required": false
+            }
+          ],
+          "presetArguments": {
+            "enabled": false
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "打开",
+            "开启"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "打开座椅按摩",
+        "开启座椅按摩",
+        "打开按摩",
+        "关闭座椅按摩",
+        "关掉座椅按摩",
+        "关闭按摩"
+      ],
+      "negativeExamples": [
+        "我不想打开主驾座椅按摩",
+        "查看座椅按摩状态"
+      ],
+      "conflictToolIds": [
+        "seat.massage.mode.set"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "seat.ventilation.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.seat.ventilation.set.on",
+          "exactPhrases": [
+            "打开主驾座椅通风",
+            "打开副驾座椅通风",
+            "打开驾驶位座椅通风",
+            "打开副驾驶座椅通风",
+            "打开后排座椅通风",
+            "打开全车座椅通风",
+            "开启主驾座椅通风",
+            "开启副驾座椅通风",
+            "开启驾驶位座椅通风",
+            "开启副驾驶座椅通风",
+            "开启后排座椅通风",
+            "开启全车座椅通风"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "POSITION",
+              "argument": "position",
+              "required": true,
+              "aliases": "vehicle_position_v1"
+            },
+            {
+              "slot": "NUMERIC",
+              "argument": "level",
+              "required": false
+            }
+          ],
+          "presetArguments": {
+            "enabled": true
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "关闭",
+            "关掉"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.seat.ventilation.set.off",
+          "exactPhrases": [
+            "关闭主驾座椅通风",
+            "关闭副驾座椅通风",
+            "关闭驾驶位座椅通风",
+            "关闭副驾驶座椅通风",
+            "关闭后排座椅通风",
+            "关闭全车座椅通风",
+            "关掉主驾座椅通风",
+            "关掉副驾座椅通风",
+            "关掉驾驶位座椅通风",
+            "关掉副驾驶座椅通风",
+            "关掉后排座椅通风",
+            "关掉全车座椅通风"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "POSITION",
+              "argument": "position",
+              "required": true,
+              "aliases": "vehicle_position_v1"
+            },
+            {
+              "slot": "NUMERIC",
+              "argument": "level",
+              "required": false
+            }
+          ],
+          "presetArguments": {
+            "enabled": false
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "打开",
+            "开启"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "打开主驾座椅通风",
+        "打开副驾座椅通风",
+        "关闭主驾座椅通风",
+        "关闭副驾座椅通风"
+      ],
+      "negativeExamples": [
+        "我不想打开主驾座椅通风",
+        "查看座椅通风状态"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "seat.heating.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.seat.heating.set.on",
+          "exactPhrases": [
+            "打开主驾座椅加热",
+            "打开副驾座椅加热",
+            "打开驾驶位座椅加热",
+            "打开副驾驶座椅加热",
+            "打开后排座椅加热",
+            "打开全车座椅加热",
+            "开启主驾座椅加热",
+            "开启副驾座椅加热",
+            "开启驾驶位座椅加热",
+            "开启副驾驶座椅加热",
+            "开启后排座椅加热",
+            "开启全车座椅加热"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "POSITION",
+              "argument": "position",
+              "required": true,
+              "aliases": "vehicle_position_v1"
+            },
+            {
+              "slot": "NUMERIC",
+              "argument": "level",
+              "required": false
+            }
+          ],
+          "presetArguments": {
+            "enabled": true
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "关闭",
+            "关掉"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.seat.heating.set.off",
+          "exactPhrases": [
+            "关闭主驾座椅加热",
+            "关闭副驾座椅加热",
+            "关闭驾驶位座椅加热",
+            "关闭副驾驶座椅加热",
+            "关闭后排座椅加热",
+            "关闭全车座椅加热",
+            "关掉主驾座椅加热",
+            "关掉副驾座椅加热",
+            "关掉驾驶位座椅加热",
+            "关掉副驾驶座椅加热",
+            "关掉后排座椅加热",
+            "关掉全车座椅加热"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "POSITION",
+              "argument": "position",
+              "required": true,
+              "aliases": "vehicle_position_v1"
+            },
+            {
+              "slot": "NUMERIC",
+              "argument": "level",
+              "required": false
+            }
+          ],
+          "presetArguments": {
+            "enabled": false
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "打开",
+            "开启"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "打开主驾座椅加热",
+        "打开副驾座椅加热",
+        "关闭主驾座椅加热",
+        "关闭副驾座椅加热"
+      ],
+      "negativeExamples": [
+        "我不想打开主驾座椅加热",
+        "查看座椅加热状态"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "climate.status.query",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.climate.status.query.query",
+          "exactPhrases": [
+            "空调开了吗",
+            "空调关了吗",
+            "现在多少度",
+            "空调状态",
+            "查一下空调",
+            "查看空调状态",
+            "空调现在多少度"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "POSITION",
+              "argument": "zone",
+              "required": false,
+              "aliases": "vehicle_position_v1"
+            }
+          ],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想查询",
+            "不要查询",
+            "打开空调",
+            "关闭空调"
+          ],
+          "priority": 5,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "空调开了吗",
+        "空调关了吗",
+        "现在多少度"
+      ],
+      "negativeExamples": [
+        "设置空调状态",
+        "打开空调状态"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "climate.vent.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.climate.vent.set.on",
+          "exactPhrases": [
+            "打开主驾通风口",
+            "打开副驾通风口",
+            "打开驾驶位通风口",
+            "打开副驾驶通风口",
+            "打开后排通风口",
+            "打开全车通风口",
+            "开启主驾通风口",
+            "开启副驾通风口",
+            "开启驾驶位通风口",
+            "开启副驾驶通风口",
+            "开启后排通风口",
+            "开启全车通风口"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "POSITION",
+              "argument": "zone",
+              "required": true,
+              "aliases": "vehicle_position_v1"
+            }
+          ],
+          "presetArguments": {
+            "enabled": true
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "关闭",
+            "关掉"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.climate.vent.set.off",
+          "exactPhrases": [
+            "关闭主驾通风口",
+            "关闭副驾通风口",
+            "关闭驾驶位通风口",
+            "关闭副驾驶通风口",
+            "关闭后排通风口",
+            "关闭全车通风口",
+            "关掉主驾通风口",
+            "关掉副驾通风口",
+            "关掉驾驶位通风口",
+            "关掉副驾驶通风口",
+            "关掉后排通风口",
+            "关掉全车通风口"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "POSITION",
+              "argument": "zone",
+              "required": true,
+              "aliases": "vehicle_position_v1"
+            }
+          ],
+          "presetArguments": {
+            "enabled": false
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "打开",
+            "开启"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "打开主驾通风口",
+        "打开副驾通风口",
+        "关闭主驾通风口",
+        "关闭副驾通风口"
+      ],
+      "negativeExamples": [
+        "我不想打开主驾通风口",
+        "查看通风口状态"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "climate.fragrance.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.climate.fragrance.set.on",
+          "exactPhrases": [
+            "打开香氛",
+            "开启香氛"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "NUMERIC",
+              "argument": "level",
+              "required": false
+            }
+          ],
+          "presetArguments": {
+            "enabled": true
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "关闭",
+            "关掉"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.climate.fragrance.set.off",
+          "exactPhrases": [
+            "关闭香氛",
+            "关掉香氛"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "NUMERIC",
+              "argument": "level",
+              "required": false
+            }
+          ],
+          "presetArguments": {
+            "enabled": false
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "打开",
+            "开启"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "打开香氛",
+        "开启香氛",
+        "关闭香氛",
+        "关掉香氛"
+      ],
+      "negativeExamples": [
+        "我不想打开香氛",
+        "查看香氛状态"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "climate.air_quality.query",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.climate.air_quality.query.query",
+          "exactPhrases": [
+            "查询空气质量",
+            "查看空气质量",
+            "空气质量状态",
+            "查一下空气质量"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "打开",
+            "关闭",
+            "设置"
+          ],
+          "priority": 5,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "查询空气质量",
+        "查看空气质量",
+        "空气质量状态"
+      ],
+      "negativeExamples": [
+        "设置空气质量",
+        "打开空气质量"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "climate.defrost.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象、动作和参数模式稳定，可由受控规则唯一解析",
+      "rules": [
+        {
+          "ruleId": "L0.climate.defrost.set.front_on",
+          "exactPhrases": [
+            "打开前挡除雾",
+            "开启前挡除霜",
+            "前挡除雾"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "target": "front",
+            "enabled": true
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.climate.defrost.set.rear_on",
+          "exactPhrases": [
+            "打开后挡除雾",
+            "开启后挡除霜",
+            "后挡除雾"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "target": "rear",
+            "enabled": true
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.climate.defrost.set.all_off",
+          "exactPhrases": [
+            "关闭除霜除雾",
+            "关掉全部除雾"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "target": "all",
+            "enabled": false
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "打开前挡除雾",
+        "打开后挡除雾",
+        "关闭除霜除雾"
+      ],
+      "negativeExamples": [
+        "我不想打开前挡除雾",
+        "查询除雾状态"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "climate.temperature.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.climate.temperature.set.set",
+          "exactPhrases": [
+            "温度调到",
+            "调到",
+            "设为",
+            "设成",
+            "空调设成",
+            "调成",
+            "温度设为"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "TEMPERATURE",
+              "argument": "temperature",
+              "required": true
+            },
+            {
+              "slot": "POSITION",
+              "argument": "zone",
+              "required": true,
+              "aliases": "vehicle_position_v1"
+            }
+          ],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "多少度",
+            "查询"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "温度调到",
+        "调到",
+        "设为"
+      ],
+      "negativeExamples": [
+        "查询目标温度",
+        "我不想设置目标温度"
+      ],
+      "conflictToolIds": [
+        "climate.temperature.adjust"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "climate.temperature.adjust",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.climate.temperature.adjust.up",
+          "exactPhrases": [
+            "温度调高一点",
+            "温度调高",
+            "调高温度",
+            "调高点",
+            "升温",
+            "温度高一点"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "POSITION",
+              "argument": "zone",
+              "required": true,
+              "aliases": "vehicle_position_v1"
+            },
+            {
+              "slot": "STEP",
+              "argument": "step",
+              "required": false
+            }
+          ],
+          "presetArguments": {
+            "direction": "increase"
+          },
+          "negativePatterns": [
+            "调低",
+            "降温"
+          ],
+          "priority": 5,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.climate.temperature.adjust.down",
+          "exactPhrases": [
+            "温度调低一点",
+            "温度调低",
+            "调低温度",
+            "调低点",
+            "降温",
+            "温度低一点"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "POSITION",
+              "argument": "zone",
+              "required": true,
+              "aliases": "vehicle_position_v1"
+            },
+            {
+              "slot": "STEP",
+              "argument": "step",
+              "required": false
+            }
+          ],
+          "presetArguments": {
+            "direction": "decrease"
+          },
+          "negativePatterns": [
+            "调高",
+            "升温"
+          ],
+          "priority": 5,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.climate.temperature.adjust.driver_up",
+          "exactPhrases": [
+            "主驾升温",
+            "驾驶位升温",
+            "主驾驶升温"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "STEP",
+              "argument": "step",
+              "required": false
+            }
+          ],
+          "presetArguments": {
+            "zone": "driver",
+            "direction": "increase"
+          },
+          "negativePatterns": [
+            "降温"
+          ],
+          "priority": 8,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.climate.temperature.adjust.passenger_up",
+          "exactPhrases": [
+            "副驾升温",
+            "副驾驶升温",
+            "乘客位升温"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "STEP",
+              "argument": "step",
+              "required": false
+            }
+          ],
+          "presetArguments": {
+            "zone": "passenger",
+            "direction": "increase"
+          },
+          "negativePatterns": [
+            "降温"
+          ],
+          "priority": 8,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.climate.temperature.adjust.driver_down",
+          "exactPhrases": [
+            "主驾降温",
+            "驾驶位降温",
+            "主驾驶降温"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "STEP",
+              "argument": "step",
+              "required": false
+            }
+          ],
+          "presetArguments": {
+            "zone": "driver",
+            "direction": "decrease"
+          },
+          "negativePatterns": [
+            "升温"
+          ],
+          "priority": 8,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.climate.temperature.adjust.passenger_down",
+          "exactPhrases": [
+            "副驾降温",
+            "副驾驶降温",
+            "乘客位降温"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "STEP",
+              "argument": "step",
+              "required": false
+            }
+          ],
+          "presetArguments": {
+            "zone": "passenger",
+            "direction": "decrease"
+          },
+          "negativePatterns": [
+            "升温"
+          ],
+          "priority": 8,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "温度调高一点",
+        "温度调高",
+        "调高温度",
+        "温度调低一点",
+        "温度调低",
+        "调低温度",
+        "主驾升温",
+        "驾驶位升温",
+        "主驾驶升温",
+        "副驾升温",
+        "副驾驶升温",
+        "乘客位升温",
+        "主驾降温",
+        "驾驶位降温",
+        "主驾驶降温",
+        "副驾降温",
+        "副驾驶降温",
+        "乘客位降温"
+      ],
+      "negativeExamples": [
+        "我不想温度调高",
+        "查询温度"
+      ],
+      "conflictToolIds": [
+        "climate.temperature.set"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "climate.power.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.climate.power.set.on",
+          "exactPhrases": [
+            "打开空调",
+            "开启空调",
+            "把空调打开",
+            "开空调",
+            "空调打开"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "POSITION",
+              "argument": "zone",
+              "required": false,
+              "aliases": "vehicle_position_v1"
+            }
+          ],
+          "presetArguments": {
+            "enabled": true
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "关闭",
+            "关掉",
+            "关上"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.climate.power.set.off",
+          "exactPhrases": [
+            "关闭空调",
+            "关空调",
+            "把空调关掉",
+            "关掉空调",
+            "空调关闭"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "POSITION",
+              "argument": "zone",
+              "required": false,
+              "aliases": "vehicle_position_v1"
+            }
+          ],
+          "presetArguments": {
+            "enabled": false
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "打开",
+            "开启"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "打开空调",
+        "开启空调",
+        "把空调打开",
+        "关闭空调",
+        "关空调",
+        "把空调关掉"
+      ],
+      "negativeExamples": [
+        "我不想打开空调电源",
+        "查看空调电源状态"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "climate.airflow.mode.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.climate.airflow.mode.set.face",
+          "exactPhrases": [
+            "出风模式吹脸",
+            "设置出风模式为吹脸"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "POSITION",
+              "argument": "zone",
+              "required": false,
+              "aliases": "vehicle_position_v1"
+            }
+          ],
+          "presetArguments": {
+            "mode": "face"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.climate.airflow.mode.set.feet",
+          "exactPhrases": [
+            "出风模式吹脚",
+            "设置出风模式为吹脚"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "POSITION",
+              "argument": "zone",
+              "required": false,
+              "aliases": "vehicle_position_v1"
+            }
+          ],
+          "presetArguments": {
+            "mode": "feet"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.climate.airflow.mode.set.defrost",
+          "exactPhrases": [
+            "出风模式除霜",
+            "设置出风模式为除霜"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "POSITION",
+              "argument": "zone",
+              "required": false,
+              "aliases": "vehicle_position_v1"
+            }
+          ],
+          "presetArguments": {
+            "mode": "defrost"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.climate.airflow.mode.set.mixed",
+          "exactPhrases": [
+            "出风模式混合",
+            "设置出风模式为混合"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "POSITION",
+              "argument": "zone",
+              "required": false,
+              "aliases": "vehicle_position_v1"
+            }
+          ],
+          "presetArguments": {
+            "mode": "mixed"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "出风模式吹脸",
+        "出风模式吹脚",
+        "出风模式除霜"
+      ],
+      "negativeExamples": [
+        "查询出风模式",
+        "我不想设置出风模式"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "climate.auto.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.climate.auto.set.on",
+          "exactPhrases": [
+            "打开自动空调",
+            "开启自动空调"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "POSITION",
+              "argument": "zone",
+              "required": false,
+              "aliases": "vehicle_position_v1"
+            }
+          ],
+          "presetArguments": {
+            "enabled": true
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "关闭",
+            "关掉"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.climate.auto.set.off",
+          "exactPhrases": [
+            "关闭自动空调",
+            "关掉自动空调"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "POSITION",
+              "argument": "zone",
+              "required": false,
+              "aliases": "vehicle_position_v1"
+            }
+          ],
+          "presetArguments": {
+            "enabled": false
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别",
+            "打开",
+            "开启"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "打开自动空调",
+        "开启自动空调",
+        "关闭自动空调",
+        "关掉自动空调"
+      ],
+      "negativeExamples": [
+        "我不想打开自动空调",
+        "查看自动空调状态"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "climate.circulation.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象、动作和参数模式稳定，可由受控规则唯一解析",
+      "rules": [
+        {
+          "ruleId": "L0.climate.circulation.set.internal",
+          "exactPhrases": [
+            "切换内循环",
+            "打开内循环",
+            "使用内循环"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "mode": "internal"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.climate.circulation.set.external",
+          "exactPhrases": [
+            "切换外循环",
+            "打开外循环",
+            "使用外循环"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "mode": "external"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.climate.circulation.set.auto",
+          "exactPhrases": [
+            "内外循环自动",
+            "自动循环"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {
+            "mode": "auto"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "别"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "切换内循环",
+        "切换外循环",
+        "内外循环自动"
+      ],
+      "negativeExamples": [
+        "查询内外循环状态",
+        "我不想切换内循环"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "climate.fan.speed.adjust",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.climate.fan.speed.adjust.up",
+          "exactPhrases": [
+            "风量调高",
+            "调高风量",
+            "增加风量"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "STEP",
+              "argument": "step",
+              "required": true
+            }
+          ],
+          "presetArguments": {
+            "direction": "increase"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "调低",
+            "降低"
+          ],
+          "priority": 5,
+          "synonymPatterns": []
+        },
+        {
+          "ruleId": "L0.climate.fan.speed.adjust.down",
+          "exactPhrases": [
+            "风量调低",
+            "调低风量",
+            "降低风量"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "STEP",
+              "argument": "step",
+              "required": true
+            }
+          ],
+          "presetArguments": {
+            "direction": "decrease"
+          },
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "调高",
+            "增加"
+          ],
+          "priority": 5,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "风量调高",
+        "风量调低"
+      ],
+      "negativeExamples": [
+        "我不想风量调高",
+        "查询风量"
+      ],
+      "conflictToolIds": [
+        "climate.fan.speed.set"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "climate.fan.speed.set",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.climate.fan.speed.set.set_numeric",
+          "exactPhrases": [
+            "风量档位调到",
+            "设置风量档位",
+            "风量档位设为"
+          ],
+          "slotPatterns": [
+            {
+              "slot": "POSITION",
+              "argument": "zone",
+              "required": false,
+              "aliases": "vehicle_position_v1"
+            },
+            {
+              "slot": "NUMERIC",
+              "argument": "level",
+              "required": true
+            }
+          ],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "查询",
+            "多少"
+          ],
+          "priority": 10,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "风量档位调到2档",
+        "设置风量档位2档"
+      ],
+      "negativeExamples": [
+        "查询风量档位",
+        "我不想设置风量档位"
+      ],
+      "conflictToolIds": [
+        "climate.fan.speed.adjust"
+      ],
+      "reviewStatus": "DRAFT"
+    },
+    {
+      "toolId": "system.status.query",
+      "support": "SUPPORTED",
+      "supportReason": "对象与动作稳定，必填参数可由固定短语、槽位或受控预置参数完整确定",
+      "rules": [
+        {
+          "ruleId": "L0.system.status.query.query",
+          "exactPhrases": [
+            "查询系统状态",
+            "查看系统状态",
+            "系统状态状态",
+            "查一下系统状态"
+          ],
+          "slotPatterns": [],
+          "presetArguments": {},
+          "negativePatterns": [
+            "不想",
+            "不要",
+            "打开",
+            "关闭",
+            "设置"
+          ],
+          "priority": 5,
+          "synonymPatterns": []
+        }
+      ],
+      "positiveExamples": [
+        "查询系统状态",
+        "查看系统状态",
+        "系统怎么样"
+      ],
+      "negativeExamples": [
+        "设置系统状态",
+        "打开系统状态"
+      ],
+      "conflictToolIds": [],
+      "reviewStatus": "DRAFT"
+    }
+  ]
+}

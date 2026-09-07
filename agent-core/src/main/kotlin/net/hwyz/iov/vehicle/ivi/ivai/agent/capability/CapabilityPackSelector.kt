@@ -56,11 +56,23 @@ data class CapabilitySnapshot(
     val governanceVersion: String,
     val migrationVersion: String?,
     val governanceRuntimeMode: String,
-    val stubExemptedToolIds: Set<String> = emptySet()
+    val stubExemptedToolIds: Set<String> = emptySet(),
+    // ---- CR-013 L0 确定性候选集 ----
+    /** CR-013：仅供 FastIntentMatcher 的确定性候选（治理 Profile 投影）。 */
+    val deterministicCandidateToolIds: Set<String> = emptySet(),
+    /** CR-013：确定性目录版本（DeterministicIntentCatalog.ruleVersion）。 */
+    val deterministicCatalogVersion: String = "v0",
+    /** CR-013：确定性目录内容 Hash（DeterministicIntentCatalog.contentHash）。 */
+    val deterministicCatalogHash: String? = null
 ) {
     /** 稳定可复现的候选集 Hash（CR-010 可观测性）。 */
     val runtimeCandidateToolIdsHash: String by lazy {
         RuntimeCapabilitySet.stableHash(runtimeCandidateToolIds)
+    }
+
+    /** CR-013 确定性候选集 Hash（可观测性）。 */
+    val deterministicCandidateToolIdsHash: String by lazy {
+        RuntimeCapabilitySet.stableHash(deterministicCandidateToolIds)
     }
 
     companion object {
@@ -181,7 +193,10 @@ class CapabilityPackSelector(
             governanceVersion = capabilitySet.governanceVersion,
             migrationVersion = capabilitySet.migrationVersion,
             governanceRuntimeMode = env.mode.name,
-            stubExemptedToolIds = capabilitySet.stubExemptedToolIds
+            stubExemptedToolIds = capabilitySet.stubExemptedToolIds,
+            deterministicCandidateToolIds = capabilitySet.deterministicCandidateToolIds,
+            deterministicCatalogVersion = capabilitySet.deterministicCatalogVersion,
+            deterministicCatalogHash = capabilitySet.deterministicCatalogHash
         )
     }
 
