@@ -448,6 +448,10 @@ class ChatViewModel : ViewModel() {
                 )
             }
 
+            // CR-014: 模型调用生命周期事件仅供测试计时采集，Chat UI 不渲染。
+            is AgentEvent.ModelCallStarted -> Unit
+            is AgentEvent.ModelCallCompleted -> Unit
+
             is AgentEvent.Reply -> _state.update { st ->
                 val updated = replaceActive(st.messages, event.turnId) { active ->
                     active.copy(

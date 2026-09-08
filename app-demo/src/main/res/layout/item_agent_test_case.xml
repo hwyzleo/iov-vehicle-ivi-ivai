@@ -60,6 +60,18 @@
         android:textSize="12sp"
         android:visibility="gone" />
 
+    <!-- CR-014：分阶段耗时（处理 / 首字 / 完整 / 总计；未落定阶段显示 “—”，
+         未调用 LLM 的终态显示 “N/A”） -->
+    <TextView
+        android:id="@+id/timingText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text=""
+        android:textColor="@color/text_secondary"
+        android:textSize="12sp"
+        android:visibility="gone" />
+
     <!-- 展开的预期/实际差异 -->
     <LinearLayout
         android:id="@+id/detailContainer"

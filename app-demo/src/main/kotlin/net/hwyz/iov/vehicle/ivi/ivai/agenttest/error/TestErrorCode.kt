@@ -30,4 +30,24 @@ object TestErrorCode {
 
     /** 批次重复启动或状态转换非法。 */
     const val BATCH_STATE_INVALID = "IVAI-TEST-008"
+
+    // ---- IVI-IVAI-DSN-CR-014：批次结果导出（IVAI-REQ-138/139） ----
+
+    /** 导出批次为空。 */
+    const val EXPORT_EMPTY = "IVAI-TEST-010"
+
+    /** 批次存在未进入终态的用例，禁止导出。 */
+    const val EXPORT_NOT_TERMINAL = "IVAI-TEST-011"
+
+    /** 批次存在重复 caseId，禁止导出。 */
+    const val EXPORT_DUPLICATE_CASE_ID = "IVAI-TEST-012"
+
+    /** 计时一致性校验失败（耗时非负 / 大小关系 / llmInvoked 语义）。 */
+    const val EXPORT_INVALID_TIMING = "IVAI-TEST-013"
+
+    /** 参数 JSON 序列化失败。 */
+    const val EXPORT_SERIALIZE_FAILED = "IVAI-TEST-014"
+
+    /** 导出过程异常或批次 ID 非法。 */
+    const val EXPORT_INVALID = "IVAI-TEST-015"
 }

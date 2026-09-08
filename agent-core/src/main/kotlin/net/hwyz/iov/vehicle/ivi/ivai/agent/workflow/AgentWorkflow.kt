@@ -910,6 +910,10 @@ class AgentWorkflow(
      * [AgentConfig.streamingEnabled] is on: forwards each accumulated delta as a
      * [AgentEvent.StreamingDelta] (rendered into the processing bubble) while
      * still returning the fully accumulated response for parse / validate.
+     *
+     * CR-014: emits [AgentEvent.ModelCallStarted] before the provider call and
+     * [AgentEvent.ModelCallCompleted] once the full response is received (or the
+     * call failed / was cancelled), enabling LLM timing in the test collector.
      */
     private suspend fun callModel(
         input: AgentInput,
@@ -923,20 +927,34 @@ class AgentWorkflow(
             messages = composedMessages,
             timeoutMs = config.requestTimeoutMs
         )
+        val providerType = modelProvider::class.simpleName
+        emit(AgentEvent.ModelCallStarted(session.sessionId, input.turnId, input.requestId, config.model, providerType))
         if (!config.streamingEnabled) {
             timings.streamingUsed = false
-            return modelProvider.generate(request)
+            return try {
+                modelProvider.generate(request)
+            } finally {
+                emit(AgentEvent.ModelCallCompleted(session.sessionId, input.turnId, input.requestId, config.model, providerType))
+            }
         }
         val streaming = modelProvider as? StreamingModelProvider
         if (streaming == null) {
             timings.streamingUsed = false
-            return modelProvider.generate(request)
+            return try {
+                modelProvider.generate(request)
+            } finally {
+                emit(AgentEvent.ModelCallCompleted(session.sessionId, input.turnId, input.requestId, config.model, providerType))
+            }
         }
         timings.streamingUsed = true
         val sb = StringBuilder()
-        return streaming.generateStreaming(request) { delta ->
-            sb.append(delta)
-            emit(AgentEvent.StreamingDelta(session.sessionId, input.turnId, input.requestId, sb.toString()))
+        return try {
+            streaming.generateStreaming(request) { delta ->
+                sb.append(delta)
+                emit(AgentEvent.StreamingDelta(session.sessionId, input.turnId, input.requestId, sb.toString()))
+            }
+        } finally {
+            emit(AgentEvent.ModelCallCompleted(session.sessionId, input.turnId, input.requestId, config.model, providerType))
         }
     }
 

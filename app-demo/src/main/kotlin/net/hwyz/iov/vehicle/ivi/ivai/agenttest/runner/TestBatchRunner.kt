@@ -9,14 +9,23 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import net.hwyz.iov.vehicle.ivi.ivai.agent.evaluation.EvaluationTerminalStatus
 import net.hwyz.iov.vehicle.ivi.ivai.agent.evaluation.EvaluationSnapshotProjector
+import net.hwyz.iov.vehicle.ivi.ivai.agent.event.AgentEvent
 import net.hwyz.iov.vehicle.ivi.ivai.agent.router.IntentTier
 import net.hwyz.iov.vehicle.ivi.ivai.agenttest.error.TestErrorCode
 import net.hwyz.iov.vehicle.ivi.ivai.agenttest.gateway.AgentCommandGateway
 import net.hwyz.iov.vehicle.ivi.ivai.agenttest.model.AgentTestCase
-import net.hwyz.iov.vehicle.ivi.ivai.agenttest.result.ActualResultCollector
+import net.hwyz.iov.vehicle.ivi.ivai.agenttest.result.IntentActualResult
+import net.hwyz.iov.vehicle.ivi.ivai.agenttest.result.IntentExpectation
+import net.hwyz.iov.vehicle.ivi.ivai.agenttest.result.JsonValueMapper
+import net.hwyz.iov.vehicle.ivi.ivai.agenttest.result.TestCaseExecutionResult
+import net.hwyz.iov.vehicle.ivi.ivai.agenttest.result.TestCaseStatus
 import net.hwyz.iov.vehicle.ivi.ivai.agenttest.scoring.AgentTestScore
 import net.hwyz.iov.vehicle.ivi.ivai.agenttest.scoring.ScoredActual
 import net.hwyz.iov.vehicle.ivi.ivai.agenttest.scoring.TestScorer
+import net.hwyz.iov.vehicle.ivi.ivai.agenttest.timing.DefaultTestCaseTimingCollector
+import net.hwyz.iov.vehicle.ivi.ivai.agenttest.timing.TestCaseTiming
+import net.hwyz.iov.vehicle.ivi.ivai.agenttest.timing.TestCaseTimingCollector
+import net.hwyz.iov.vehicle.ivi.ivai.agenttest.result.ActualResultCollector
 import net.hwyz.iov.vehicle.ivi.ivai.demo.BuildConfig
 
 /**
@@ -42,7 +51,9 @@ enum class AgentTestCaseStatus {
 }
 
 /**
- * 单条用例执行结果（IVI-IVAI-DSN-CR-012）。
+ * 单条用例执行结果（IVI-IVAI-DSN-CR-012 / CR-014）。
+ *
+ * [timing] 为 CR-014 新增的分阶段耗时（终态后不可变；未执行用例为空）。
  */
 data class AgentTestCaseResult(
     val runId: String,
@@ -52,7 +63,10 @@ data class AgentTestCaseResult(
     val terminalStatus: EvaluationTerminalStatus? = null,
     val reasonCode: String? = null,
     val errorCode: String? = null,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val timing: TestCaseTiming? = null,
+    /** CR-014：该用例在终态时投影出的结构化实际值（供导出组装）。 */
+    val executionActual: ScoredActual? = null
 )
 
 /**
@@ -78,7 +92,7 @@ class TestRunnerException(
 ) : RuntimeException(message)
 
 /**
- * 串行批次执行器（IVI-IVAI-DSN-CR-012 批次状态机）。
+ * 串行批次执行器（IVI-IVAI-DSN-CR-012 批次状态机 / CR-014 计时采集）。
  *
  *  - 同一时刻只有一个活动 case；收到该 requestId 的终态后才执行下一条。
  *  - 每条用例创建隔离的测试 Session（REQ-121）。
@@ -88,23 +102,33 @@ class TestRunnerException(
  *    并继续下一条。
  *  - 事件按 requestId 去重，不重复评分和提交；旧批次事件不更新新批次（Session 隔离）。
  *  - 启动时执行运行环境门禁（Release / 真实 Binding 拒绝，IVAI-TEST-003）。
+ *
+ *  CR-014 计时：每条用例以单调时钟记录 t0 调度 → t1 处理 → t2/t3/t4 LLM →
+ *  t5 终态；超时、取消和异常在 finally 路径落定 t5 并保留已采集里程碑。
  */
 class TestBatchRunner(
     private val gateway: AgentCommandGateway,
     private val caseTimeoutMs: Long = DEFAULT_CASE_TIMEOUT_MS,
     private val awaitIdleTimeoutMs: Long = DEFAULT_AWAIT_IDLE_TIMEOUT_MS,
-    private val environmentAllowed: () -> Boolean = { BuildConfig.DEBUG }
+    private val environmentAllowed: () -> Boolean = { BuildConfig.DEBUG },
+    private val timingCollector: TestCaseTimingCollector = DefaultTestCaseTimingCollector()
 ) {
 
     /**
      * 顺序执行 [cases]。每完成一条通过 [onCaseResult] 回调；执行被取消（外层
      * Job cancel）时中断并取消活动请求。
      *
+     * @param onExecutionResult CR-014：每条用例终态时的不可变执行结果（供导出 /
+     *   批次状态聚合；包含 expected/actual/timing）。
+     * @param onTimingUpdate CR-014：用例执行过程中的部分计时实时回调（页面展示
+     *   已落定阶段耗时；未落定阶段保持空）。
      * @return 批次汇总。
      */
     suspend fun run(
         runId: String,
         cases: List<AgentTestCase>,
+        onExecutionResult: (suspend (TestCaseExecutionResult) -> Unit)? = null,
+        onTimingUpdate: ((String, TestCaseTiming) -> Unit)? = null,
         onCaseResult: suspend (AgentTestCaseResult) -> Unit
     ): TestRunSummary {
         if (!environmentAllowed()) {
@@ -122,17 +146,17 @@ class TestBatchRunner(
         for (case in cases) {
             if (!case.enabled) {
                 skipped++
-                onCaseResult(
-                    AgentTestCaseResult(
-                        runId = runId,
-                        caseId = case.caseId,
-                        status = AgentTestCaseStatus.SKIPPED
-                    )
+                val result = AgentTestCaseResult(
+                    runId = runId,
+                    caseId = case.caseId,
+                    status = AgentTestCaseStatus.SKIPPED
                 )
+                onCaseResult(result)
+                onExecutionResult?.invoke(toExecutionResult(runId, case, result, actual = null))
                 continue
             }
 
-            val result = runOne(runId, case)
+            val result = runOne(runId, case, onTimingUpdate)
             when (result.status) {
                 AgentTestCaseStatus.PASSED -> passed++
                 AgentTestCaseStatus.SKIPPED -> skipped++
@@ -140,6 +164,7 @@ class TestBatchRunner(
             }
             scoreSum += result.score?.total ?: 0
             onCaseResult(result)
+            onExecutionResult?.invoke(toExecutionResult(runId, case, result, actual = result.executionActual))
             executed++
         }
 
@@ -154,7 +179,13 @@ class TestBatchRunner(
     }
 
     /** 执行单条用例：等闸门释放 → 隔离 Session → 提交 → 等待终态 → 取快照 → 评分。 */
-    private suspend fun runOne(runId: String, case: AgentTestCase): AgentTestCaseResult {
+    private suspend fun runOne(
+        runId: String,
+        case: AgentTestCase,
+        onTimingUpdate: ((String, TestCaseTiming) -> Unit)?
+    ): AgentTestCaseResult {
+        timingCollector.onCaseScheduled(case.caseId)
+
         // 串行语义加固：终态事件在服务端 process 内部发出，而活动 Turn 闸门要等 process
         // 完全返回（finally）才释放——事件到达 ≠ 闸门释放。提交下一条前必须先等闸门真正
         // 空闲，否则全局单飞闸门会拒绝后续所有提交（大量 IVAI-TEST-004 批量失败）。
@@ -162,13 +193,15 @@ class TestBatchRunner(
             // 可能是阻塞模型调用未被取消打断：强制取消当前活动请求后重试一次。
             gateway.cancelActiveRequest()
             if (!gateway.awaitIdle(awaitIdleTimeoutMs)) {
+                val timing = timingCollector.onCaseFinalized(case.caseId)
                 return AgentTestCaseResult(
                     runId = runId,
                     caseId = case.caseId,
                     status = AgentTestCaseStatus.FAILED,
                     terminalStatus = EvaluationTerminalStatus.FAILED,
                     errorCode = TestErrorCode.SERVICE_BUSY,
-                    errorMessage = "Agent 服务活动 Turn 持续未释放，等待并强制取消后仍无法提交（IVAI-TEST-009）"
+                    errorMessage = "Agent 服务活动 Turn 持续未释放，等待并强制取消后仍无法提交（IVAI-TEST-009）",
+                    timing = timing
                 )
             }
         }
@@ -182,6 +215,8 @@ class TestBatchRunner(
             val collectJob = launch {
                 try {
                     gateway.observe(sessionId).collect { event ->
+                        // CR-014：验证链路事件驱动计时里程碑（t1～t4）。
+                        onTimingEvent(case.caseId, event, onTimingUpdate)
                         if (collector.onEvent(event)) terminal.complete(Unit)
                     }
                 } catch (e: CancellationException) {
@@ -190,85 +225,189 @@ class TestBatchRunner(
                     terminal.completeExceptionally(e)
                 }
             }
+            var result: AgentTestCaseResult
+            var snapshot: net.hwyz.iov.vehicle.ivi.ivai.agent.evaluation.AgentEvaluationSnapshot? = null
             try {
                 val accepted = gateway.submitText(sessionId, requestId, case.input)
                 if (!accepted) {
-                    return@coroutineScope AgentTestCaseResult(
+                    val timing = timingCollector.onCaseFinalized(case.caseId)
+                    result = AgentTestCaseResult(
                         runId = runId,
                         caseId = case.caseId,
                         status = AgentTestCaseStatus.FAILED,
                         terminalStatus = EvaluationTerminalStatus.FAILED,
                         errorCode = TestErrorCode.SUBMIT_FAILED,
-                        errorMessage = "提交失败：Agent 服务不可用（Agent 图未构建或服务未就绪）"
+                        errorMessage = "提交失败：Agent 服务不可用（Agent 图未构建或服务未就绪）",
+                        timing = timing
                     )
-                }
-
-                val finishedInTime = withTimeoutOrNull(caseTimeoutMs) { terminal.await() } != null
-                if (!finishedInTime) {
-                    gateway.cancelRequest(requestId)
-                    return@coroutineScope AgentTestCaseResult(
-                        runId = runId,
-                        caseId = case.caseId,
-                        status = AgentTestCaseStatus.TIMEOUT,
-                        terminalStatus = EvaluationTerminalStatus.TIMEOUT,
-                        errorCode = TestErrorCode.CASE_TIMEOUT,
-                        errorMessage = "等待结果超时（${caseTimeoutMs}ms），已取消该请求"
-                    )
-                }
-
-                // 结构化实际结果以快照契约为权威来源；缺失时用采集器兜底（IVAI-TEST-006）。
-                // 终态事件与快照写入之间仍存在极小竞态窗口（workflow 已改为先写快照再发
-                // 终态；此处再做有界重试兜底，避免 006 型 RESULT_MISSING）。
-                var snapshot = gateway.evaluationSnapshot(requestId)
-                var snapshotMissing = snapshot == null
-                if (snapshotMissing) {
-                    repeat(SNAPSHOT_READ_RETRY_TIMES) {
-                        delay(SNAPSHOT_READ_RETRY_INTERVAL_MS)
+                } else {
+                    val finishedInTime = withTimeoutOrNull(caseTimeoutMs) { terminal.await() } != null
+                    if (!finishedInTime) {
+                        gateway.cancelRequest(requestId)
+                        val timing = timingCollector.onCaseFinalized(case.caseId)
+                        result = AgentTestCaseResult(
+                            runId = runId,
+                            caseId = case.caseId,
+                            status = AgentTestCaseStatus.TIMEOUT,
+                            terminalStatus = EvaluationTerminalStatus.TIMEOUT,
+                            errorCode = TestErrorCode.CASE_TIMEOUT,
+                            errorMessage = "等待结果超时（${caseTimeoutMs}ms），已取消该请求",
+                            timing = timing
+                        )
+                    } else {
+                        // 结构化实际结果以快照契约为权威来源；缺失时用采集器兜底（IVAI-TEST-006）。
+                        // 终态事件与快照写入之间仍存在极小竞态窗口（workflow 已改为先写快照再发
+                        // 终态；此处再做有界重试兜底，避免 006 型 RESULT_MISSING）。
                         snapshot = gateway.evaluationSnapshot(requestId)
-                        if (snapshot != null) {
-                            snapshotMissing = false
-                            return@repeat
+                        var snapshotMissing = snapshot == null
+                        if (snapshotMissing) {
+                            repeat(SNAPSHOT_READ_RETRY_TIMES) {
+                                delay(SNAPSHOT_READ_RETRY_INTERVAL_MS)
+                                snapshot = gateway.evaluationSnapshot(requestId)
+                                if (snapshot != null) {
+                                    snapshotMissing = false
+                                    return@repeat
+                                }
+                            }
                         }
+                        val actual = snapshot?.let {
+                            ScoredActual(
+                                finalTier = it.finalTier,
+                                finalDomain = it.finalDomain,
+                                actualCapabilityPacks = it.selectedCapabilityPackIds,
+                                target = it.selectedTarget,
+                                arguments = it.normalizedArguments
+                            )
+                        } ?: ScoredActual()
+                        val score = TestScorer.score(case, actual)
+
+                        val terminalStatus = snapshot?.terminalStatus
+                            ?: collector.terminalStatus
+                            ?: EvaluationTerminalStatus.FAILED
+                        val status = when {
+                            snapshotMissing -> AgentTestCaseStatus.FAILED
+                            EvaluationSnapshotProjector.isIncomplete(terminalStatus) -> AgentTestCaseStatus.INCOMPLETE
+                            score.total == MAX_SCORE_PER_CASE -> AgentTestCaseStatus.PASSED
+                            else -> AgentTestCaseStatus.FAILED
+                        }
+                        val timing = timingCollector.onCaseFinalized(case.caseId)
+                        result = AgentTestCaseResult(
+                            runId = runId,
+                            caseId = case.caseId,
+                            status = status,
+                            score = score,
+                            terminalStatus = terminalStatus,
+                            reasonCode = snapshot?.reasonCode,
+                            errorCode = if (snapshotMissing) TestErrorCode.RESULT_MISSING else collector.errorCode,
+                            errorMessage = if (snapshotMissing) "结构化实际结果缺失或无法关联 requestId" else null,
+                            timing = timing,
+                            executionActual = if (snapshotMissing) null else actual
+                        )
                     }
                 }
-                val actual = snapshot?.let {
-                    ScoredActual(
-                        finalTier = it.finalTier,
-                        finalDomain = it.finalDomain,
-                        actualCapabilityPacks = it.selectedCapabilityPackIds,
-                        target = it.selectedTarget,
-                        arguments = it.normalizedArguments
-                    )
-                } ?: ScoredActual()
-                val score = TestScorer.score(case, actual)
-
-                val terminalStatus = snapshot?.terminalStatus
-                    ?: collector.terminalStatus
-                    ?: EvaluationTerminalStatus.FAILED
-                val status = when {
-                    snapshotMissing -> AgentTestCaseStatus.FAILED
-                    EvaluationSnapshotProjector.isIncomplete(terminalStatus) -> AgentTestCaseStatus.INCOMPLETE
-                    score.total == MAX_SCORE_PER_CASE -> AgentTestCaseStatus.PASSED
-                    else -> AgentTestCaseStatus.FAILED
-                }
-                AgentTestCaseResult(
-                    runId = runId,
-                    caseId = case.caseId,
-                    status = status,
-                    score = score,
-                    terminalStatus = terminalStatus,
-                    reasonCode = snapshot?.reasonCode,
-                    errorCode = if (snapshotMissing) TestErrorCode.RESULT_MISSING else collector.errorCode,
-                    errorMessage = if (snapshotMissing) "结构化实际结果缺失或无法关联 requestId" else null
-                )
             } catch (e: CancellationException) {
                 // 批次取消（外层 Job cancel）：取消活动请求后中断（CANCELLING → CANCELLED）。
                 gateway.cancelRequest(requestId)
+                timingCollector.onCaseFinalized(case.caseId)
                 throw e
+            } catch (e: Exception) {
+                // 异常也必须落定 t5（保留已采集里程碑），随后转失败结果。
+                val timing = timingCollector.onCaseFinalized(case.caseId)
+                result = AgentTestCaseResult(
+                    runId = runId,
+                    caseId = case.caseId,
+                    status = AgentTestCaseStatus.FAILED,
+                    terminalStatus = EvaluationTerminalStatus.FAILED,
+                    errorCode = TestErrorCode.SUBMIT_FAILED,
+                    errorMessage = "用例执行异常：${e.message}",
+                    timing = timing
+                )
             } finally {
                 collectJob.cancel()
             }
+            result
         }
+    }
+
+    /** CR-014：把验证链路事件映射为计时里程碑（t1～t4），并触发实时回调。 */
+    private fun onTimingEvent(
+        caseId: String,
+        event: AgentEvent,
+        onTimingUpdate: ((String, TestCaseTiming) -> Unit)?
+    ) {
+        when (event) {
+            is AgentEvent.ProcessingStarted -> timingCollector.onProcessingStarted(caseId)
+            is AgentEvent.ModelCallStarted -> timingCollector.onLlmRequestStarted(
+                caseId, event.requestId, event.model, event.providerType
+            )
+            is AgentEvent.StreamingDelta -> {
+                // 首个可消费文本增量（非空）才计首字；采集器内部保证只写一次。
+                if (event.text.isNotBlank()) {
+                    timingCollector.onLlmFirstConsumableOutput(caseId, event.requestId)
+                }
+            }
+            is AgentEvent.ModelCallCompleted -> timingCollector.onLlmCompleted(
+                caseId, event.requestId, event.model, event.providerType
+            )
+            else -> {}
+        }
+        if (onTimingUpdate != null) {
+            timingCollector.partialTiming(caseId)?.let { onTimingUpdate(caseId, it) }
+        }
+    }
+
+    /** CR-014：由用例定义 + 执行结果投影不可变 [TestCaseExecutionResult]。 */
+    private fun toExecutionResult(
+        runId: String,
+        case: AgentTestCase,
+        result: AgentTestCaseResult,
+        actual: ScoredActual?
+    ): TestCaseExecutionResult {
+        val expected = IntentExpectation(
+            level = case.expectedTier.name,
+            domainId = case.expectedDomain.name,
+            capabilityPackId = case.expectedCapabilityPack,
+            targetId = case.expectedTarget?.id,
+            arguments = JsonValueMapper.toValueMap(case.expectedArguments)
+        )
+        val actualResult = actual?.let {
+            IntentActualResult(
+                level = it.finalTier?.name,
+                domainId = it.finalDomain?.name,
+                capabilityPackId = it.actualCapabilityPacks.firstOrNull(),
+                targetId = it.target?.id,
+                arguments = it.arguments?.let(JsonValueMapper::toValueMap) ?: emptyMap()
+            )
+        }
+        val timing = result.timing ?: TestCaseTiming(
+            processingStartLatencyMs = 0,
+            llmFirstTokenLatencyMs = null,
+            llmCompleteLatencyMs = null,
+            totalCaseDurationMs = 0,
+            llmInvoked = false
+        )
+        return TestCaseExecutionResult(
+            batchId = runId,
+            caseId = case.caseId,
+            input = case.input,
+            expected = expected,
+            actual = actualResult,
+            status = mapStatus(result.status),
+            timing = timing,
+            failureReason = result.errorMessage ?: result.errorCode
+        )
+    }
+
+    /** CR-012 状态 → CR-014 导出状态。 */
+    private fun mapStatus(status: AgentTestCaseStatus): TestCaseStatus = when (status) {
+        AgentTestCaseStatus.PENDING -> TestCaseStatus.PENDING
+        AgentTestCaseStatus.RUNNING -> TestCaseStatus.RUNNING
+        AgentTestCaseStatus.PASSED -> TestCaseStatus.PASSED
+        AgentTestCaseStatus.FAILED -> TestCaseStatus.FAILED
+        AgentTestCaseStatus.INCOMPLETE -> TestCaseStatus.FAILED
+        AgentTestCaseStatus.TIMEOUT -> TestCaseStatus.TIMED_OUT
+        AgentTestCaseStatus.INVALID -> TestCaseStatus.ERROR
+        AgentTestCaseStatus.SKIPPED -> TestCaseStatus.SKIPPED
     }
 
     companion object {

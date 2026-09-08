@@ -33,6 +33,7 @@ class AgentTestCaseViewHolder(
     private val targetText: TextView = itemView.findViewById(R.id.targetText)
     private val argsText: TextView = itemView.findViewById(R.id.argsText)
     private val errorText: TextView = itemView.findViewById(R.id.errorText)
+    private val timingText: TextView = itemView.findViewById(R.id.timingText)
 
     fun bind(model: AgentTestCaseUiModel) {
         caseIdText.text = model.caseId
@@ -42,6 +43,8 @@ class AgentTestCaseViewHolder(
         statusText.text = statusLabel(model.status)
         statusText.setTextColor(ContextCompat.getColor(itemView.context, statusColor(model.status)))
         scoreText.text = model.scoreTotal?.let { "$it/5" } ?: ""
+        timingText.text = timingLine(model)
+        timingText.visibility = if (model.timing == null) View.GONE else View.VISIBLE
         detailContainer.visibility = if (model.expanded) View.VISIBLE else View.GONE
 
         val score = model.score
@@ -70,6 +73,26 @@ class AgentTestCaseViewHolder(
         val expected = field.expected?.toString() ?: "无"
         val actual = field.actual?.toString() ?: "无"
         return "$label：$mark  预期[$expected] 实际[$actual]"
+    }
+
+    /**
+     * CR-014 分阶段耗时展示：
+     *  - 用例执行中未落定阶段显示 "—"；
+     *  - 未调用 LLM 的终态用例显示 "N/A"（与尚未返回的 "—" 明确区分）；
+     *  - 已落定阶段显示毫秒值。
+     */
+    private fun timingLine(model: AgentTestCaseUiModel): String {
+        val t = model.timing ?: return "耗时：—"
+        val terminal = model.status != AgentTestCaseStatus.RUNNING &&
+            model.status != AgentTestCaseStatus.PENDING
+        return "耗时：处理 ${t.processingStartLatencyMs}ms · 首字 ${llmValue(t.llmFirstTokenLatencyMs, t.llmInvoked, terminal)} · " +
+            "完整 ${llmValue(t.llmCompleteLatencyMs, t.llmInvoked, terminal)} · 总计 ${t.totalCaseDurationMs}ms"
+    }
+
+    private fun llmValue(value: Long?, llmInvoked: Boolean, terminal: Boolean): String = when {
+        value != null -> "${value}ms"
+        !llmInvoked && terminal -> "N/A"
+        else -> "—"
     }
 
     companion object {

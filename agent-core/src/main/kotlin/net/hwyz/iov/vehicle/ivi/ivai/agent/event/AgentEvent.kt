@@ -42,6 +42,34 @@ sealed interface AgentEvent {
         val text: String
     ) : AgentEvent
 
+    /**
+     * A model request was started (IVI-IVAI-DSN-CR-014 LLM timing milestone
+     * t2). Emitted right before the provider call begins. Chat UI ignores it;
+     * the test timing collector consumes it to measure LLM first-token and
+     * full-completion latency against a monotonic clock.
+     */
+    data class ModelCallStarted(
+        override val sessionId: String,
+        override val turnId: String,
+        override val requestId: String,
+        val model: String? = null,
+        val providerType: String? = null
+    ) : AgentEvent
+
+    /**
+     * A model call completed (IVI-IVAI-DSN-CR-014 LLM timing milestone t4).
+     * Emitted after the full response is received (streamed or not) or when
+     * the call fails / is cancelled. Chat UI ignores it; the test timing
+     * collector uses it to finalize LLM full-completion latency.
+     */
+    data class ModelCallCompleted(
+        override val sessionId: String,
+        override val turnId: String,
+        override val requestId: String,
+        val model: String? = null,
+        val providerType: String? = null
+    ) : AgentEvent
+
     /** A plain agent reply, a follow-up question (追问) or a rejected response. */
     data class Reply(
         override val sessionId: String,
