@@ -41,7 +41,7 @@ object ToolCatalogV1 {
         t("climate.power.set", "设置空调电源", BD01, "cabin.climate", CONTROL, "{enabled:boolean, zone?:enum}", "LOW；关闭前检查除霜依赖", P0),
         t("climate.temperature.set", "设置目标温度", BD01, "cabin.climate", CONTROL, "{zone:enum, temperature:number[16..30], unit:C}", "LOW；越界拒绝", P0),
         t("climate.temperature.adjust", "调节温度", BD01, "cabin.climate", CONTROL, "{zone:enum, direction:increase|decrease, step:number[0.5..5]}", "LOW；按当前值归一化", P0),
-        t("climate.fan.speed.set", "设置风量档位", BD01, "cabin.climate", CONTROL, "{zone?:enum, level:int[0..10]}", "LOW；默认免确认", P0),
+        t("climate.fan.speed.set", "设置风量档位", BD01, "cabin.climate", CONTROL, "{zone?:all|driver|passenger|front|rear|middle_left|middle_right|second_row|third_row=all, level:int[0..10]}", "LOW；默认免确认；省略 zone 默认全车", P0),
         t("climate.fan.speed.adjust", "调节风量", BD01, "cabin.climate", CONTROL, "{direction:increase|decrease, step:int[1..3]}", "LOW；默认免确认", P0),
         t("climate.airflow.mode.set", "设置出风模式", BD01, "cabin.climate", CONTROL, "{zone?:enum, mode:face|feet|defrost|mixed}", "LOW；默认免确认", P0),
         t("climate.auto.set", "设置自动空调", BD01, "cabin.climate", CONTROL, "{enabled:boolean, zone?:enum}", "LOW；默认免确认", P0),

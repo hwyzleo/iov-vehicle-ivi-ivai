@@ -41,7 +41,7 @@ class DeterministicCoverageTest {
         assertEquals(160, ToolAliasCatalog.PROFILES.size, "CR-013：全部 160 Tool 都有资格画像")
         assertEquals(160, catalog.profiles.size)
         val production = catalog.productionToolIds
-        assertEquals(102, production.size)
+        assertEquals(103, production.size)
         for (profile in catalog.profiles.values) {
             assertEquals(profile.support == DeterministicSupport.SUPPORTED, profile.toolId in production)
         }

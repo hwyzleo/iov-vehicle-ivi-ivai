@@ -3,6 +3,7 @@ package net.hwyz.iov.vehicle.ivi.ivai.agent.router
 import net.hwyz.iov.vehicle.ivi.ivai.agent.capability.CapabilityPackSelector
 import net.hwyz.iov.vehicle.ivi.ivai.agent.capability.CapabilitySnapshot
 import net.hwyz.iov.vehicle.ivi.ivai.agent.domain.DomainAmbiguity
+import net.hwyz.iov.vehicle.ivi.ivai.agent.domain.CabinAirflowSemanticLexicon
 import net.hwyz.iov.vehicle.ivi.ivai.agent.domain.DomainRouteDecision
 import net.hwyz.iov.vehicle.ivi.ivai.agent.domain.DomainRouter
 import net.hwyz.iov.vehicle.ivi.ivai.retrieval.KnowledgeRetrievalQuery
@@ -210,6 +211,18 @@ class TieredIntentRouter(
                     )
                     domainClassifier.classify(input) == IntentDomain.KNOWLEDGE ->
                         knowledgeDecision(input, domainDecision, snapshot)
+                    // CR-018：座舱气流本地能力保护性兜底——CABIN_COMFORT 证据 + 合法
+                    // cabin.climate 候选时强制 L1，不得无原因直入 L3（IVAI-ROUTE-LOCAL-001
+                    // 用于测试/诊断断言该违规不存在）。
+                    hasLocalClimateCapability(domainDecision, snapshot, input) ->
+                        toolDomainDecision(
+                            reasonCode = RouteReasonCode.L1_TOOL_DOMAIN,
+                            input = input,
+                            context = context,
+                            domain = domainDecision,
+                            snapshot = snapshot,
+                            observability = observability
+                        )
                     domainClassifier.classify(input) == IntentDomain.TOOL ->
                         toolDomainDecision(
                             reasonCode = l0Reason,
@@ -237,6 +250,27 @@ class TieredIntentRouter(
         if (input.hasNegation || input.hasMultiIntent) return false
         if (domain.semanticFeatures.contains(SemanticFeature.IMPLICIT_EXPRESSION)) return false
         return domain.operationType in EXPLICIT_OPERATION_TYPES
+    }
+
+    /**
+     * CR-018：座舱气流本地能力保护性兜底。
+     *
+     * CABIN_COMFORT 气流对象证据存在、当前请求为显式工具命令、且运行时候选集中有
+     * 合法 cabin.climate 候选时，未命中 L0 必须进入 L1 消歧/受控选择，禁止无原因
+     * 直接转 L3（违规对应 IVAI-ROUTE-LOCAL-001）。规划（推荐/规划/分析…）与知识
+     * 问答（L2）请求保持原层级，不受本保护影响。
+     */
+    private fun hasLocalClimateCapability(
+        domain: DomainRouteDecision?,
+        snapshot: CapabilitySnapshot?,
+        input: NormalizedInput
+    ): Boolean {
+        if (domain == null || snapshot == null) return false
+        if (domain.airflowObjects.isEmpty()) return false
+        if (!isExplicitToolCommand(domain, input)) return false
+        if (snapshot.runtimeCandidateToolIds.isEmpty()) return false
+        // 确有 cabin.climate 候选（选中包内空调类 Tool 存在）。
+        return snapshot.packs.any { it.packId == CabinAirflowSemanticLexicon.CABIN_CLIMATE_PACK }
     }
 
     /**
@@ -498,9 +532,14 @@ class TieredIntentRouter(
         }
 
     private companion object {
-        /** Driving-safety control keywords — always REJECT (design pre-check). */
+        /**
+         * Driving-safety control keywords — always REJECT (design pre-check).
+         * CR-018：移除过宽的“驾驶/转向”——“驾驶位/副驾驶”是座位位置（vehicle_position
+         * Alias），“驾驶模式/转向模式/加速响应”是合法配置 Tool；驾驶控制仍由
+         * 开车/刹车/制动/方向盘/油门/挂挡/变道/倒车/漂移/自动驾驶/车速等覆盖。
+         */
         val DEFAULT_SAFETY_KEYWORDS = listOf(
-            "开车", "驾驶", "刹车", "制动", "转向", "方向盘", "油门", "加速",
+            "开车", "刹车", "制动", "方向盘", "油门",
             "挂挡", "开走", "变道", "倒车", "漂移", "自动驾驶", "车速"
         )
 

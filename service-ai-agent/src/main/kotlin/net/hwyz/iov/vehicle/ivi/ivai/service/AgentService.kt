@@ -672,7 +672,11 @@ class AgentService : Service(), AiAgentClient, AgentTestSupport {
                 selectedPackIds = GovernanceWorkspace.runtimePacks().map { it.packId }.toSet()
             )
         )
-        val toolDocs = ToolRetrievalDocumentBuilder(registry, WorkflowRegistry)
+        val toolDocs = ToolRetrievalDocumentBuilder(
+            registry,
+            WorkflowRegistry,
+            deterministicCatalog = net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.DeterministicIntentCatalog.build()
+        )
             .buildAll(GovernanceWorkspace.catalog, runtimeSet, sourceVersion = SOFTWARE_VERSION)
         lifecycle.ensureIndex(
             IndexBuildRequest(
@@ -683,7 +687,9 @@ class AgentService : Service(), AiAgentClient, AgentTestSupport {
                 modelVersion = embedding.descriptor.modelVersion,
                 dimension = embedding.descriptor.dimension,
                 distanceMetric = DistanceMetric.COSINE,
-                documentBuilderVersion = "tool-builder-1",
+                // CR-017: 语义载荷升级（位置 Alias/enum/正反例/冲突集入文档）→ 文档构建版本提升，
+                // 兼容键变化强制旧索引失效并全量重建（REQ-177：索引未刷新不得宣称新 Alias 生效）。
+                documentBuilderVersion = "tool-builder-2",
                 governanceVersion = runtimeSet.governanceVersion,
                 indexVersion = "v1"
             )

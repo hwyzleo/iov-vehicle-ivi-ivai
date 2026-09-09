@@ -41,7 +41,9 @@ class TieredIntentRouterCr012Test {
 
     @Test
     fun `关闭能量回收 - 无 L0 规则时走工具领域 L1 且命中 BD03 与能力包`() {
-        val d = route("关闭能量回收")
+        // CR-018 维护：原输入“关闭能量回收”已被 CR-013 L0 目录收录为 brake_regen off
+        // 批准短语（L0 直达）；改用无规则的口语化表达验证 L1 回退语义。
+        val d = route("把能量回收调弱一点")
         assertEquals(IntentTier.L1_LOCAL_TOOL_REASONING, d.tier)
         assertEquals("BD03", d.domain?.topDomain?.code)
         assertTrue(d.capabilitySnapshot?.selectedPackIds?.contains("vehicle.driving_config") == true)

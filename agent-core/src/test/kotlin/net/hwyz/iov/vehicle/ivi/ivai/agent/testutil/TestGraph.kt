@@ -218,4 +218,58 @@ object TestGraph {
             softwareVersion = null
         )
     }
+
+    /**
+     * CR-017：治理桩图（自定义候选提供器 / 位置解析器 / 快照捕获）。
+     * 用于验证 L1 候选为空（IVAI-CANDIDATE-001）、车型拓扑（IVAI-ALIAS-TOPOLOGY-001）
+     * 与检索可观测性字段导出。
+     */
+    fun buildGovernedStubGraphCr017(
+        model: ModelProvider,
+        toolCandidateProvider: net.hwyz.iov.vehicle.ivi.ivai.agent.router.ToolCandidateProvider? = null,
+        positionResolver: net.hwyz.iov.vehicle.ivi.ivai.tool.registry.aliases.PositionAliasResolver? = null,
+        holder: SnapshotHolder? = null,
+        vehicleModel: String? = null
+    ): AgentWorkflow {
+        val governedAdapter = net.hwyz.iov.vehicle.ivi.ivai.adapter.mock.MockGovernedToolAdapter()
+        val registry = GovernanceWorkspace.registerAllStubs(ToolRegistry())
+        val validator = ToolValidator(registry)
+        val agentPolicy = AgentPolicyEngine(registry, ToolPolicyEngine())
+        val executor = DefaultToolExecutor(
+            registry = registry,
+            adapterRegistry = AdapterRegistry().register(governedAdapter),
+            executionTimeoutMs = AgentConfig(model = "qwen3.5:4b", ollamaBaseUrl = "http://localhost:11434").executionTimeoutMs
+        )
+        val capabilitySelector = CapabilityPackSelector.governed(
+            catalog = GovernanceWorkspace.runtimePacks(),
+            governanceCatalog = GovernanceWorkspace.catalog,
+            defaultEnvironment = GovernanceWorkspace.devStubEnvironment()
+        )
+        val tieredRouter = TieredIntentRouter(
+            DefaultFastIntentMatcher(registry), DomainClassifier(registry),
+            domainRouter = DomainRouter(registry),
+            capabilitySelector = capabilitySelector,
+            registry = registry
+        )
+        val config = AgentConfig(model = "qwen3.5:4b", ollamaBaseUrl = "http://localhost:11434")
+        return AgentWorkflow(
+            modelProvider = model,
+            registry = registry,
+            router = Router(),
+            promptBuilder = PromptBuilder(registry),
+            validator = validator,
+            agentPolicy = agentPolicy,
+            toolExecutor = executor,
+            config = config,
+            tieredRouter = tieredRouter,
+            toolCandidateProvider = toolCandidateProvider
+                ?: net.hwyz.iov.vehicle.ivi.ivai.agent.router.AllEnabledToolsProvider(registry),
+            positionResolver = positionResolver
+                ?: net.hwyz.iov.vehicle.ivi.ivai.tool.registry.aliases.PositionAliasResolver(),
+            vehicleStateProvider = VehicleStateProvider { governedAdapter.snapshot() },
+            evaluationListener = holder?.let { h -> { h.snapshot = it } },
+            vehicleModel = vehicleModel,
+            softwareVersion = null
+        )
+    }
 }

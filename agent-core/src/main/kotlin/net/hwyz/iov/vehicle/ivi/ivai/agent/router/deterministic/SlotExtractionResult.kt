@@ -45,7 +45,9 @@ data class ExtractedArgument(
 data class SlotExtractionResult(
     val arguments: List<ExtractedArgument> = emptyList(),
     val conflict: String? = null,
-    val missing: List<String> = emptyList()
+    val missing: List<String> = emptyList(),
+    /** CR-017: 命中但当前车型座舱拓扑不适用（IVAI-ALIAS-TOPOLOGY-001，禁止 L0 直达）。 */
+    val topologyViolations: List<String> = emptyList()
 ) {
     companion object {
         val EMPTY = SlotExtractionResult()

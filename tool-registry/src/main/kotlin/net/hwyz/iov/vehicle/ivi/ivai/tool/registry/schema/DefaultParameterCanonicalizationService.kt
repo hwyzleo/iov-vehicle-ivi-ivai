@@ -133,6 +133,20 @@ class DefaultParameterCanonicalizationService(
             }
         }
 
+        // 2.5) Schema 默认值补齐（CR-017，REQ-181）：省略 zone 等价全车时，Schema 声明
+        //      default=all 并在 Candidate Boundary 前补齐（L0/L1 统一，测试评分按 Schema 一致）。
+        //      只对声明了 default 的缺失可选参数补齐，其余缺失参数保持缺失（必填校验负责）。
+        for (prop in schema.properties) {
+            if (canonical[prop.name] == null && prop.defaultValue != null) {
+                val defaultValue = prop.defaultValue
+                canonical[prop.name] = when {
+                    defaultValue is JsonPrimitive && defaultValue.isString -> defaultValue.content
+                    else -> defaultValue.toString()
+                }
+                sources[prop.name] = "SCHEMA_DEFAULT"
+            }
+        }
+
         // 3) 必填校验（缺失 → missingArguments，禁止合法候选）。
         val required = requiredOverride ?: schema.required.toSet()
         val missing = required.filter { canonical[it] == null }
@@ -171,8 +185,12 @@ class DefaultParameterCanonicalizationService(
             message = "参数 $name=$value 越界（$bound=$limit）"
         )
 
-    /** 类型转换：integer/number 字符串→数值；枚举字段→字段级 Alias canonical。 */
+    /** 类型转换：integer/number 字符串→数值；枚举字段→字段级 Alias canonical；定性词典→固定值。 */
     private fun convert(prop: CanonicalPropertySchema, raw: Any?): Any? {
+        // CR-017 定性业务词典（fan_level_qualitative_v1）：中等→5 等固定映射，禁止模型猜测。
+        if (raw is String) {
+            lexicon.fieldQualitativeAliases[prop.name]?.get(raw)?.let { return it }
+        }
         val canonicalValue = when {
             // 字段级枚举 Alias（ALL→all / 全部→all / 整车→all ...），仅当 Schema
             // enum 或词表登记时才转换，绝不随意 lowercase 自由文本。

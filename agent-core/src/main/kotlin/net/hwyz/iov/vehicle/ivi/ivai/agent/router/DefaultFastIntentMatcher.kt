@@ -69,7 +69,12 @@ class DefaultFastIntentMatcher(
                 // CR-013：短语命中 ≠ 可执行；导航/查询/配置意图冲突直接拦截。
                 if (intentTypeConflict(rule, tool, input)) continue
                 // CR-016：Schema 感知槽位提取（带来源）+ 统一参数规范化。
-                val extraction = slotExtractor.extract(rule, tool.toolId, input.normalized)
+                val extraction = slotExtractor.extract(rule, tool.toolId, input.normalized, context.vehicleModel)
+                // CR-017：位置命中但车型座舱拓扑不适用 → 不得 L0 直达（IVAI-ALIAS-TOPOLOGY-001），
+                // 交由 L1 处理（Resolver 输出明确错误码）。
+                if (extraction.topologyViolations.isNotEmpty()) {
+                    return FastIntentMatchResult.NoMatch
+                }
                 // 同为用户显式语义且值冲突 → IVAI-ROUTE-005（不得静默决胜）。
                 if (extraction.conflict != null) {
                     return FastIntentMatchResult.ArgumentConflict(

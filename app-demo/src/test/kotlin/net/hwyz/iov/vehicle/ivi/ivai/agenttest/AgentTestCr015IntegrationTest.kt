@@ -280,7 +280,7 @@ class AgentTestCr015IntegrationTest {
         assertTrue(sheet.contains("AIRFLOW-0001"))
         assertTrue(sheet.contains("AIRFLOW-1200"))
         // 首行冻结 + 自动筛选覆盖全部行。
-        assertTrue(sheet.contains("""<autoFilter ref="A1:Y1201"/>"""))
+        assertTrue(sheet.contains("""<autoFilter ref="A1:AG1201"/>""")) // CR-018 33 列
     }
 
     @Test

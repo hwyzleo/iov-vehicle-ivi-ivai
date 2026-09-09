@@ -151,8 +151,10 @@ class AgentWorkflowCr008Test {
         val result = workflow.process(input("req-scope", "打开座椅加热"), Session())
 
         // seat.heat 不在 cabin.climate 包内 → 候选被过滤为空 → 模型选择包外 Tool。
-        assertEquals(AgentState.REJECTED, result.state)
-        assertEquals("IVAI-TOOL-001", result.errorCode)
+        // CR-016/017 维护：候选为空时以 IVAI-CANDIDATE-001 明确失败终态（不得生成空 L1
+        // 快照），不再落入旧 REJECT/IVAI-TOOL-001 路径。
+        assertEquals(AgentState.FAILED, result.state)
+        assertEquals("IVAI-CANDIDATE-001", result.errorCode)
     }
 
     private fun buildRuntime(

@@ -94,5 +94,17 @@ data class AgentEvaluationSnapshot(
     /** CR-016: 是否发起过模型请求（L1 状态一致性证据）。 */
     val llmInvoked: Boolean? = null,
     /** CR-016: 模型请求计数。 */
-    val modelRequestCount: Int? = null
+    val modelRequestCount: Int? = null,
+    // ---- CR-017 检索与模型分发可观测性（REQ-183） ----
+    /** 是否执行过 L1 检索（RAG 命中或回退）。 */
+    val retrievalInvoked: Boolean? = null,
+    /** L1 检索后、包过滤收敛后的候选数。 */
+    val retrievedCandidateCount: Int? = null,
+    /** 是否发起过模型分发（与 llmInvoked 一致）。 */
+    val modelDispatchAttempted: Boolean? = null,
+    // ---- CR-018 检索 Top-K 可观测性（诊断导出：RAG Top-K / 选中候选及分数） ----
+    /** L1 候选 Top-K canonical Tool ID（RAG 召回或固定候选）。 */
+    val retrievedCandidateIds: List<String> = emptyList(),
+    /** L1 候选 Top-K 最终分数（与 retrievedCandidateIds 对齐）。 */
+    val retrievedCandidateScores: List<Double> = emptyList()
 )

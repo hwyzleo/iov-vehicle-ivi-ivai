@@ -59,7 +59,9 @@ data class TestCaseExecutionResult(
     val actual: IntentActualResult?,
     val status: TestCaseStatus,
     val timing: TestCaseTiming,
-    val failureReason: String? = null
+    val failureReason: String? = null,
+    /** CR-018：运行时失败与评分差异拆分诊断（可选列导出）。 */
+    val diagnostics: net.hwyz.iov.vehicle.ivi.ivai.agenttest.diagnostics.TestFailureDiagnostics? = null
 )
 
 /**

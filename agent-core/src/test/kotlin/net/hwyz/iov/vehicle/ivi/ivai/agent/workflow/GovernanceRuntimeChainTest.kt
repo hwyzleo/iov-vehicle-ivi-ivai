@@ -94,8 +94,10 @@ class GovernanceRuntimeChainTest {
     }
 
     private fun containsSafetyKeyword(text: String): Boolean =
+        // CR-018：与运行时 DEFAULT_SAFETY_KEYWORDS 同源（驾驶位/副驾驶是座位位置，
+        // 驾驶模式/转向模式/加速响应是合法配置，不属驾驶安全控制）。
         listOf(
-            "开车", "驾驶", "刹车", "制动", "转向", "方向盘", "油门", "加速",
+            "开车", "刹车", "制动", "方向盘", "油门",
             "挂挡", "开走", "变道", "倒车", "漂移", "自动驾驶", "车速"
         ).any { text.contains(it) }
 

@@ -92,4 +92,52 @@ class L1ToolRagEvalTest {
         listOf(result.recallAt1, result.recallAt3, result.recallAtK, result.mrr, result.top1Accuracy)
             .forEach { assertTrue(it in 0.0..1.0) }
     }
+
+    @Test
+    fun `CR-017 位置表达正确 Tool Recall@5 为 100 pct`() = runTest {
+        // 词法重叠 Embedding：验证展开后的检索文档内容（分区正例/位置 Alias/enum）
+        // 确实驱动位置表达的正确召回（正式环境用语义 Embedding，文档内容相同）。
+        val registry = GovernanceWorkspace.registerAllStubs(ToolRegistry())
+        val catalog = GovernanceWorkspace.catalog
+        val runtimeSet = RuntimeCapabilitySet(
+            selectedPackIds = emptySet(),
+            runtimeCandidateToolIds = catalog.tools.map { it.toolId }.toSet(),
+            runtimeCandidateWorkflowIds = WorkflowRegistry.ALL.map { it.workflowId }.toSet(),
+            governanceVersion = "ivai-governance-v1"
+        )
+        val embedding = net.hwyz.iov.vehicle.ivi.ivai.retrieval.testutil.LexicalEmbeddingProvider()
+        val docs = ToolRetrievalDocumentBuilder(registry, WorkflowRegistry)
+            .buildAll(catalog, runtimeSet, "1.0")
+            .map { it.toIndexedDocument() }
+        val vectors = embedding.embed(EmbeddingRequest(docs.map { it.text })).vectors
+        val store = LocalExactVectorStore(FileVectorPersistence(File(tmp, "l1-lexical")))
+        store.build(
+            VectorIndexBuildInput(
+                namespace = "tool-intent", documents = docs, vectors = vectors,
+                providerType = "LOCAL", modelId = embedding.descriptor.modelId, modelVersion = null,
+                dimension = embedding.descriptor.dimension, distanceMetric = DistanceMetric.COSINE,
+                documentBuilderVersion = "tool-builder-2", governanceVersion = "ivai-governance-v1",
+                contentSetHash = "l1-lexical", indexVersion = "v1"
+            )
+        )
+        val retriever = ToolRagRetriever(registry, store, embedding)
+        val positionQueries = listOf(
+            "中左风量档位调到5档",
+            "中右设置风量档位5档",
+            "2排风量档位设为5档",
+            "3排风量档位调到5档",
+            "中排左风量调到5档",
+            "第二排右风量设为5档"
+        )
+        for (text in positionQueries) {
+            val top5 = retriever.retrieve(
+                ToolRetrievalQuery(text = text, vehicleModel = "demo"),
+                5
+            ).map { it.toolId }
+            assertTrue(
+                "climate.fan.speed.set" in top5,
+                "$text → Top-5 必须包含 climate.fan.speed.set，实际: $top5"
+            )
+        }
+    }
 }

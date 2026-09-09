@@ -7,7 +7,10 @@ import net.hwyz.iov.vehicle.ivi.ivai.retrieval.KnowledgeChunk
 import net.hwyz.iov.vehicle.ivi.ivai.retrieval.ToolCandidate
 import net.hwyz.iov.vehicle.ivi.ivai.retrieval.ToolDefinitionSummary
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.ToolRegistry
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.aliases.PositionResolution
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.ToolDefinition
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.ClimateToolBoundaryCatalog
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.schema.CanonicalSchemaParser
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.VehicleStateSnapshot
 
 /**
@@ -58,24 +61,34 @@ class PromptBuilder(private val registry: ToolRegistry) {
      * CR-016：候选集只注入 canonical ID、必要描述、相似 Tool 的正反例与最小参数
      * Schema，帮助模型区分易混淆 Tool（绝对档位 vs 相对步进、风口开关 vs 风向模式
      * vs 自动模式）。
+     *
+     * CR-017（REQ-179）：候选上下文注入参数合法枚举（allowed enum）、用户文本命中
+     * 的 Alias 证据（matchedEvidence）、建议 canonical 值（canonicalHint）与相似
+     * Tool 负边界；模型只能从本次 CandidateSet 与参数合法值范围内输出。
      */
     fun buildWithCandidates(
         session: Session,
         input: AgentInput,
         vehicleState: VehicleStateSnapshot?,
-        candidates: List<ToolCandidate>
+        candidates: List<ToolCandidate>,
+        positionEvidence: PositionResolution? = null
     ): List<ChatMessage> =
-        buildToolSelection(session, input, vehicleState, candidates.map { it.definition }, candidates.map { it.toolId })
+        buildToolSelection(
+            session, input, vehicleState,
+            candidates.map { it.definition }, candidates.map { it.toolId },
+            positionEvidence
+        )
 
     private fun buildToolSelection(
         session: Session,
         input: AgentInput,
         vehicleState: VehicleStateSnapshot?,
         toolSummaries: List<ToolDefinitionSummary>,
-        candidateToolIds: List<String>? = null
+        candidateToolIds: List<String>? = null,
+        positionEvidence: PositionResolution? = null
     ): List<ChatMessage> {
         val messages = mutableListOf<ChatMessage>()
-        messages += ChatMessage("system", buildSystem(session, input, vehicleState, toolSummaries, candidateToolIds))
+        messages += ChatMessage("system", buildSystem(session, input, vehicleState, toolSummaries, candidateToolIds, positionEvidence))
         messages += FEW_SHOT_EXAMPLES
         messages += session.history().takeLast(MAX_HISTORY_TURNS)
         messages += ChatMessage("user", input.text)
@@ -122,7 +135,8 @@ class PromptBuilder(private val registry: ToolRegistry) {
         input: AgentInput,
         vehicleState: VehicleStateSnapshot?,
         toolSummaries: List<ToolDefinitionSummary>,
-        candidateToolIds: List<String>? = null
+        candidateToolIds: List<String>? = null,
+        positionEvidence: PositionResolution? = null
     ): String = buildString {
         appendLine(SYSTEM_PROMPT)
         appendLine()
@@ -133,7 +147,7 @@ class PromptBuilder(private val registry: ToolRegistry) {
         appendLine("- 车辆状态：${renderVehicleState(vehicleState)}")
         appendLine()
         appendLine("## 候选工具（只能使用以下 toolId，不得使用集合之外的工具）")
-        toolSummaries.forEach { appendLine(renderToolSummary(it)) }
+        toolSummaries.forEach { appendLine(renderToolSummary(it, positionEvidence)) }
         appendLine()
         appendLine("## 相似工具区分（必须严格遵守，避免选择错误工具）")
         appendLine(renderSimilarToolGuidance(candidateToolIds))
@@ -168,12 +182,50 @@ class PromptBuilder(private val registry: ToolRegistry) {
     private fun renderVehicleState(state: VehicleStateSnapshot?): String =
         state?.let { "空调电源：${if (it.powerOn) "开" else "关"}" } ?: "未知"
 
-    private fun renderToolSummary(tool: ToolDefinitionSummary): String = buildString {
+    private fun renderToolSummary(tool: ToolDefinitionSummary, positionEvidence: PositionResolution? = null): String = buildString {
         appendLine("- ${tool.toolId}${tool.functionId?.let { " (${it})" } ?: ""}：${tool.name}")
         appendLine("  说明：${tool.description}")
         appendLine("  参数：${tool.parameterSchema.replace("\n", "").replace(" ", "")}")
         appendLine("  正例：${tool.positiveExamples.joinToString("、")}")
         appendLine("  反例：${tool.negativeExamples.joinToString("、")}")
+        // CR-017: Candidate Context——合法枚举、命中 Alias 证据、canonical 提示、相似 Tool 负边界。
+        append(renderCandidateContext(tool, positionEvidence))
+    }
+
+    /**
+     * CR-017（REQ-179）：参数级候选上下文。
+     *  - allowed enum：zone/position 的 Schema 合法枚举；
+     *  - matchedEvidence + canonicalHint：用户文本命中的 Alias 原文与建议 canonical 值；
+     *  - negativeBoundary：该 Tool 的负例边界（相似 Tool 区分由 renderSimilarToolGuidance 补充）。
+     * 模型只能输出 allowed enum；Alias 证据是提示，不替代后置 canonicalization。
+     */
+    private fun renderCandidateContext(tool: ToolDefinitionSummary, positionEvidence: PositionResolution?): String {
+        val sb = StringBuilder()
+        val schema = runCatching { CanonicalSchemaParser.parse(tool.parameterSchema) }.getOrNull()
+        val zoneProp = schema?.properties?.firstOrNull { it.name == "zone" || it.name == "position" }
+        val zoneEnum = zoneProp?.enum
+        if (zoneEnum != null && zoneEnum.isNotEmpty()) {
+            sb.appendLine("  位置合法值：${zoneEnum.joinToString(" | ")}")
+        }
+        if (positionEvidence != null && zoneProp != null) {
+            if (positionEvidence.matchedEntries.isNotEmpty()) {
+                val hints = positionEvidence.matchedEntries
+                    .joinToString("；") { "${it.word}→${it.canonicalValue}" }
+                sb.appendLine("  位置证据：$hints")
+            }
+            if (positionEvidence.ambiguousWords.isNotEmpty()) {
+                sb.appendLine("  位置歧义：${positionEvidence.ambiguousWords.joinToString("、")} 不得静默映射，需澄清或追问")
+            }
+        }
+        // CR-018：空调相似 Tool 候选上下文（正向证据 / 负边界 / 必填参数）。
+        val boundary = ClimateToolBoundaryCatalog.forTool(tool.toolId)
+        if (boundary != null) {
+            sb.appendLine("  正向证据：${boundary.positiveObjects.sorted().joinToString("、")} + ${boundary.positiveActions.sorted().joinToString("、")}")
+            sb.appendLine("  负边界：${boundary.conflictToolIds.sorted().joinToString("、")}")
+            val required = boundary.requiredSlots.sorted().joinToString("、")
+            if (required.isNotBlank()) sb.appendLine("  必填参数：$required")
+        }
+        return sb.toString()
     }
 
     private companion object {
@@ -198,7 +250,11 @@ class PromptBuilder(private val registry: ToolRegistry) {
 禁止事项：
 - 禁止将「我有点冷」等隐式表达无依据解释为「打开空调」。
 - 禁止输出候选范围外的 toolId。
-- 禁止虚构温度数值或车辆状态。"""
+- 禁止虚构温度数值或车辆状态。
+- 「开吹风/开出风/打开风口」等座舱气流歧义表达，若缺少足够对象或参数证据（如
+  未指明是电源、风口、风量档位、风向还是自动模式），必须 LOCAL_DIALOGUE 追问，
+  不得随意选择并执行工具；只有证据充分时才选对应 Tool（电源 power / 风口 vent /
+  风量 fan / 风向 airflow / 自动 auto）。"""
 
         const val OUTPUT_SCHEMA = """{
   "route": "LOCAL_TOOL | LOCAL_DIALOGUE | CLOUD_AI | REJECT",

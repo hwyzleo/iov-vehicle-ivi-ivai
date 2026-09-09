@@ -43,6 +43,7 @@ import net.hwyz.iov.vehicle.ivi.ivai.agent.rag.RagExecutionSnapshot
 import net.hwyz.iov.vehicle.ivi.ivai.agent.rag.RagRuntimeManager
 import net.hwyz.iov.vehicle.ivi.ivai.agent.rag.RagRuntimeStatus
 import net.hwyz.iov.vehicle.ivi.ivai.agent.router.AgentContext
+import net.hwyz.iov.vehicle.ivi.ivai.agent.router.CandidateSetSource
 import net.hwyz.iov.vehicle.ivi.ivai.agent.router.CandidateSource
 import net.hwyz.iov.vehicle.ivi.ivai.agent.router.IntentTier
 import net.hwyz.iov.vehicle.ivi.ivai.agent.router.RouteReasonCode
@@ -54,6 +55,7 @@ import net.hwyz.iov.vehicle.ivi.ivai.agent.router.ToolCandidateSet
 import net.hwyz.iov.vehicle.ivi.ivai.agent.router.TextNormalizer
 import net.hwyz.iov.vehicle.ivi.ivai.agent.session.PendingTask
 import net.hwyz.iov.vehicle.ivi.ivai.agent.session.Session
+import net.hwyz.iov.vehicle.ivi.ivai.agent.error.Cr016ErrorCodes
 import net.hwyz.iov.vehicle.ivi.ivai.model.AgentPerformanceMetrics
 import net.hwyz.iov.vehicle.ivi.ivai.model.ChatMessage
 import net.hwyz.iov.vehicle.ivi.ivai.model.HttpNetworkMetrics
@@ -83,7 +85,10 @@ import net.hwyz.iov.vehicle.ivi.ivai.retrieval.knowledge.KnowledgeReranker
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.ToolRegistry
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.aliases.CanonicalAliasLexicon
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.aliases.DefaultAliasLexicons
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.aliases.PositionAliasLexicon
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.aliases.PositionAliasResolver
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.BusinessDomainId
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.Cr017ErrorCodes
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.GovernanceWorkspace
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.ToolCatalogV1
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.WorkflowCatalogV1
@@ -206,6 +211,21 @@ private class CandidateTrace {
     var governanceVersion: String? = null
     var candidateVersion: String? = null
 
+    /** CR-017: L1 是否执行过检索（RAG 命中或回退）。 */
+    var retrievalInvoked: Boolean? = null
+
+    /** CR-017: L1 检索后、包过滤收敛后的候选数（供快照导出）。 */
+    var retrievedCandidateCount: Int? = null
+
+    /** CR-018: L1 候选 Top-K canonical ID（RAG 或固定候选，供诊断导出）。 */
+    var retrievedCandidateIds: List<String> = emptyList()
+
+    /** CR-018: L1 候选 Top-K 最终分数（与 retrievedCandidateIds 对齐）。 */
+    var retrievedCandidateScores: List<Double> = emptyList()
+
+    /** CR-017: 是否发起过模型分发（= llmInvoked，供快照导出）。 */
+    var modelDispatchAttempted: Boolean? = null
+
     /** CR-016：候选边界通过后的不可变冻结快照（执行失败不得清空）。 */
     var frozenSnapshot: FrozenCandidateSnapshot? = null
         private set
@@ -219,6 +239,11 @@ private class CandidateTrace {
         governanceVersion = null
         candidateVersion = null
         frozenSnapshot = null
+        retrievalInvoked = null
+        retrievedCandidateCount = null
+        retrievedCandidateIds = emptyList()
+        retrievedCandidateScores = emptyList()
+        modelDispatchAttempted = null
         return this
     }
 
@@ -303,6 +328,8 @@ class AgentWorkflow(
     private val workflowRuntime: WorkflowRuntime? = null,
     /** CR-016: 共享版本化 Alias Lexicon（L0/L1/Validator/Scorer 同一实例）。 */
     private val aliasLexicon: CanonicalAliasLexicon = DefaultAliasLexicons.DEFAULT,
+    /** CR-017: 位置 Alias 解析器（车型拓扑 + 歧义保护），L1 证据 / 候选边界 / Prompt 同源。 */
+    private val positionResolver: PositionAliasResolver = PositionAliasResolver(),
     /**
      * CR-016: 共享参数规范化服务（L0/L1/Validator/Scorer 同一实例）。
      * 不注入时在 init 中基于 [registry] 构建，保证 L1 候选边界使用完整注册表。
@@ -480,6 +507,12 @@ class AgentWorkflow(
         }
         timings.addRouteAndPolicy(msSince(retrievalStartNs))
         val candidateToolIds = packScopedSet.candidates.map { it.toolId }.toSet()
+        // CR-017: L1 检索事实（快照导出 retrievalInvoked / retrievedCandidateCount）。
+        candidateTrace.retrievalInvoked = candidateSet.source == CandidateSetSource.RETRIEVED
+        candidateTrace.retrievedCandidateCount = packScopedSet.candidates.size
+        // CR-018: L1 候选 Top-K（RAG Top-K 诊断导出）。
+        candidateTrace.retrievedCandidateIds = packScopedSet.candidates.map { it.toolId }
+        candidateTrace.retrievedCandidateScores = packScopedSet.candidates.map { it.score }
         val ragInfo = RagExecutionInfo(
             configuredEnabled = ragSnapshot.enabled,
             runtimeStatus = ragRuntimeManager?.status() ?: RagRuntimeStatus.DISABLED,
@@ -498,8 +531,36 @@ class AgentWorkflow(
             searchLatencyMs = msSince(retrievalStartNs)
         )
 
+        // CR-017（REQ-170 / IVAI-CANDIDATE-001）：候选为空或无法形成受控 CandidateSet
+        // → 明确终态 + reasonCode，不调用模型，不留空 L1 快照。
+        if (packScopedSet.candidates.isEmpty()) {
+            tracker.transition(IntentTier.L1_LOCAL_TOOL_REASONING, RouteReasonCode.L1_CANDIDATE_EMPTY)
+            tracker.finalReasonCode = RouteReasonCode.L1_CANDIDATE_EMPTY
+            return turnFailed(
+                input, session, timings, Cr016ErrorCodes.CANDIDATE_SET_EMPTY,
+                "暂时无法为本次请求形成受控候选集，请换一种说法", false, tracker, ragInfo,
+                "L1 候选为空（retrievalInvoked=${candidateTrace.retrievalInvoked}）", cr008 = cr008
+            )
+        }
+
+        // CR-017（REQ-173）：位置 Alias 命中但当前车型座舱拓扑不适用 → 明确错误，禁止执行。
+        val positionEvidence = positionResolver.resolve(normalized.normalized, vehicleModel)
+        if (positionEvidence.hasTopologyViolation) {
+            tracker.transition(IntentTier.L1_LOCAL_TOOL_REASONING, RouteReasonCode.L1_CANDIDATE_EMPTY)
+            tracker.finalReasonCode = Cr017ErrorCodes.ALIAS_TOPOLOGY
+            return turnFailed(
+                input, session, timings, Cr017ErrorCodes.ALIAS_TOPOLOGY,
+                "该位置在当前车型上不可用", false, tracker, ragInfo,
+                "位置不适用于当前车型座舱拓扑：${positionEvidence.topologyViolations.joinToString(",")}",
+                cr008 = cr008
+            )
+        }
+
         val contextStartNs = System.nanoTime()
-        val composedMessages = promptBuilder.buildWithCandidates(session, input, context.vehicleState, packScopedSet.candidates)
+        val composedMessages = promptBuilder.buildWithCandidates(
+            session, input, context.vehicleState, packScopedSet.candidates,
+            positionEvidence = positionEvidence
+        )
         timings.contextAndPromptMs = msSince(contextStartNs)
 
         val modelStartNs = System.nanoTime()
@@ -573,9 +634,22 @@ class AgentWorkflow(
                 }
                 // CR-016：候选集约束 + 旧 ID canonicalization + 参数 canonicalization。
                 // 边界通过时返回 canonical 化后的 output（旧 ID → canonical Tool ID）。
-                val effectiveOutput = applyCandidateBoundary(
+                val boundary = applyCandidateBoundary(
                     input, session, output, candidateToolIds, tracker, ragInfo, timings, cr008
-                ) ?: output
+                )
+                val effectiveOutput: AgentOutput = when (boundary) {
+                    is CandidateBoundaryResult.Rewritten -> boundary.output
+                    CandidateBoundaryResult.Passthrough -> output
+                    is CandidateBoundaryResult.Blocked -> {
+                        timings.parseAndSchemaMs = msSince(parseStartNs)
+                        tracker.finalReasonCode = boundary.errorCode
+                        return turnFailed(
+                            input, session, timings, boundary.errorCode,
+                            "该位置表达无法安全执行，请明确位置或换一种说法", false, tracker, ragInfo,
+                            boundary.reason, cr008 = cr008
+                        )
+                    }
+                }
                 timings.parseAndSchemaMs = msSince(parseStartNs)
 
                 // --- route decision (model-proposed route) ---
@@ -1269,6 +1343,18 @@ class AgentWorkflow(
     }
 
     /**
+     * CR-017：候选边界（Candidate Boundary）结果。
+     *  - [Rewritten]：边界通过，返回 canonical 化后的 output；
+     *  - [Passthrough]：非 LOCAL_TOOL 或无法 canonicalize（沿用原 output，由既有链校验/拒绝）；
+     *  - [Blocked]：位置 Alias 歧义/冲突（IVAI-ALIAS-AMBIGUOUS-001 等）——硬阻止，禁止执行。
+     */
+    private sealed interface CandidateBoundaryResult {
+        data class Rewritten(val output: AgentOutput) : CandidateBoundaryResult
+        data object Passthrough : CandidateBoundaryResult
+        data class Blocked(val errorCode: String, val reason: String) : CandidateBoundaryResult
+    }
+
+    /**
      * CR-016：候选边界（Candidate Boundary）——非阻断冻结版。
      *
      * 在模型解析后、进入 Policy/Confirmation/执行链之前执行：
@@ -1278,11 +1364,9 @@ class AgentWorkflow(
      *  3. 候选边界通过后在 CandidateTrace 冻结 canonical Target/Arguments
      *     （FrozenCandidateSnapshot），后续 Policy/Adapter 失败不清空；
      *  4. 边界未通过 → 不冻结（Target/Arguments 保持空），由既有链路按
-     *     IVAI-TOOL-001/002/003 汇总码拒绝，细分码进入 trace（不改变兼容码语义）。
-     *
-     * @return 候选边界通过时返回 canonical 化后的 [AgentOutput]（旧 ID → canonical
-     *   Tool ID + canonical 参数）；非 LOCAL_TOOL 或未发生重写时返回 null（调用方
-     *   沿用原 output）。
+     *     IVAI-TOOL-001/002/003 汇总码拒绝，细分码进入 trace（不改变兼容码语义）；
+     *  5. CR-017：位置 Alias 歧义/冲突（宽泛表达、rear 替代明确排数、与用户证据冲突）
+     *     → [CandidateBoundaryResult.Blocked] 硬阻止执行（IVAI-ALIAS-AMBIGUOUS-001）。
      */
     private suspend fun applyCandidateBoundary(
         input: AgentInput,
@@ -1293,10 +1377,10 @@ class AgentWorkflow(
         ragInfo: RagExecutionInfo?,
         timings: TurnTimings,
         cr008: Cr008DebugInfo?
-    ): AgentOutput? {
+    ): CandidateBoundaryResult {
         // 非 LOCAL_TOOL 路由不进入候选边界（对话/云/拒绝不产生可执行目标）。
-        if (output.route != AgentRoute.LOCAL_TOOL.name) return null
-        val intent = output.intents.firstOrNull() ?: return null
+        if (output.route != AgentRoute.LOCAL_TOOL.name) return CandidateBoundaryResult.Passthrough
+        val intent = output.intents.firstOrNull() ?: return CandidateBoundaryResult.Passthrough
         // 1) Tool ID canonicalization：registry 直接注册则保留；否则旧 ID → canonical。
         val rawId = intent.toolId
         val canonicalId = if (registry.get(rawId) != null) {
@@ -1304,16 +1388,42 @@ class AgentWorkflow(
         } else {
             aliasLexicon.canonicalToolId(rawId)
         }
-        val tool = registry.get(canonicalId) ?: return null // 放行：既有链路报 UNKNOWN_TOOL
-        // 2) 参数 canonicalization（统一参数语义 + 范围 + 必填）。
-        val args = jsonArgsToValues(intent.arguments)
+        val tool = registry.get(canonicalId) ?: return CandidateBoundaryResult.Passthrough // 放行：既有链路报 UNKNOWN_TOOL
+        // CR-017: 位置证据（用户原话 → 批准 Alias canonical），用于 zone 补齐与歧义/冲突校验。
+        val positionResolution = positionResolver.resolve(input.text, vehicleModel)
+        // 2) 参数 canonicalization（统一参数语义 + 范围 + 必填）；用户唯一位置证据且模型遗漏 → 补齐。
+        var args = jsonArgsToValues(intent.arguments)
+        if (positionResolution.singleZone != null && args["zone"] == null) {
+            args = args + ("zone" to positionResolution.singleZone)
+        }
         val canonical = effectiveCanonicalizer.canonicalize(
             canonicalId, args, CanonicalizationSource.L1_LOCAL_LLM
         )
         if (canonical is CanonicalizationResult.Failed) {
             // 边界未通过：不冻结；细分码进 trace（既有一致汇总码由校验/执行链给出）。
             emitLifecycle(ToolLifecyclePhase.FAILED, input.requestId, canonicalId, canonical.message)
-            return null
+            return CandidateBoundaryResult.Passthrough
+        }
+        // CR-017（REQ-174/180）：zone 值必须是批准枚举；宽泛表达（right/中间/后面）或与用户
+        // 明确位置证据冲突的映射禁止执行（IVAI-ALIAS-AMBIGUOUS-001）。
+        val zoneValue = (canonical as CanonicalizationResult.Success).canonicalArguments["zone"] as? String
+        if (zoneValue != null) {
+            val blocked = when {
+                zoneValue !in PositionAliasLexicon.CANONICAL_ZONES ->
+                    "zone=$zoneValue 不是批准枚举"
+                positionResolution.ambiguousWords.isNotEmpty() ->
+                    "宽泛表达 ${positionResolution.ambiguousWords.joinToString("/")} 不得静默映射为 $zoneValue"
+                positionResolution.matchedZones.isNotEmpty() && zoneValue !in positionResolution.matchedZones ->
+                    "用户位置证据 ${positionResolution.matchedZones.joinToString(",")} 与模型输出 $zoneValue 冲突"
+                else -> null
+            }
+            if (blocked != null) {
+                emitLifecycle(
+                    ToolLifecyclePhase.FAILED, input.requestId, canonicalId,
+                    "$blocked（${Cr017ErrorCodes.ALIAS_AMBIGUOUS}）"
+                )
+                return CandidateBoundaryResult.Blocked(Cr017ErrorCodes.ALIAS_AMBIGUOUS, blocked)
+            }
         }
         // 3) 冻结候选快照（canonical Target/Arguments 在候选边界通过后固化）。
         val success = canonical as CanonicalizationResult.Success
@@ -1331,7 +1441,7 @@ class AgentWorkflow(
             toolId = canonicalId,
             arguments = valuesToJsonArgs(success.canonicalArguments)
         )
-        return output.copy(intents = listOf(rewritten))
+        return CandidateBoundaryResult.Rewritten(output.copy(intents = listOf(rewritten)))
     }
 
     private fun candidateSetHash(candidateToolIds: Set<String>?): String =
@@ -1813,6 +1923,8 @@ class AgentWorkflow(
             reasonCode = executionPath?.finalReasonCode,
             terminalStatus = terminalStatus
         )
+        // CR-017: 模型分发尝试标记（快照导出 modelDispatchAttempted）。
+        candidateTrace.modelDispatchAttempted = executionState.llmInvoked
         val invariantResult = invariantValidator.validate(
             executionState.invariantContext(candidateTrace.selectedTarget)
         )
@@ -1851,7 +1963,14 @@ class AgentWorkflow(
                     matchedRuleIds = frozen?.matchedRuleIds ?: emptyList(),
                     argumentSources = frozen?.argumentSources?.mapValues { (_, v) -> v.name } ?: emptyMap(),
                     llmInvoked = executionState.llmInvoked,
-                    modelRequestCount = executionState.modelRequestCount
+                    modelRequestCount = executionState.modelRequestCount,
+                    // CR-017: 检索与模型分发可观测性（REQ-183）。
+                    retrievalInvoked = candidateTrace.retrievalInvoked,
+                    retrievedCandidateCount = candidateTrace.retrievedCandidateCount,
+                    modelDispatchAttempted = candidateTrace.modelDispatchAttempted,
+                    // CR-018: 检索 Top-K 可观测性。
+                    retrievedCandidateIds = candidateTrace.retrievedCandidateIds,
+                    retrievedCandidateScores = candidateTrace.retrievedCandidateScores
                 )
             )
         )

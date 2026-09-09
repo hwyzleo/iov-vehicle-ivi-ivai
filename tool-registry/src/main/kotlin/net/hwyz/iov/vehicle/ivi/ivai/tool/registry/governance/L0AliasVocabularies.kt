@@ -9,11 +9,30 @@ package net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance
  */
 object L0AliasVocabularies {
 
-    /** 车内区域/座位位置（zone / position 通用）。 */
+    /** 车内区域/座位位置 v1（zone / position 通用，兼容既有规则引用）。 */
     val vehicle_position_v1: Map<String, String> = mapOf(
         "主驾" to "driver", "驾驶位" to "driver", "司机位" to "driver", "主驾驶" to "driver",
         "副驾" to "passenger", "副驾驶" to "passenger", "乘客位" to "passenger",
         "前排" to "front", "后排" to "rear", "全车" to "all"
+    )
+
+    /**
+     * 车内区域/座位位置 v2（IVI-IVAI-DSN-CR-017，REQ-171/172）。
+     * 覆盖 9 个 canonical zone 与批准的中文/数字变体（中左/中右/2排/3排 等）；
+     * 英文 token（ALL/ROW2/ZONE2/3RD）为模型输出侧 Alias，由字段级枚举 Alias
+     * 消费（见 [net.hwyz.iov.vehicle.ivi.ivai.tool.registry.aliases.DefaultAliasLexicons]）。
+     * 与 [net.hwyz.iov.vehicle.ivi.ivai.tool.registry.aliases.PositionAliasLexicon] 同源。
+     */
+    val vehicle_position_v2: Map<String, String> = mapOf(
+        "全部" to "all", "所有" to "all", "整车" to "all", "全车" to "all",
+        "主驾" to "driver", "驾驶位" to "driver", "司机位" to "driver", "主驾驶" to "driver",
+        "副驾" to "passenger", "副驾驶" to "passenger", "副驾驶位" to "passenger", "乘客位" to "passenger",
+        "前排" to "front", "第一排" to "front", "1排" to "front",
+        "后排" to "rear",
+        "中左" to "middle_left", "中排左" to "middle_left", "第二排左" to "middle_left", "2排左" to "middle_left",
+        "中右" to "middle_right", "中排右" to "middle_right", "第二排右" to "middle_right", "2排右" to "middle_right",
+        "二排" to "second_row", "第二排" to "second_row", "2排" to "second_row",
+        "三排" to "third_row", "第三排" to "third_row", "3排" to "third_row"
     )
 
     /** 车窗位置（body.window.*）。 */
@@ -33,6 +52,7 @@ object L0AliasVocabularies {
     /** 按名称解析词表；未知词表名抛错（构建期应被 Validator 拦截）。 */
     fun resolve(name: String): Map<String, String> = when (name) {
         "vehicle_position_v1" -> vehicle_position_v1
+        "vehicle_position_v2" -> vehicle_position_v2
         "window_position_aliases_v1" -> window_position_aliases_v1
         "door_position_aliases_v1" -> door_position_aliases_v1
         else -> throw IllegalArgumentException("未知 L0 受控别名词表: $name")
@@ -41,6 +61,7 @@ object L0AliasVocabularies {
     /** 已注册词表名（校验引用闭合）。 */
     val names: Set<String> = setOf(
         "vehicle_position_v1",
+        "vehicle_position_v2",
         "window_position_aliases_v1",
         "door_position_aliases_v1"
     )

@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test
 /**
  * CR-013 验证设计 · 160 个 Tool 的 L0 确定性资格模型与 Catalog 构建。
  *
- *  - 160 项全量资格评审：102 SUPPORTED / 29 NOT_SUPPORTED / 29 NEEDS_REVIEW，
+ *  - 160 项全量资格评审：103 SUPPORTED / 29 NOT_SUPPORTED / 28 NEEDS_REVIEW，
  *    与 IVAI Tool Catalog v1（ivai-l0-rules-v1-draft）一致。
  *  - Catalog 是规则事实源：DeterministicIntentCatalog 构建期编译并校验，
  *    SUPPORTED 有规则，NOT_SUPPORTED/NEEDS_REVIEW 无规则（GOV-006）。
@@ -36,28 +36,28 @@ class L0GovernanceTest {
     }
 
     @Test
-    fun `资格分布为 102 SUPPORTED 29 NOT_SUPPORTED 29 NEEDS_REVIEW`() {
+    fun `资格分布为 103 SUPPORTED 29 NOT_SUPPORTED 28 NEEDS_REVIEW`() {
         val counts = spec.tools.groupingBy { it.support }.eachCount()
-        assertEquals(102, counts["SUPPORTED"])
+        assertEquals(103, counts["SUPPORTED"])
         assertEquals(29, counts["NOT_SUPPORTED"])
-        assertEquals(29, counts["NEEDS_REVIEW"])
+        assertEquals(28, counts["NEEDS_REVIEW"])
     }
 
     @Test
     fun `L0 资格校验零问题通过`() {
         val result = L0QualificationValidator(spec.tools, ToolCatalogV1.ALL, spec.ruleVersion).validate()
         assertTrue(result.passed, "L0 资格校验应通过: ${result.issues.take(5).joinToString("; ") { it.message }}")
-        assertEquals(102, result.supportedCount)
+        assertEquals(103, result.supportedCount)
         assertEquals(29, result.notSupportedCount)
-        assertEquals(29, result.needsReviewCount)
+        assertEquals(28, result.needsReviewCount)
     }
 
     @Test
-    fun `DeterministicIntentCatalog 编译全部 160 个 Profile 且 102 个生产启用`() {
+    fun `DeterministicIntentCatalog 编译全部 160 个 Profile 且 103 个生产启用`() {
         val catalog = DeterministicIntentCatalog.build(spec, ToolCatalogV1.ALL)
         assertEquals(160, catalog.profiles.size)
         assertEquals("ivai-l0-rules-v1-draft", catalog.ruleVersion)
-        assertEquals(102, catalog.productionToolIds.size)
+        assertEquals(103, catalog.productionToolIds.size)
         // SUPPORTED 全部有规则；其余无生产规则。
         for (profile in catalog.profiles.values) {
             when (profile.support) {

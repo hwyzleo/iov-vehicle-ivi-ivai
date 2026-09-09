@@ -23,7 +23,12 @@ data class CanonicalAliasLexicon(
     /** Tool ID / Function ID Alias → canonical Tool ID（旧 ID 迁移，CR-010）。 */
     val toolIdAliases: Map<String, String> = emptyMap(),
     /** 位置/区域词 → canonical（受控词表，来自 L0AliasVocabularies 评审闭合部分）。 */
-    val positionAliases: Map<String, String> = emptyMap()
+    val positionAliases: Map<String, String> = emptyMap(),
+    /**
+     * 定性业务词典（CR-017，fan_level_qualitative_v1）：参数名 → 短语 → 固定值。
+     * 如 level: 中等→5；禁止模型自由猜测档位（REQ-182）。
+     */
+    val fieldQualitativeAliases: Map<String, Map<String, Any?>> = emptyMap()
 ) {
     /** 查询字段级枚举 canonical；无映射时返回原值。 */
     fun enumCanonical(parameterName: String, value: String): String =

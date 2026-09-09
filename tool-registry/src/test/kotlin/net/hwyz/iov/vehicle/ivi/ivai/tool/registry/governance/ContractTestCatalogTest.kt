@@ -98,7 +98,8 @@ class ContractTestCatalogTest {
         assertEquals("IVAI-ROUTE-003", toolTests.first { it.category == "DET_AMBIGUOUS" && it.objectId == "climate.power.set" }.expectedReasonCode)
         // CR-013：跨 Tool 冲突（有冲突集 → ROUTE-003）。
         assertEquals("IVAI-ROUTE-003", toolTests.first { it.category == "DET_CONFLICT" && it.objectId == "body.window.set" }.expectedReasonCode)
-        assertEquals("DETERMINISTIC_SINGLETON", toolTests.first { it.category == "DET_CONFLICT" && it.objectId == "climate.power.set" }.expectedReasonCode)
+        // CR-018：power.set 已纳入 auto/vent/fan/airflow 冲突集 → ROUTE-003（原为空 → SINGLETON）。
+        assertEquals("IVAI-ROUTE-003", toolTests.first { it.category == "DET_CONFLICT" && it.objectId == "climate.power.set" }.expectedReasonCode)
         // CR-013：参数矛盾检测（SUPPORTED → ROUTE-005）。
         assertEquals("IVAI-ROUTE-005", toolTests.first { it.category == "DET_ARG" && it.objectId == "climate.power.set" }.expectedReasonCode)
         // CR-013：降级类型。

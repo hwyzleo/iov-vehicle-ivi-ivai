@@ -1,0 +1,4346 @@
+{
+ "suiteId": "ivai-agent-climate-power-boundary-regression-v2",
+ "schemaVersion": 1,
+ "governanceVersion": "ivai-governance-v1",
+ "cases": [
+  {
+   "caseId": "POWER-001",
+   "description": "L0 power.on 批准短语 打开空调",
+   "tags": [
+    "L0",
+    "power",
+    "on"
+   ],
+   "enabled": true,
+   "input": "打开空调",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-002",
+   "description": "L0 power.on 批准短语 开启空调",
+   "tags": [
+    "L0",
+    "power",
+    "on"
+   ],
+   "enabled": true,
+   "input": "开启空调",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-003",
+   "description": "L0 power.on 批准短语 把空调打开",
+   "tags": [
+    "L0",
+    "power",
+    "on"
+   ],
+   "enabled": true,
+   "input": "把空调打开",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-004",
+   "description": "L0 power.on 批准短语 开空调",
+   "tags": [
+    "L0",
+    "power",
+    "on"
+   ],
+   "enabled": true,
+   "input": "开空调",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-005",
+   "description": "L0 power.on 批准短语 空调打开",
+   "tags": [
+    "L0",
+    "power",
+    "on"
+   ],
+   "enabled": true,
+   "input": "空调打开",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-006",
+   "description": "L0 power.off 批准短语 关闭空调",
+   "tags": [
+    "L0",
+    "power",
+    "off"
+   ],
+   "enabled": true,
+   "input": "关闭空调",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-007",
+   "description": "L0 power.off 批准短语 关空调",
+   "tags": [
+    "L0",
+    "power",
+    "off"
+   ],
+   "enabled": true,
+   "input": "关空调",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-008",
+   "description": "L0 power.off 批准短语 把空调关掉",
+   "tags": [
+    "L0",
+    "power",
+    "off"
+   ],
+   "enabled": true,
+   "input": "把空调关掉",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-009",
+   "description": "L0 power.off 批准短语 关掉空调",
+   "tags": [
+    "L0",
+    "power",
+    "off"
+   ],
+   "enabled": true,
+   "input": "关掉空调",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-010",
+   "description": "L0 power.off 批准短语 空调关闭",
+   "tags": [
+    "L0",
+    "power",
+    "off"
+   ],
+   "enabled": true,
+   "input": "空调关闭",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-011",
+   "description": "L0 vent.on 批准短语 打开主驾通风口",
+   "tags": [
+    "L0",
+    "vent",
+    "on"
+   ],
+   "enabled": true,
+   "input": "打开主驾通风口",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "driver",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-012",
+   "description": "L0 vent.on 批准短语 打开副驾通风口",
+   "tags": [
+    "L0",
+    "vent",
+    "on"
+   ],
+   "enabled": true,
+   "input": "打开副驾通风口",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "passenger",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-013",
+   "description": "L0 vent.on 批准短语 打开驾驶位通风口",
+   "tags": [
+    "L0",
+    "vent",
+    "on"
+   ],
+   "enabled": true,
+   "input": "打开驾驶位通风口",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "driver",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-014",
+   "description": "L0 vent.on 批准短语 打开副驾驶通风口",
+   "tags": [
+    "L0",
+    "vent",
+    "on"
+   ],
+   "enabled": true,
+   "input": "打开副驾驶通风口",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "passenger",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-015",
+   "description": "L0 vent.on 批准短语 打开后排通风口",
+   "tags": [
+    "L0",
+    "vent",
+    "on"
+   ],
+   "enabled": true,
+   "input": "打开后排通风口",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "rear",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-016",
+   "description": "L0 vent.on 批准短语 打开全车通风口",
+   "tags": [
+    "L0",
+    "vent",
+    "on"
+   ],
+   "enabled": true,
+   "input": "打开全车通风口",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "all",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-017",
+   "description": "L0 vent.on 批准短语 开启主驾通风口",
+   "tags": [
+    "L0",
+    "vent",
+    "on"
+   ],
+   "enabled": true,
+   "input": "开启主驾通风口",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "driver",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-018",
+   "description": "L0 vent.on 批准短语 开启副驾通风口",
+   "tags": [
+    "L0",
+    "vent",
+    "on"
+   ],
+   "enabled": true,
+   "input": "开启副驾通风口",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "passenger",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-019",
+   "description": "L0 vent.on 批准短语 开启驾驶位通风口",
+   "tags": [
+    "L0",
+    "vent",
+    "on"
+   ],
+   "enabled": true,
+   "input": "开启驾驶位通风口",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "driver",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-020",
+   "description": "L0 vent.on 批准短语 开启副驾驶通风口",
+   "tags": [
+    "L0",
+    "vent",
+    "on"
+   ],
+   "enabled": true,
+   "input": "开启副驾驶通风口",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "passenger",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-021",
+   "description": "L0 vent.on 批准短语 开启后排通风口",
+   "tags": [
+    "L0",
+    "vent",
+    "on"
+   ],
+   "enabled": true,
+   "input": "开启后排通风口",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "rear",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-022",
+   "description": "L0 vent.on 批准短语 开启全车通风口",
+   "tags": [
+    "L0",
+    "vent",
+    "on"
+   ],
+   "enabled": true,
+   "input": "开启全车通风口",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "all",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-023",
+   "description": "L0 vent.off 批准短语 关闭主驾通风口",
+   "tags": [
+    "L0",
+    "vent",
+    "off"
+   ],
+   "enabled": true,
+   "input": "关闭主驾通风口",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "driver",
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-024",
+   "description": "L0 vent.off 批准短语 关闭副驾通风口",
+   "tags": [
+    "L0",
+    "vent",
+    "off"
+   ],
+   "enabled": true,
+   "input": "关闭副驾通风口",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "passenger",
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-025",
+   "description": "L0 vent.off 批准短语 关闭驾驶位通风口",
+   "tags": [
+    "L0",
+    "vent",
+    "off"
+   ],
+   "enabled": true,
+   "input": "关闭驾驶位通风口",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "driver",
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-026",
+   "description": "L0 vent.off 批准短语 关闭副驾驶通风口",
+   "tags": [
+    "L0",
+    "vent",
+    "off"
+   ],
+   "enabled": true,
+   "input": "关闭副驾驶通风口",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "passenger",
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-027",
+   "description": "L0 vent.off 批准短语 关闭后排通风口",
+   "tags": [
+    "L0",
+    "vent",
+    "off"
+   ],
+   "enabled": true,
+   "input": "关闭后排通风口",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "rear",
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-028",
+   "description": "L0 vent.off 批准短语 关闭全车通风口",
+   "tags": [
+    "L0",
+    "vent",
+    "off"
+   ],
+   "enabled": true,
+   "input": "关闭全车通风口",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "all",
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-029",
+   "description": "L0 vent.off 批准短语 关掉主驾通风口",
+   "tags": [
+    "L0",
+    "vent",
+    "off"
+   ],
+   "enabled": true,
+   "input": "关掉主驾通风口",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "driver",
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-030",
+   "description": "L0 vent.off 批准短语 关掉副驾通风口",
+   "tags": [
+    "L0",
+    "vent",
+    "off"
+   ],
+   "enabled": true,
+   "input": "关掉副驾通风口",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "passenger",
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-031",
+   "description": "L0 vent.off 批准短语 关掉驾驶位通风口",
+   "tags": [
+    "L0",
+    "vent",
+    "off"
+   ],
+   "enabled": true,
+   "input": "关掉驾驶位通风口",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "driver",
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-032",
+   "description": "L0 vent.off 批准短语 关掉副驾驶通风口",
+   "tags": [
+    "L0",
+    "vent",
+    "off"
+   ],
+   "enabled": true,
+   "input": "关掉副驾驶通风口",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "passenger",
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-033",
+   "description": "L0 vent.off 批准短语 关掉后排通风口",
+   "tags": [
+    "L0",
+    "vent",
+    "off"
+   ],
+   "enabled": true,
+   "input": "关掉后排通风口",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "rear",
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-034",
+   "description": "L0 vent.off 批准短语 关掉全车通风口",
+   "tags": [
+    "L0",
+    "vent",
+    "off"
+   ],
+   "enabled": true,
+   "input": "关掉全车通风口",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "all",
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-035",
+   "description": "L0 fan.set 绝对档位",
+   "tags": [
+    "L0",
+    "fan",
+    "set"
+   ],
+   "enabled": true,
+   "input": "风量档位调到5档",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.set"
+   },
+   "expectedArguments": {
+    "zone": "all",
+    "level": 5
+   }
+  },
+  {
+   "caseId": "POWER-036",
+   "description": "L0 fan.set 绝对档位",
+   "tags": [
+    "L0",
+    "fan",
+    "set"
+   ],
+   "enabled": true,
+   "input": "设置风量档位2档",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.set"
+   },
+   "expectedArguments": {
+    "zone": "all",
+    "level": 2
+   }
+  },
+  {
+   "caseId": "POWER-037",
+   "description": "L0 fan.set 绝对档位",
+   "tags": [
+    "L0",
+    "fan",
+    "set"
+   ],
+   "enabled": true,
+   "input": "风量档位设为3档",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.set"
+   },
+   "expectedArguments": {
+    "zone": "all",
+    "level": 3
+   }
+  },
+  {
+   "caseId": "POWER-038",
+   "description": "L0 fan.set 分区正例 中左风量档位调到5档",
+   "tags": [
+    "L0",
+    "fan",
+    "set",
+    "zone"
+   ],
+   "enabled": true,
+   "input": "中左风量档位调到5档",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.set"
+   },
+   "expectedArguments": {
+    "zone": "middle_left",
+    "level": 5
+   }
+  },
+  {
+   "caseId": "POWER-039",
+   "description": "L0 fan.set 分区正例 中右风量档位调到2档",
+   "tags": [
+    "L0",
+    "fan",
+    "set",
+    "zone"
+   ],
+   "enabled": true,
+   "input": "中右风量档位调到2档",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.set"
+   },
+   "expectedArguments": {
+    "zone": "middle_right",
+    "level": 2
+   }
+  },
+  {
+   "caseId": "POWER-040",
+   "description": "L0 fan.set 分区正例 2排风量档位设为5档",
+   "tags": [
+    "L0",
+    "fan",
+    "set",
+    "zone"
+   ],
+   "enabled": true,
+   "input": "2排风量档位设为5档",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.set"
+   },
+   "expectedArguments": {
+    "zone": "second_row",
+    "level": 5
+   }
+  },
+  {
+   "caseId": "POWER-041",
+   "description": "L0 fan.set 分区正例 3排风量档位调到5档",
+   "tags": [
+    "L0",
+    "fan",
+    "set",
+    "zone"
+   ],
+   "enabled": true,
+   "input": "3排风量档位调到5档",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.set"
+   },
+   "expectedArguments": {
+    "zone": "third_row",
+    "level": 5
+   }
+  },
+  {
+   "caseId": "POWER-042",
+   "description": "L0 fan.adjust 批准短语 风量调高2档",
+   "tags": [
+    "L0",
+    "fan",
+    "adjust"
+   ],
+   "enabled": true,
+   "input": "风量调高2档",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 2
+   }
+  },
+  {
+   "caseId": "POWER-043",
+   "description": "L0 fan.adjust 批准短语 调高风量2档",
+   "tags": [
+    "L0",
+    "fan",
+    "adjust"
+   ],
+   "enabled": true,
+   "input": "调高风量2档",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 2
+   }
+  },
+  {
+   "caseId": "POWER-044",
+   "description": "L0 fan.adjust 批准短语 增加风量2档",
+   "tags": [
+    "L0",
+    "fan",
+    "adjust"
+   ],
+   "enabled": true,
+   "input": "增加风量2档",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 2
+   }
+  },
+  {
+   "caseId": "POWER-045",
+   "description": "L0 fan.adjust 批准短语 风量调低2档",
+   "tags": [
+    "L0",
+    "fan",
+    "adjust"
+   ],
+   "enabled": true,
+   "input": "风量调低2档",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 2
+   }
+  },
+  {
+   "caseId": "POWER-046",
+   "description": "L0 fan.adjust 批准短语 调低风量2档",
+   "tags": [
+    "L0",
+    "fan",
+    "adjust"
+   ],
+   "enabled": true,
+   "input": "调低风量2档",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 2
+   }
+  },
+  {
+   "caseId": "POWER-047",
+   "description": "L0 fan.adjust 批准短语 降低风量2档",
+   "tags": [
+    "L0",
+    "fan",
+    "adjust"
+   ],
+   "enabled": true,
+   "input": "降低风量2档",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 2
+   }
+  },
+  {
+   "caseId": "POWER-048",
+   "description": "L0 airflow 批准短语 出风模式吹脸",
+   "tags": [
+    "L0",
+    "airflow",
+    "mode"
+   ],
+   "enabled": true,
+   "input": "出风模式吹脸",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.airflow.mode.set"
+   },
+   "expectedArguments": {
+    "mode": "face"
+   }
+  },
+  {
+   "caseId": "POWER-049",
+   "description": "L0 airflow 批准短语 设置出风模式为吹脸",
+   "tags": [
+    "L0",
+    "airflow",
+    "mode"
+   ],
+   "enabled": true,
+   "input": "设置出风模式为吹脸",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.airflow.mode.set"
+   },
+   "expectedArguments": {
+    "mode": "face"
+   }
+  },
+  {
+   "caseId": "POWER-050",
+   "description": "L0 airflow 批准短语 出风模式吹脚",
+   "tags": [
+    "L0",
+    "airflow",
+    "mode"
+   ],
+   "enabled": true,
+   "input": "出风模式吹脚",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.airflow.mode.set"
+   },
+   "expectedArguments": {
+    "mode": "feet"
+   }
+  },
+  {
+   "caseId": "POWER-051",
+   "description": "L0 airflow 批准短语 设置出风模式为吹脚",
+   "tags": [
+    "L0",
+    "airflow",
+    "mode"
+   ],
+   "enabled": true,
+   "input": "设置出风模式为吹脚",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.airflow.mode.set"
+   },
+   "expectedArguments": {
+    "mode": "feet"
+   }
+  },
+  {
+   "caseId": "POWER-052",
+   "description": "L0 airflow 批准短语 出风模式除霜",
+   "tags": [
+    "L0",
+    "airflow",
+    "mode"
+   ],
+   "enabled": true,
+   "input": "出风模式除霜",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.airflow.mode.set"
+   },
+   "expectedArguments": {
+    "mode": "defrost"
+   }
+  },
+  {
+   "caseId": "POWER-053",
+   "description": "L0 airflow 批准短语 设置出风模式为除霜",
+   "tags": [
+    "L0",
+    "airflow",
+    "mode"
+   ],
+   "enabled": true,
+   "input": "设置出风模式为除霜",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.airflow.mode.set"
+   },
+   "expectedArguments": {
+    "mode": "defrost"
+   }
+  },
+  {
+   "caseId": "POWER-054",
+   "description": "L0 airflow 批准短语 出风模式混合",
+   "tags": [
+    "L0",
+    "airflow",
+    "mode"
+   ],
+   "enabled": true,
+   "input": "出风模式混合",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.airflow.mode.set"
+   },
+   "expectedArguments": {
+    "mode": "mixed"
+   }
+  },
+  {
+   "caseId": "POWER-055",
+   "description": "L0 airflow 批准短语 设置出风模式为混合",
+   "tags": [
+    "L0",
+    "airflow",
+    "mode"
+   ],
+   "enabled": true,
+   "input": "设置出风模式为混合",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.airflow.mode.set"
+   },
+   "expectedArguments": {
+    "mode": "mixed"
+   }
+  },
+  {
+   "caseId": "POWER-056",
+   "description": "L0 auto.on 批准短语 打开自动空调",
+   "tags": [
+    "L0",
+    "auto",
+    "on"
+   ],
+   "enabled": true,
+   "input": "打开自动空调",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.auto.set"
+   },
+   "expectedArguments": {
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-057",
+   "description": "L0 auto.on 批准短语 开启自动空调",
+   "tags": [
+    "L0",
+    "auto",
+    "on"
+   ],
+   "enabled": true,
+   "input": "开启自动空调",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.auto.set"
+   },
+   "expectedArguments": {
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-058",
+   "description": "L0 auto.off 批准短语 关闭自动空调",
+   "tags": [
+    "L0",
+    "auto",
+    "off"
+   ],
+   "enabled": true,
+   "input": "关闭自动空调",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.auto.set"
+   },
+   "expectedArguments": {
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-059",
+   "description": "L0 auto.off 批准短语 关掉自动空调",
+   "tags": [
+    "L0",
+    "auto",
+    "off"
+   ],
+   "enabled": true,
+   "input": "关掉自动空调",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.auto.set"
+   },
+   "expectedArguments": {
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-060",
+   "description": "L1 power 明确电源表达 启动空调",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "启动空调",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-061",
+   "description": "L1 power 明确电源表达 启动空调系统",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "启动空调系统",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-062",
+   "description": "L1 power 明确电源表达 接通空调电源",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "接通空调电源",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-063",
+   "description": "L1 power 明确电源表达 启用空调系统",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "启用空调系统",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-064",
+   "description": "L1 power 明确电源表达 让空调系统开始运行",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "让空调系统开始运行",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-065",
+   "description": "L1 power 明确电源表达 把空调电源打开",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "把空调电源打开",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-066",
+   "description": "L1 power 明确电源表达 空调电源开启",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "空调电源开启",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-067",
+   "description": "L1 power 明确电源表达 空调系统打开",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "空调系统打开",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-068",
+   "description": "L1 power 明确电源表达 空调电源打开",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "空调电源打开",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-069",
+   "description": "L1 power 明确电源表达 空调系统开启",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "空调系统开启",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-070",
+   "description": "L1 power 明确电源表达 启动空调电源",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "启动空调电源",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-071",
+   "description": "L1 power 明确电源表达 打开整个空调系统",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "打开整个空调系统",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-072",
+   "description": "L1 power 明确电源表达 空调系统启动",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "空调系统启动",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-073",
+   "description": "L1 power 明确电源表达 让空调系统运行",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "让空调系统运行",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-074",
+   "description": "L1 power 明确电源表达 空调电源启动",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "空调电源启动",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-075",
+   "description": "L1 power 明确电源表达 空调电源接通",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "空调电源接通",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-076",
+   "description": "L1 power 明确电源表达 启动整个空调系统",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "启动整个空调系统",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-077",
+   "description": "L1 power 明确电源表达 把空调系统打开",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "把空调系统打开",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-078",
+   "description": "L1 power 明确电源表达 打开主驾空调",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "打开主驾空调",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "driver",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-079",
+   "description": "L1 power 明确电源表达 打开副驾空调",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "打开副驾空调",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "passenger",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-080",
+   "description": "L1 power 明确电源表达 打开主驾空调电源",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "打开主驾空调电源",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "driver",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-081",
+   "description": "L1 power 明确电源表达 启动主驾空调",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "启动主驾空调",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "driver",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-082",
+   "description": "L1 power 明确电源表达 启动副驾空调系统",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "启动副驾空调系统",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "passenger",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-083",
+   "description": "L1 power 明确电源表达 打开前排空调",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "打开前排空调",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "front",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-084",
+   "description": "L1 power 明确电源表达 打开后排空调",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "打开后排空调",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "rear",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-085",
+   "description": "L1 power 明确电源表达 打开全车空调",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "打开全车空调",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "all",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-086",
+   "description": "L1 power 明确电源表达 启动后排空调",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "启动后排空调",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "rear",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-087",
+   "description": "L1 power 明确电源表达 打开中左空调",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "打开中左空调",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "middle_left",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-088",
+   "description": "L1 power 明确电源表达 打开中右空调",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "打开中右空调",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "middle_right",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-089",
+   "description": "L1 power 明确电源表达 打开2排空调",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "打开2排空调",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "second_row",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-090",
+   "description": "L1 power 明确电源表达 打开3排空调",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "打开3排空调",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "third_row",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-091",
+   "description": "L1 power 明确电源表达 打开前排空调电源",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "打开前排空调电源",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "front",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-092",
+   "description": "L1 power 明确电源表达 把主驾空调启动",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "把主驾空调启动",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "driver",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-093",
+   "description": "L1 power 明确电源表达 把副驾空调启动",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "把副驾空调启动",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "passenger",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-094",
+   "description": "L1 power 明确电源表达 主驾空调开启",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "主驾空调开启",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "driver",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-095",
+   "description": "L1 power 明确电源表达 副驾空调开启",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "副驾空调开启",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "passenger",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-096",
+   "description": "L1 power 明确电源表达 接通主驾空调电源",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "接通主驾空调电源",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "driver",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-097",
+   "description": "L1 power 明确电源表达 启用全车空调系统",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "启用全车空调系统",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "all",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-098",
+   "description": "L1 power 明确电源表达 后排空调开启",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "后排空调开启",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "rear",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-099",
+   "description": "L1 power 明确电源表达 2排空调启动",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "2排空调启动",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "second_row",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-100",
+   "description": "L1 power 明确电源表达 3排空调开启",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "3排空调开启",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "third_row",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-101",
+   "description": "L1 power 明确电源表达 中左空调启动",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "中左空调启动",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "middle_left",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-102",
+   "description": "L1 power 明确电源表达 中右空调启动",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "中右空调启动",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "middle_right",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-103",
+   "description": "L1 power 明确电源表达 主驾空调启动",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "主驾空调启动",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "driver",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-104",
+   "description": "L1 power 明确电源表达 副驾空调启动",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "副驾空调启动",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "passenger",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-105",
+   "description": "L1 power 明确电源表达 启动2排空调",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "启动2排空调",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "second_row",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-106",
+   "description": "L1 power 明确电源表达 启动3排空调",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "启动3排空调",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "third_row",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-107",
+   "description": "L1 power 明确电源表达 启动中左空调",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "启动中左空调",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "middle_left",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-108",
+   "description": "L1 power 明确电源表达 启动中右空调",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "启动中右空调",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "middle_right",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-109",
+   "description": "L1 power 明确电源表达 把后排空调启动",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "把后排空调启动",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "rear",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-110",
+   "description": "L1 power 明确电源表达 把前排空调启动",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "把前排空调启动",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "front",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-111",
+   "description": "L1 power 明确电源表达 把全车空调启动",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "把全车空调启动",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "all",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-112",
+   "description": "L1 power 明确电源表达 主驾空调电源打开",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "主驾空调电源打开",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "driver",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-113",
+   "description": "L1 power 明确电源表达 副驾空调电源打开",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "副驾空调电源打开",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "passenger",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-114",
+   "description": "L1 power 明确电源表达 中左空调电源打开",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "中左空调电源打开",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "middle_left",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-115",
+   "description": "L1 power 明确电源表达 2排空调电源打开",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "2排空调电源打开",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "second_row",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-116",
+   "description": "L1 power 明确电源表达 空调系统关闭",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "空调系统关闭",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-117",
+   "description": "L1 power 明确电源表达 空调电源断开",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "空调电源断开",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-118",
+   "description": "L1 power 明确电源表达 空调电源关闭",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "空调电源关闭",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-119",
+   "description": "L1 power 明确电源表达 空调电源关掉",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "空调电源关掉",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-120",
+   "description": "L1 power 明确电源表达 主驾空调断电",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "主驾空调断电",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "driver",
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-121",
+   "description": "L1 power 明确电源表达 副驾空调断电",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "副驾空调断电",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "passenger",
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-122",
+   "description": "L1 power 明确电源表达 把主驾空调关掉",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "把主驾空调关掉",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "driver",
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-123",
+   "description": "L1 power 明确电源表达 把副驾空调关掉",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "把副驾空调关掉",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "passenger",
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-124",
+   "description": "L1 power 明确电源表达 主驾空调电源关闭",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "主驾空调电源关闭",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "driver",
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-125",
+   "description": "L1 power 明确电源表达 副驾空调电源关闭",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "副驾空调电源关闭",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "passenger",
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-126",
+   "description": "L1 power 明确电源表达 关闭整个空调系统",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "关闭整个空调系统",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-127",
+   "description": "L1 power 明确电源表达 空调系统关掉",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "空调系统关掉",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-128",
+   "description": "L1 power 明确电源表达 断开主驾空调电源",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "断开主驾空调电源",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "zone": "driver",
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-129",
+   "description": "L1 power 明确电源表达 停止空调系统",
+   "tags": [
+    "L1",
+    "power",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "停止空调系统",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.power.set"
+   },
+   "expectedArguments": {
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-130",
+   "description": "L1 vent 风口开关 打开前排通风口",
+   "tags": [
+    "L1",
+    "vent",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "打开前排通风口",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "front",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-131",
+   "description": "L1 vent 风口开关 打开前排风口",
+   "tags": [
+    "L1",
+    "vent",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "打开前排风口",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "front",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-132",
+   "description": "L1 vent 风口开关 关闭前排通风口",
+   "tags": [
+    "L1",
+    "vent",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "关闭前排通风口",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "front",
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-133",
+   "description": "L1 vent 风口开关 关闭后排风口",
+   "tags": [
+    "L1",
+    "vent",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "关闭后排风口",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "rear",
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-134",
+   "description": "L1 vent 风口开关 开启前排风口",
+   "tags": [
+    "L1",
+    "vent",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "开启前排风口",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "front",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-135",
+   "description": "L1 vent 风口开关 打开主驾风口",
+   "tags": [
+    "L1",
+    "vent",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "打开主驾风口",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "driver",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-136",
+   "description": "L1 vent 风口开关 关闭副驾风口",
+   "tags": [
+    "L1",
+    "vent",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "关闭副驾风口",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "passenger",
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-137",
+   "description": "L1 vent 风口开关 打开主驾出风口",
+   "tags": [
+    "L1",
+    "vent",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "打开主驾出风口",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "driver",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-138",
+   "description": "L1 vent 风口开关 开启副驾出风口",
+   "tags": [
+    "L1",
+    "vent",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "开启副驾出风口",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "passenger",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-139",
+   "description": "L1 vent 风口开关 关闭后排出风口",
+   "tags": [
+    "L1",
+    "vent",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "关闭后排出风口",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "rear",
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-140",
+   "description": "L1 vent 风口开关 打开全车风口",
+   "tags": [
+    "L1",
+    "vent",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "打开全车风口",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "all",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-141",
+   "description": "L1 vent 风口开关 关闭全车风口",
+   "tags": [
+    "L1",
+    "vent",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "关闭全车风口",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "all",
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-142",
+   "description": "L1 vent 风口开关 把主驾风口打开",
+   "tags": [
+    "L1",
+    "vent",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "把主驾风口打开",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "driver",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-143",
+   "description": "L1 vent 风口开关 把副驾风口关掉",
+   "tags": [
+    "L1",
+    "vent",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "把副驾风口关掉",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "passenger",
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-144",
+   "description": "L1 vent 风口开关 主驾风口打开",
+   "tags": [
+    "L1",
+    "vent",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "主驾风口打开",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "driver",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-145",
+   "description": "L1 vent 风口开关 副驾风口关掉",
+   "tags": [
+    "L1",
+    "vent",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "副驾风口关掉",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "passenger",
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-146",
+   "description": "L1 vent 风口开关 打开中左风口",
+   "tags": [
+    "L1",
+    "vent",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "打开中左风口",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "middle_left",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-147",
+   "description": "L1 vent 风口开关 打开中右风口",
+   "tags": [
+    "L1",
+    "vent",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "打开中右风口",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "middle_right",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-148",
+   "description": "L1 vent 风口开关 打开2排风口",
+   "tags": [
+    "L1",
+    "vent",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "打开2排风口",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "second_row",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-149",
+   "description": "L1 vent 风口开关 打开3排风口",
+   "tags": [
+    "L1",
+    "vent",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "打开3排风口",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "third_row",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-150",
+   "description": "L1 vent 风口开关 关闭中左风口",
+   "tags": [
+    "L1",
+    "vent",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "关闭中左风口",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "middle_left",
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-151",
+   "description": "L1 vent 风口开关 开启后排风口",
+   "tags": [
+    "L1",
+    "vent",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "开启后排风口",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "rear",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-152",
+   "description": "L1 vent 风口开关 关掉全车风口",
+   "tags": [
+    "L1",
+    "vent",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "关掉全车风口",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "all",
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-153",
+   "description": "L1 vent 风口开关 打开前排出风口",
+   "tags": [
+    "L1",
+    "vent",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "打开前排出风口",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "front",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-154",
+   "description": "L1 vent 风口开关 关闭前排出风口",
+   "tags": [
+    "L1",
+    "vent",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "关闭前排出风口",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "front",
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-155",
+   "description": "L1 vent 风口开关 把后排风口打开",
+   "tags": [
+    "L1",
+    "vent",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "把后排风口打开",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.vent.set"
+   },
+   "expectedArguments": {
+    "zone": "rear",
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-156",
+   "description": "L1 fan.set 绝对档位 风量调到5档",
+   "tags": [
+    "L1",
+    "fan",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "风量调到5档",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.set"
+   },
+   "expectedArguments": {
+    "zone": "all",
+    "level": 5
+   }
+  },
+  {
+   "caseId": "POWER-157",
+   "description": "L1 fan.set 绝对档位 风速设成3档",
+   "tags": [
+    "L1",
+    "fan",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "风速设成3档",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.set"
+   },
+   "expectedArguments": {
+    "zone": "all",
+    "level": 3
+   }
+  },
+  {
+   "caseId": "POWER-158",
+   "description": "L1 fan.set 绝对档位 风量设为2档",
+   "tags": [
+    "L1",
+    "fan",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "风量设为2档",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.set"
+   },
+   "expectedArguments": {
+    "zone": "all",
+    "level": 2
+   }
+  },
+  {
+   "caseId": "POWER-159",
+   "description": "L1 fan.set 绝对档位 风速调到7档",
+   "tags": [
+    "L1",
+    "fan",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "风速调到7档",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.set"
+   },
+   "expectedArguments": {
+    "zone": "all",
+    "level": 7
+   }
+  },
+  {
+   "caseId": "POWER-160",
+   "description": "L1 fan.set 绝对档位 中左风量调到5档",
+   "tags": [
+    "L1",
+    "fan",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "中左风量调到5档",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.set"
+   },
+   "expectedArguments": {
+    "zone": "middle_left",
+    "level": 5
+   }
+  },
+  {
+   "caseId": "POWER-161",
+   "description": "L1 fan.set 绝对档位 2排风速设成3档",
+   "tags": [
+    "L1",
+    "fan",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "2排风速设成3档",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.set"
+   },
+   "expectedArguments": {
+    "zone": "second_row",
+    "level": 3
+   }
+  },
+  {
+   "caseId": "POWER-162",
+   "description": "L1 fan.set 绝对档位 3排风量调到4档",
+   "tags": [
+    "L1",
+    "fan",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "3排风量调到4档",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.set"
+   },
+   "expectedArguments": {
+    "zone": "third_row",
+    "level": 4
+   }
+  },
+  {
+   "caseId": "POWER-163",
+   "description": "L1 fan.set 绝对档位 中右风量设为5档",
+   "tags": [
+    "L1",
+    "fan",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "中右风量设为5档",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.set"
+   },
+   "expectedArguments": {
+    "zone": "middle_right",
+    "level": 5
+   }
+  },
+  {
+   "caseId": "POWER-164",
+   "description": "L1 fan.set 绝对档位 副驾风量调到3档",
+   "tags": [
+    "L1",
+    "fan",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "副驾风量调到3档",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.set"
+   },
+   "expectedArguments": {
+    "zone": "passenger",
+    "level": 3
+   }
+  },
+  {
+   "caseId": "POWER-165",
+   "description": "L1 fan.set 绝对档位 主驾风量设成5档",
+   "tags": [
+    "L1",
+    "fan",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "主驾风量设成5档",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.set"
+   },
+   "expectedArguments": {
+    "zone": "driver",
+    "level": 5
+   }
+  },
+  {
+   "caseId": "POWER-166",
+   "description": "L1 fan.set 绝对档位 风量调整到6档",
+   "tags": [
+    "L1",
+    "fan",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "风量调整到6档",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.set"
+   },
+   "expectedArguments": {
+    "zone": "all",
+    "level": 6
+   }
+  },
+  {
+   "caseId": "POWER-167",
+   "description": "L1 fan.set 绝对档位 风速调整到4档",
+   "tags": [
+    "L1",
+    "fan",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "风速调整到4档",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.set"
+   },
+   "expectedArguments": {
+    "zone": "all",
+    "level": 4
+   }
+  },
+  {
+   "caseId": "POWER-168",
+   "description": "L1 fan.set 绝对档位 风量开到5档",
+   "tags": [
+    "L1",
+    "fan",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "风量开到5档",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.set"
+   },
+   "expectedArguments": {
+    "zone": "all",
+    "level": 5
+   }
+  },
+  {
+   "caseId": "POWER-169",
+   "description": "L1 fan.set 绝对档位 风量调成2档",
+   "tags": [
+    "L1",
+    "fan",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "风量调成2档",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.set"
+   },
+   "expectedArguments": {
+    "zone": "all",
+    "level": 2
+   }
+  },
+  {
+   "caseId": "POWER-170",
+   "description": "L1 fan.set 绝对档位 前排风量调到3档",
+   "tags": [
+    "L1",
+    "fan",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "前排风量调到3档",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.set"
+   },
+   "expectedArguments": {
+    "zone": "front",
+    "level": 3
+   }
+  },
+  {
+   "caseId": "POWER-171",
+   "description": "L1 fan.set 绝对档位 后排风量设成4档",
+   "tags": [
+    "L1",
+    "fan",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "后排风量设成4档",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.set"
+   },
+   "expectedArguments": {
+    "zone": "rear",
+    "level": 4
+   }
+  },
+  {
+   "caseId": "POWER-172",
+   "description": "L1 fan.set 绝对档位 全车风量调到5档",
+   "tags": [
+    "L1",
+    "fan",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "全车风量调到5档",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.set"
+   },
+   "expectedArguments": {
+    "zone": "all",
+    "level": 5
+   }
+  },
+  {
+   "caseId": "POWER-173",
+   "description": "L1 fan.adjust 相对增减 风量调大一点",
+   "tags": [
+    "L1",
+    "fan",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "风量调大一点",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 1
+   }
+  },
+  {
+   "caseId": "POWER-174",
+   "description": "L1 fan.adjust 相对增减 风量调小一点",
+   "tags": [
+    "L1",
+    "fan",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "风量调小一点",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 1
+   }
+  },
+  {
+   "caseId": "POWER-175",
+   "description": "L1 fan.adjust 相对增减 风量再大一点",
+   "tags": [
+    "L1",
+    "fan",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "风量再大一点",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 1
+   }
+  },
+  {
+   "caseId": "POWER-176",
+   "description": "L1 fan.adjust 相对增减 风量再小一点",
+   "tags": [
+    "L1",
+    "fan",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "风量再小一点",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 1
+   }
+  },
+  {
+   "caseId": "POWER-177",
+   "description": "L1 fan.adjust 相对增减 风速调大一些",
+   "tags": [
+    "L1",
+    "fan",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "风速调大一些",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 1
+   }
+  },
+  {
+   "caseId": "POWER-178",
+   "description": "L1 fan.adjust 相对增减 风速调小一些",
+   "tags": [
+    "L1",
+    "fan",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "风速调小一些",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 1
+   }
+  },
+  {
+   "caseId": "POWER-179",
+   "description": "L1 fan.adjust 相对增减 风量调大2档",
+   "tags": [
+    "L1",
+    "fan",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "风量调大2档",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 2
+   }
+  },
+  {
+   "caseId": "POWER-180",
+   "description": "L1 fan.adjust 相对增减 风量调小1档",
+   "tags": [
+    "L1",
+    "fan",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "风量调小1档",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 1
+   }
+  },
+  {
+   "caseId": "POWER-181",
+   "description": "L1 fan.adjust 相对增减 风量加大一档",
+   "tags": [
+    "L1",
+    "fan",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "风量加大一档",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 1
+   }
+  },
+  {
+   "caseId": "POWER-182",
+   "description": "L1 fan.adjust 相对增减 风量减小一档",
+   "tags": [
+    "L1",
+    "fan",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "风量减小一档",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.fan.speed.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 1
+   }
+  },
+  {
+   "caseId": "POWER-183",
+   "description": "L1 airflow 风向模式 吹脸",
+   "tags": [
+    "L1",
+    "airflow",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "吹脸",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.airflow.mode.set"
+   },
+   "expectedArguments": {
+    "mode": "face"
+   }
+  },
+  {
+   "caseId": "POWER-184",
+   "description": "L1 airflow 风向模式 吹脚",
+   "tags": [
+    "L1",
+    "airflow",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "吹脚",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.airflow.mode.set"
+   },
+   "expectedArguments": {
+    "mode": "feet"
+   }
+  },
+  {
+   "caseId": "POWER-185",
+   "description": "L1 airflow 风向模式 除霜",
+   "tags": [
+    "L1",
+    "airflow",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "除霜",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.airflow.mode.set"
+   },
+   "expectedArguments": {
+    "mode": "defrost"
+   }
+  },
+  {
+   "caseId": "POWER-186",
+   "description": "L1 airflow 风向模式 混合出风",
+   "tags": [
+    "L1",
+    "airflow",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "混合出风",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.airflow.mode.set"
+   },
+   "expectedArguments": {
+    "mode": "mixed"
+   }
+  },
+  {
+   "caseId": "POWER-187",
+   "description": "L1 airflow 风向模式 改成吹脚",
+   "tags": [
+    "L1",
+    "airflow",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "改成吹脚",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.airflow.mode.set"
+   },
+   "expectedArguments": {
+    "mode": "feet"
+   }
+  },
+  {
+   "caseId": "POWER-188",
+   "description": "L1 airflow 风向模式 设置出风方向为吹脸",
+   "tags": [
+    "L1",
+    "airflow",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "设置出风方向为吹脸",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.airflow.mode.set"
+   },
+   "expectedArguments": {
+    "mode": "face"
+   }
+  },
+  {
+   "caseId": "POWER-189",
+   "description": "L1 airflow 风向模式 风向调成吹脚",
+   "tags": [
+    "L1",
+    "airflow",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "风向调成吹脚",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.airflow.mode.set"
+   },
+   "expectedArguments": {
+    "mode": "feet"
+   }
+  },
+  {
+   "caseId": "POWER-190",
+   "description": "L1 airflow 风向模式 出风模式改成除霜",
+   "tags": [
+    "L1",
+    "airflow",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "出风模式改成除霜",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.airflow.mode.set"
+   },
+   "expectedArguments": {
+    "mode": "defrost"
+   }
+  },
+  {
+   "caseId": "POWER-191",
+   "description": "L1 airflow 风向模式 改成混合出风",
+   "tags": [
+    "L1",
+    "airflow",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "改成混合出风",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.airflow.mode.set"
+   },
+   "expectedArguments": {
+    "mode": "mixed"
+   }
+  },
+  {
+   "caseId": "POWER-192",
+   "description": "L1 airflow 风向模式 出风方向吹脚",
+   "tags": [
+    "L1",
+    "airflow",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "出风方向吹脚",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.airflow.mode.set"
+   },
+   "expectedArguments": {
+    "mode": "feet"
+   }
+  },
+  {
+   "caseId": "POWER-193",
+   "description": "L1 airflow 风向模式 出风改为吹脸",
+   "tags": [
+    "L1",
+    "airflow",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "出风改为吹脸",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.airflow.mode.set"
+   },
+   "expectedArguments": {
+    "mode": "face"
+   }
+  },
+  {
+   "caseId": "POWER-194",
+   "description": "L1 airflow 风向模式 设置风向为吹脚",
+   "tags": [
+    "L1",
+    "airflow",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "设置风向为吹脚",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.airflow.mode.set"
+   },
+   "expectedArguments": {
+    "mode": "feet"
+   }
+  },
+  {
+   "caseId": "POWER-195",
+   "description": "L1 auto 自动空调 打开AUTO模式",
+   "tags": [
+    "L1",
+    "auto",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "打开AUTO模式",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.auto.set"
+   },
+   "expectedArguments": {
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-196",
+   "description": "L1 auto 自动空调 开启自动模式",
+   "tags": [
+    "L1",
+    "auto",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "开启自动模式",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.auto.set"
+   },
+   "expectedArguments": {
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-197",
+   "description": "L1 auto 自动空调 自动空调启动",
+   "tags": [
+    "L1",
+    "auto",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "自动空调启动",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.auto.set"
+   },
+   "expectedArguments": {
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-198",
+   "description": "L1 auto 自动空调 关闭AUTO模式",
+   "tags": [
+    "L1",
+    "auto",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "关闭AUTO模式",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.auto.set"
+   },
+   "expectedArguments": {
+    "enabled": false
+   }
+  },
+  {
+   "caseId": "POWER-199",
+   "description": "L1 auto 自动空调 自动空调开启",
+   "tags": [
+    "L1",
+    "auto",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "自动空调开启",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.auto.set"
+   },
+   "expectedArguments": {
+    "enabled": true
+   }
+  },
+  {
+   "caseId": "POWER-200",
+   "description": "L1 auto 自动空调 自动空调停止",
+   "tags": [
+    "L1",
+    "auto",
+    "rewrite"
+   ],
+   "enabled": true,
+   "input": "自动空调停止",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.auto.set"
+   },
+   "expectedArguments": {
+    "enabled": false
+   }
+  }
+ ]
+}

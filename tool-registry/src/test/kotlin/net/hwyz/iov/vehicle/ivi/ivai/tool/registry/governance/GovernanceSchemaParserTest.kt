@@ -62,6 +62,18 @@ class GovernanceSchemaParserTest {
     }
 
     @Test
+    fun `字面枚举支持缺省值后缀（CR-017 zone 缺省 all）`() {
+        val schema = parse("{zone?:all|driver|passenger|front|rear|middle_left|middle_right|second_row|third_row=all, level:int[0..10]}")
+        val zone = schema["properties"]!!.jsonObject["zone"]!!.jsonObject
+        assertEquals(9, zone["enum"]!!.jsonArray.size)
+        assertEquals("all", zone["default"]?.jsonPrimitive?.content)
+        // 缺省必须是枚举成员，否则不输出 default。
+        val bad = parse("{zone?:all|driver=ghost}")
+        val zoneBad = bad["properties"]!!.jsonObject["zone"]!!.jsonObject
+        assertEquals(null, zoneBad["default"])
+    }
+
+    @Test
     fun `泛型 enum 使用 L0 批准枚举值`() {
         val schema = parse(
             "{level:enum}",

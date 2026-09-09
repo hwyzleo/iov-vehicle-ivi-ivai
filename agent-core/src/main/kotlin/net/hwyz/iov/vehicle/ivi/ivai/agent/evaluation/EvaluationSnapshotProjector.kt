@@ -38,7 +38,14 @@ data class SnapshotFacts(
     val matchedRuleIds: List<String> = emptyList(),
     val argumentSources: Map<String, String> = emptyMap(),
     val llmInvoked: Boolean? = null,
-    val modelRequestCount: Int? = null
+    val modelRequestCount: Int? = null,
+    // ---- CR-017 检索与模型分发可观测性（REQ-183） ----
+    val retrievalInvoked: Boolean? = null,
+    val retrievedCandidateCount: Int? = null,
+    val modelDispatchAttempted: Boolean? = null,
+    // ---- CR-018 检索 Top-K 可观测性（诊断导出） ----
+    val retrievedCandidateIds: List<String> = emptyList(),
+    val retrievedCandidateScores: List<Double> = emptyList()
 )
 
 /**
@@ -80,7 +87,12 @@ object EvaluationSnapshotProjector {
             matchedRuleIds = facts.matchedRuleIds,
             argumentSources = facts.argumentSources,
             llmInvoked = facts.llmInvoked,
-            modelRequestCount = facts.modelRequestCount
+            modelRequestCount = facts.modelRequestCount,
+            retrievalInvoked = facts.retrievalInvoked,
+            retrievedCandidateCount = facts.retrievedCandidateCount,
+            modelDispatchAttempted = facts.modelDispatchAttempted,
+            retrievedCandidateIds = facts.retrievedCandidateIds,
+            retrievedCandidateScores = facts.retrievedCandidateScores
         )
     }
 

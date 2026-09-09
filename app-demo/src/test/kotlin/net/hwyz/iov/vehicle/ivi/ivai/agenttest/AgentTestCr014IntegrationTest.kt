@@ -237,8 +237,8 @@ class AgentTestCr014IntegrationTest {
         val file = DefaultTestResultExporter().exportXlsx("cr14-l0", executions)
         val sheet = unzipSheet(file.bytes)
         assertTrue(sheet.contains("AIRFLOW-001"))
-        // 每条一行（表头 + 2 行 → autoFilter A1:Y3）。
-        assertTrue(sheet.contains("""<autoFilter ref="A1:Y3"/>"""))
+        // 每条一行（表头 + 2 行 → autoFilter A1:AG3，CR-018 33 列）。
+        assertTrue(sheet.contains("""<autoFilter ref="A1:AG3"/>"""))
     }
 
     @Test

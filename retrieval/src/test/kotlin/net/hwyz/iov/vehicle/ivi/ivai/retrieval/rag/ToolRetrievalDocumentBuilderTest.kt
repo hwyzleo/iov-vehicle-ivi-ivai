@@ -77,4 +77,53 @@ class ToolRetrievalDocumentBuilderTest {
         assertTrue(doc.semanticText.contains(doc.title))
         assertTrue(doc.operationTypes.contains(net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.OperationType.WORKFLOW))
     }
+
+    // ---------------- CR-017：语义载荷（位置 Alias / enum / 正反例 / 冲突 / 来源版本） ----------------
+
+    @Test
+    fun `climate fan speed set 文档包含分区正例 位置 Alias enum 负例与来源版本`() {
+        val docs = builder.buildAll(
+            catalog,
+            runtimeSet(setOf("climate.fan.speed.set")),
+            sourceVersion = "1.0"
+        )
+        val doc = docs.single { it.canonicalId == "climate.fan.speed.set" }
+        // 分区正例（中左/中右/2排/3排）进入 semanticText。
+        assertTrue(doc.semanticText.contains("中左风量档位调到5档"), "semanticText 必须含中左正例")
+        assertTrue(doc.semanticText.contains("中右设置风量档位5档"), "semanticText 必须含中右正例")
+        assertTrue(doc.semanticText.contains("2排风量档位设为5档"), "semanticText 必须含2排正例")
+        assertTrue(doc.semanticText.contains("3排风量档位调到5档"), "semanticText 必须含3排正例")
+        // 负例边界（右边/后面）进入 semanticText。
+        assertTrue(doc.semanticText.contains("右边风量调到5"), "semanticText 必须含宽泛表达负例")
+        // canonical enum 显式展开（zone 9 值）。
+        assertTrue(doc.semanticText.contains("middle_left"), "semanticText 必须含 middle_left 枚举")
+        assertTrue(doc.semanticText.contains("second_row"), "semanticText 必须含 second_row 枚举")
+        assertTrue(doc.semanticText.contains("third_row"), "semanticText 必须含 third_row 枚举")
+        assertTrue(doc.semanticText.contains("位置合法") || doc.semanticText.contains("位置别名"), "semanticText 必须含位置 Alias 段")
+        assertTrue(doc.semanticText.contains("来源版本"), "semanticText 必须含来源版本段")
+        // 冲突 Tool（speed.adjust）进入相似工具段（注入 L0 编译产物）。
+        val withL0 = ToolRetrievalDocumentBuilder(
+            registry, WorkflowRegistry,
+            deterministicCatalog = net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.DeterministicIntentCatalog.build()
+        )
+        val docsL0 = withL0.buildAll(catalog, runtimeSet(setOf("climate.fan.speed.set")), "1.0")
+        val docL0 = docsL0.single { it.canonicalId == "climate.fan.speed.set" }
+        assertTrue(docL0.semanticText.contains("climate.fan.speed.adjust"), "semanticText 必须含冲突 Tool")
+    }
+
+    @Test
+    fun `Catalog 正例变化导致 contentHash 变化（REQ-177 索引刷新前提）`() {
+        val docs1 = builder.buildAll(catalog, runtimeSet(setOf("climate.fan.speed.set")), "1.0")
+        val hash1 = docs1.single { it.canonicalId == "climate.fan.speed.set" }.contentHash
+        // 模拟 Alias/Catalog 内容变化：更换正例后语义文本变化 → contentHash 必须变化。
+        val toolId = "climate.fan.speed.set"
+        val altered = registry.get(toolId)!!.copy(
+            positiveExamples = listOf("全新分区表达风量档位调到9档")
+        )
+        val registry2 = ToolRegistry().register(altered)
+        val builder2 = ToolRetrievalDocumentBuilder(registry2, WorkflowRegistry)
+        val docs2 = builder2.buildAll(catalog, runtimeSet(setOf(toolId)), "1.0")
+        val hash2 = docs2.single { it.canonicalId == toolId }.contentHash
+        assertTrue(hash1 != hash2, "正例变化必须引起 contentHash 变化（增量重建依据）")
+    }
 }

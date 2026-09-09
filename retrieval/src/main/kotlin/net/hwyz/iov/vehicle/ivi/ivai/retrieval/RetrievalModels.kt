@@ -80,8 +80,37 @@ data class ToolCandidate(
     val toolId: String,
     val score: Double,
     val matchedFields: List<String>,
-    val definition: ToolDefinitionSummary
+    val definition: ToolDefinitionSummary,
+    /** CR-017: 混合召回分数分解（vectorScore / aliasBoost / slotBoost / operationBoost）。 */
+    val boostBreakdown: BoostBreakdown? = null
 )
+
+/**
+ * 混合召回分数分解（CR-017 + CR-018）。
+ *
+ * finalScore = vectorScore + aliasBoost + slotBoost + operationBoost
+ *            + objectEvidenceBoost + actionEvidenceBoost
+ *            − negativeBoundaryPenalty。
+ *
+ * CR-018：对象/动作/槽位证据与负边界惩罚只作用于 RuntimeCapabilitySet 中的
+ * 合法候选；Trace 记录每个分量及最终排序。默认 0 保持 CR-017 既有语义兼容。
+ */
+data class BoostBreakdown(
+    val vectorScore: Double,
+    val aliasBoost: Double,
+    val slotCoverageBoost: Double,
+    val operationBoundaryBoost: Double,
+    /** CR-018: 对象证据加权（HVAC_SYSTEM / VENT / FAN_SPEED / AIRFLOW_DIRECTION / AUTO_HVAC）。 */
+    val objectEvidenceBoost: Double = 0.0,
+    /** CR-018: 动作证据加权（open/close/start/absolute/relative/face/feet…）。 */
+    val actionEvidenceBoost: Double = 0.0,
+    /** CR-018: 相似 Tool 负边界惩罚（命中负例边界时扣分）。 */
+    val negativeBoundaryPenalty: Double = 0.0
+) {
+    val finalScore: Double
+        get() = vectorScore + aliasBoost + slotCoverageBoost + operationBoundaryBoost +
+            objectEvidenceBoost + actionEvidenceBoost - negativeBoundaryPenalty
+}
 
 /**
  * L2 知识片段模型（IVI-IVAI-DSN-CR-011）。

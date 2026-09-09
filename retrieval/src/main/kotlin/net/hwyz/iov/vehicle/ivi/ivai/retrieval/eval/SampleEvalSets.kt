@@ -31,7 +31,24 @@ object SampleEvalSets {
             domainIds = listOf(BusinessDomainId.CABIN_COMFORT)
         ),
         RetrievalEvalQuery("量子物理讲座", setOf(), expectEmpty = false),
-        RetrievalEvalQuery("宇宙起源", setOf(), expectEmpty = true)
+        RetrievalEvalQuery("宇宙起源", setOf(), expectEmpty = true),
+        // ---- CR-017：位置表达专项（中左/中右/2排/3排 → climate.fan.speed.set） ----
+        RetrievalEvalQuery("中左风量档位调到5档", setOf("climate.fan.speed.set")),
+        RetrievalEvalQuery("中右设置风量档位5档", setOf("climate.fan.speed.set")),
+        RetrievalEvalQuery("2排风量档位设为5档", setOf("climate.fan.speed.set")),
+        RetrievalEvalQuery("3排风量档位调到5档", setOf("climate.fan.speed.set")),
+        RetrievalEvalQuery("中排左风量调到5档", setOf("climate.fan.speed.set")),
+        RetrievalEvalQuery("第二排右风量设为5档", setOf("climate.fan.speed.set")),
+        // ---- CR-018：空调相似 Tool 边界专项（power/vent/fan/airflow/auto 五类） ----
+        RetrievalEvalQuery("打开空调", setOf("climate.power.set")),
+        RetrievalEvalQuery("启动空调系统", setOf("climate.power.set")),
+        RetrievalEvalQuery("接通空调电源", setOf("climate.power.set")),
+        RetrievalEvalQuery("打开通风口", setOf("climate.vent.set")),
+        RetrievalEvalQuery("打开前排风口", setOf("climate.vent.set")),
+        RetrievalEvalQuery("风量调到5档", setOf("climate.fan.speed.set")),
+        RetrievalEvalQuery("风量调大一点", setOf("climate.fan.speed.adjust")),
+        RetrievalEvalQuery("出风模式吹脸", setOf("climate.airflow.mode.set")),
+        RetrievalEvalQuery("开启自动空调", setOf("climate.auto.set"))
     )
 
     /** L2 Knowledge 评测集：期望命中 sourceId。 */

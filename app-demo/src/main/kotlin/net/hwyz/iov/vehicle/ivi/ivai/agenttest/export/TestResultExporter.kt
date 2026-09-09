@@ -154,6 +154,7 @@ class DefaultTestResultExporter(
         val actual = r.actual
         val actualArgsJson = actual?.let { stableJson(it.arguments) }
         val expectedArgsJson = stableJson(expected.arguments)
+        val diag = r.diagnostics
         return listOf(
             XlsxCell.XlsxText(r.caseId),
             XlsxCell.XlsxText(r.input),
@@ -186,7 +187,17 @@ class DefaultTestResultExporter(
             XlsxCell.XlsxText(r.batchId),
             XlsxCell.XlsxText(r.status.name),
             XlsxCell.XlsxText(r.failureReason ?: ""),
-            XlsxCell.XlsxText(r.timing.llmInvoked.toString())
+            XlsxCell.XlsxText(r.timing.llmInvoked.toString()),
+            // CR-018 诊断可选列：运行时终态 / 失败阶段 / 原因码 / 评分维度 / 差异详情 /
+            // Domain 证据 / RAG Top-K / 选中候选及分数（缺失写空单元格）。
+            XlsxCell.XlsxText(diag?.runtimeStatus?.name ?: ""),
+            XlsxCell.XlsxText(diag?.runtimeTerminalStage?.name ?: ""),
+            XlsxCell.XlsxText(diag?.runtimeReasonCode ?: ""),
+            XlsxCell.XlsxText(diag?.mismatchDimensions?.sortedBy { it.name }?.joinToString(",") ?: ""),
+            XlsxCell.XlsxText(diag?.mismatchDetail ?: ""),
+            XlsxCell.XlsxText(diag?.domainEvidence ?: ""),
+            XlsxCell.XlsxText(diag?.ragTopK ?: ""),
+            XlsxCell.XlsxText(diag?.selectedCandidate ?: "")
         )
     }
 
@@ -243,7 +254,9 @@ class DefaultTestResultExporter(
         /**
          * 列契约（用户确认调整版）：期望 → 实际 → 一致标记 分组排列，16 个核心列
          * 语义不变（用例ID/输入/层级/领域/能力包/工具或工作流/参数/四耗时），
-         * 之后追加辅助列（批次ID / 状态 / 失败原因 / llmInvoked）。
+         * 之后追加辅助列（批次ID / 状态 / 失败原因 / llmInvoked）与 CR-018 诊断
+         * 可选列（运行时终态 / 失败阶段 / 原因码 / 评分维度 / 差异详情 /
+         * Domain 证据 / RAG Top-K / 选中候选及分数）。
          */
         val HEADER: List<String> = listOf(
             "用例ID",
@@ -270,7 +283,16 @@ class DefaultTestResultExporter(
             "批次ID",
             "执行状态",
             "失败原因",
-            "是否调用LLM"
+            "是否调用LLM",
+            // CR-018 诊断可选列。
+            "运行时终态",
+            "运行时失败阶段",
+            "运行时原因码",
+            "评分失败维度",
+            "评分差异详情",
+            "Domain证据",
+            "RAG Top-K",
+            "选中候选及分数"
         )
     }
 }

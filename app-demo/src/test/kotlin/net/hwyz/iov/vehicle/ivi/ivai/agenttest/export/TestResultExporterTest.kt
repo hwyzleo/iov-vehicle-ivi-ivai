@@ -87,8 +87,8 @@ class TestResultExporterTest {
     @Test
     fun `21 核心列按 期望-实际-一致标记 分组且顺序固定 辅助列随后`() {
         val header = DefaultTestResultExporter.HEADER
-        // 21 核心列（用例ID/输入 + 5 组期望/实际/一致 + 4 耗时）+ 4 辅助列。
-        assertEquals(25, header.size)
+        // 21 核心列（用例ID/输入 + 5 组期望/实际/一致 + 4 耗时）+ 4 辅助列 + CR-018 8 诊断列。
+        assertEquals(33, header.size)
         assertEquals(
             listOf(
                 "用例ID", "输入内容",
@@ -106,6 +106,15 @@ class TestResultExporterTest {
         assertEquals("执行状态", header[22])
         assertEquals("失败原因", header[23])
         assertEquals("是否调用LLM", header[24])
+        // CR-018 诊断可选列：运行时终态 / 失败阶段 / 原因码 / 评分维度 / 差异详情 /
+        // Domain 证据 / RAG Top-K / 选中候选及分数。
+        assertEquals(
+            listOf(
+                "运行时终态", "运行时失败阶段", "运行时原因码", "评分失败维度",
+                "评分差异详情", "Domain证据", "RAG Top-K", "选中候选及分数"
+            ),
+            header.subList(25, 33)
+        )
     }
 
     @Test
@@ -256,7 +265,8 @@ class TestResultExporterTest {
         }
         val file = exporter().exportXlsx("run-big", rows)
         val sheet = unzipSheet(file.bytes)
-        assertTrue(sheet.contains("""<autoFilter ref="A1:Y1175"/>"""))
+        // CR-018：33 列（21 核心 + 4 辅助 + 8 诊断），AG = 第 33 列。
+        assertTrue(sheet.contains("""<autoFilter ref="A1:AG1175"/>"""))
         assertTrue(sheet.contains("TC-0001"))
         assertTrue(sheet.contains("TC-1174"))
     }

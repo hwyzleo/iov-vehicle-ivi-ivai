@@ -2,6 +2,7 @@ package net.hwyz.iov.vehicle.ivi.ivai.agent.router.deterministic
 
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.ToolRegistry
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.aliases.CanonicalAliasLexicon
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.aliases.PositionAliasResolver
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.DeterministicIntentRule
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.SlotPattern
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.SlotType
@@ -24,7 +25,9 @@ import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.schema.CanonicalSchemaParser
  */
 class SchemaAwareSlotExtractor(
     private val registry: ToolRegistry,
-    private val lexicon: CanonicalAliasLexicon
+    private val lexicon: CanonicalAliasLexicon,
+    /** CR-017: 位置 Alias 解析（车型拓扑 + 歧义保护），与 L1/参数规范化同源。 */
+    private val positionResolver: PositionAliasResolver = PositionAliasResolver()
 ) {
 
     /**
@@ -33,11 +36,13 @@ class SchemaAwareSlotExtractor(
      * @param rule 命中的确定性规则（声明要抽取的槽位）
      * @param toolId 规则所属 Tool（用于读取 Schema 参数名/类型/枚举/范围）
      * @param normalized 归一化后的用户输入
+     * @param vehicleModel 当前车型（位置 Alias 拓扑过滤，CR-017；null 按默认拓扑）
      */
     fun extract(
         rule: DeterministicIntentRule,
         toolId: String,
-        normalized: String
+        normalized: String,
+        vehicleModel: String? = null
     ): SlotExtractionResult {
         val tool = registry.get(toolId)
         if (tool == null) {
@@ -52,14 +57,17 @@ class SchemaAwareSlotExtractor(
         val extracted = mutableListOf<ExtractedArgument>()
         val present = mutableSetOf<String>()
         var conflict: String? = null
+        val topologyViolations = mutableListOf<String>()
 
         for (slot in rule.slotPatterns) {
             val prop = propByName[slot.name]
-            // Schema 感知：槽位仍按规则声明提取；Schema 属性用于读取类型/枚举/范围
-            // （prop 为 null 时仍提取——规则声明的槽位是 L0 事实源，测试夹具可能
-            // 只有规则没有完整 Schema）。
-            val result = extractSlot(slot, prop?.type, normalized)
+            val result = extractSlot(slot, prop?.type, normalized, vehicleModel)
             if (result == null) {
+                continue
+            }
+            if (result.topologyViolated) {
+                // CR-017: 位置命中但车型不适用 → 该槽位不得进入候选（IVAI-ALIAS-TOPOLOGY-001）。
+                topologyViolations += result.value?.toString() ?: slot.name
                 continue
             }
             val source = if (result.fromAlias) ArgumentSource.ALIAS_MAPPING
@@ -92,7 +100,8 @@ class SchemaAwareSlotExtractor(
         return SlotExtractionResult(
             arguments = extracted,
             conflict = conflict,
-            missing = missing
+            missing = missing,
+            topologyViolations = topologyViolations
         )
     }
 
@@ -101,12 +110,17 @@ class SchemaAwareSlotExtractor(
         return values.isEmpty() || values.all { it == null || (it as? String)?.isBlank() == true }
     }
 
-    private data class SlotValue(val value: Any?, val fromAlias: Boolean, val range: IntRange? = null)
+    private data class SlotValue(val value: Any?, val fromAlias: Boolean, val range: IntRange? = null, val topologyViolated: Boolean = false)
 
-    private fun extractSlot(slot: SlotPattern, schemaType: String?, normalized: String): SlotValue? =
+    private fun extractSlot(
+        slot: SlotPattern,
+        schemaType: String?,
+        normalized: String,
+        vehicleModel: String?
+    ): SlotValue? =
         when (slot.type) {
             SlotType.TEMPERATURE -> extractTemperature(normalized)
-            SlotType.POSITION -> extractPosition(normalized)
+            SlotType.POSITION -> extractPosition(normalized, vehicleModel)
             SlotType.STEP -> extractStep(normalized)
             SlotType.NUMERIC -> extractNumeric(normalized)
             SlotType.TIME -> null
@@ -126,18 +140,24 @@ class SchemaAwareSlotExtractor(
     }
 
     /**
-     * 位置槽位：只使用版本化 Alias Lexicon（含 2排/3排/整车 等批准词）。
-     * 命中 → ALIAS_MAPPING 来源；未命中 → null（由调用方决定缺参/降级）。
+     * 位置槽位：通过 [PositionAliasResolver] 消费版本化 Alias（含车型拓扑与歧义保护）。
+     *  - 命中批准 Alias 且车型适用 → ALIAS_MAPPING 来源证据；
+     *  - 命中但车型不适用 → 标记拓扑违规（不提取为参数）；
+     *  - 宽泛表达/一对多 → 歧义（不提取；由规则负向词或 L1 消歧处理）。
      */
-    private fun extractPosition(normalized: String): SlotValue? {
-        val sorted = lexicon.positionAliases.entries.sortedByDescending { it.key.length }
-        for ((word, canonical) in sorted) {
-            val idx = normalized.indexOf(word)
-            if (idx >= 0) {
-                return SlotValue(canonical, true, idx..(idx + word.length))
-            }
+    private fun extractPosition(normalized: String, vehicleModel: String?): SlotValue? {
+        val resolution = positionResolver.resolve(normalized, vehicleModel)
+        if (resolution.hasTopologyViolation) {
+            return SlotValue(
+                value = resolution.topologyViolations.firstOrNull(),
+                fromAlias = true,
+                range = null,
+                topologyViolated = true
+            )
         }
-        return null
+        val zone = resolution.singleZone ?: return null
+        val entry = resolution.matchedEntries.firstOrNull { it.canonicalValue == zone } ?: return null
+        return SlotValue(zone, true, entry.evidenceRange)
     }
 
     /**

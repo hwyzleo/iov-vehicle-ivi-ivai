@@ -38,7 +38,11 @@ data class DomainRouteDecision(
     val semanticFeatures: Set<SemanticFeature>,
     val reasonCode: String,
     /** false 表示未识别到任何可信业务领域（回退旧链路 / 追问）。 */
-    val classified: Boolean
+    val classified: Boolean,
+    /** CR-018: 座舱气流语义对象证据（出风/吹风/风口/风量/自动空调…），只用于领域路由与相似 Tool 区分。 */
+    val airflowObjects: Set<SemanticObject> = emptySet(),
+    /** CR-018: 是否存在座舱气流词但未能形成 CABIN_COMFORT 证据（IVAI-DOMAIN-AIRFLOW-001）。 */
+    val airflowEvidenceFailed: Boolean = false
 ) {
     val topDomain: BusinessDomainId? get() = candidates.firstOrNull()?.domainId
 }
@@ -49,6 +53,9 @@ object DomainReasonCode {
     const val DOMAIN_AMBIGUOUS = "DOMAIN_AMBIGUOUS"
     const val DOMAIN_LOW_CONFIDENCE = "DOMAIN_LOW_CONFIDENCE"
     const val DOMAIN_UNKNOWN = "DOMAIN_UNKNOWN"
+
+    /** CR-018：存在座舱气流词但未形成 CABIN_COMFORT 证据（IVAI-DOMAIN-AIRFLOW-001）。 */
+    const val DOMAIN_AIRFLOW_UNRESOLVED = "DOMAIN_AIRFLOW_UNRESOLVED"
 }
 
 /**
@@ -65,7 +72,9 @@ object DomainReasonCode {
 class DomainRouter(
     private val registry: ToolRegistry,
     private val extraVocabulary: Map<BusinessDomainId, List<String>> = DEFAULT_DOMAIN_VOCAB,
-    private val maxCandidates: Int = DEFAULT_MAX_CANDIDATES
+    private val maxCandidates: Int = DEFAULT_MAX_CANDIDATES,
+    /** CR-018: 座舱气流语义词典（治理单一事实源，出风/吹风/风口/风量/气流…）。 */
+    private val airflowLexicon: CabinAirflowSemanticLexicon = CabinAirflowSemanticLexicon
 ) {
 
     private val domainVocab: Map<BusinessDomainId, List<String>> = run {
@@ -82,6 +91,9 @@ class DomainRouter(
         for ((domain, words) in extraVocabulary) {
             map.getOrPut(domain) { mutableListOf() }.addAll(words)
         }
+        // CR-018：座舱气流治理词并入 CABIN_COMFORT 领域信号（出风/送风/风口/气流…）。
+        map.getOrPut(BusinessDomainId.CABIN_COMFORT) { mutableListOf() }
+            .addAll(airflowLexicon.PHRASES)
         // 输入经 TextNormalizer 已转小写；词表统一小写后匹配，避免 ADAS/POI/wifi 等
         // 英文词大小写不一致导致领域无法识别（CR-009 160 工具含大量英文词）。
         map.mapValues { (_, signals) ->
@@ -98,6 +110,8 @@ class DomainRouter(
 
         val operationType = OperationClassifier.classify(text)
         val semantic = semanticFeatures(input)
+        // CR-018：座舱气流对象证据（治理词表，不选 Tool）。
+        val airflowObjects = airflowLexicon.evidenceFor(text)
 
         if (scored.isEmpty()) {
             return DomainRouteDecision(
@@ -106,8 +120,13 @@ class DomainRouter(
                 confidence = 0.0,
                 ambiguity = DomainAmbiguity.LOW_CONFIDENCE,
                 semanticFeatures = semantic,
-                reasonCode = DomainReasonCode.DOMAIN_UNKNOWN,
-                classified = false
+                reasonCode = when {
+                    airflowObjects.isNotEmpty() -> DomainReasonCode.DOMAIN_AIRFLOW_UNRESOLVED
+                    else -> DomainReasonCode.DOMAIN_UNKNOWN
+                },
+                classified = false,
+                airflowObjects = airflowObjects,
+                airflowEvidenceFailed = airflowObjects.isNotEmpty()
             )
         }
 
@@ -121,18 +140,23 @@ class DomainRouter(
             else -> DomainAmbiguity.NONE
         }
         val classified = best.score >= MIN_CONFIDENT_SCORE
+        // CR-018：存在气流词但最终领域不是 CABIN_COMFORT → 记录 IVAI-DOMAIN-AIRFLOW-001。
+        val airflowFailed = airflowObjects.isNotEmpty() && best.domainId != BusinessDomainId.CABIN_COMFORT
         return DomainRouteDecision(
             candidates = topN,
             operationType = operationType,
             confidence = confidence,
             ambiguity = ambiguity,
             semanticFeatures = semantic,
-            reasonCode = when (ambiguity) {
-                DomainAmbiguity.MULTI_DOMAIN -> DomainReasonCode.DOMAIN_AMBIGUOUS
-                DomainAmbiguity.LOW_CONFIDENCE -> DomainReasonCode.DOMAIN_LOW_CONFIDENCE
+            reasonCode = when {
+                airflowFailed -> DomainReasonCode.DOMAIN_AIRFLOW_UNRESOLVED
+                ambiguity == DomainAmbiguity.MULTI_DOMAIN -> DomainReasonCode.DOMAIN_AMBIGUOUS
+                ambiguity == DomainAmbiguity.LOW_CONFIDENCE -> DomainReasonCode.DOMAIN_LOW_CONFIDENCE
                 else -> DomainReasonCode.DOMAIN_CONFIDENT
             },
-            classified = classified
+            classified = classified,
+            airflowObjects = airflowObjects,
+            airflowEvidenceFailed = airflowFailed
         )
     }
 
@@ -174,7 +198,7 @@ class DomainRouter(
 
         private val CONTROL_VERBS = listOf(
             "打开", "开启", "关闭", "关掉", "调高", "调低", "升高", "降低", "升温", "降温",
-            "切换", "调节", "增大", "减小", "开", "关"
+            "切换", "调节", "增大", "减小", "调大", "调小", "开", "关"
         )
         private val QUERY_VERBS = listOf(
             "查询", "查看", "看", "多少", "有没有", "是否", "开了吗", "关了吗",

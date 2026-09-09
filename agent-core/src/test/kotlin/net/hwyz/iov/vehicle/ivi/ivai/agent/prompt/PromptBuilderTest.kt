@@ -72,4 +72,69 @@ class PromptBuilderTest {
         assertTrue(!snapshot.content.contains("会话状态："))
         assertTrue(!snapshot.content.contains("车辆状态："))
     }
+
+    // ---------------- CR-017：Candidate Context（allowed enum / matchedEvidence / canonicalHint） ----------------
+
+    @Test
+    fun `候选上下文注入 zone 合法枚举与命中 Alias 证据`() {
+        val fanSet = net.hwyz.iov.vehicle.ivi.ivai.retrieval.ToolDefinitionSummary(
+            toolId = "climate.fan.speed.set",
+            name = "设置风量档位",
+            description = "设置绝对风量档位",
+            positiveExamples = listOf("中左风量档位调到5档"),
+            negativeExamples = listOf("右边风量调到5"),
+            parameterSchema = """{"type":"object","properties":{"zone":{"type":"string","enum":["all","middle_left","middle_right","second_row","third_row"],"default":"all"},"level":{"type":"integer"}},"required":["level"]}"""
+        )
+        val candidate = net.hwyz.iov.vehicle.ivi.ivai.retrieval.ToolCandidate(
+            toolId = "climate.fan.speed.set",
+            score = 0.9,
+            matchedFields = listOf("vector", "alias:middle_left"),
+            definition = fanSet
+        )
+        val evidence = net.hwyz.iov.vehicle.ivi.ivai.tool.registry.aliases.PositionAliasResolver()
+            .resolve("中左风量档位调到5档")
+        val messages = builder.buildWithCandidates(
+            session = Session(),
+            input = AgentInput("cr017-prompt", "中左风量档位调到5档"),
+            vehicleState = null,
+            candidates = listOf(candidate),
+            positionEvidence = evidence
+        )
+        val system = messages.first().content
+        assertTrue(system.contains("位置合法值"), "候选上下文必须含合法枚举段")
+        assertTrue(system.contains("middle_left") && system.contains("second_row"), "合法枚举须含分区值")
+        assertTrue(system.contains("位置证据"), "候选上下文必须含 Alias 命中证据")
+        assertTrue(system.contains("中左") && system.contains("middle_left"), "证据须含原文词与 canonical 提示")
+    }
+
+    @Test
+    fun `候选上下文注入负例边界与宽泛表达歧义提示`() {
+        val fanSet = net.hwyz.iov.vehicle.ivi.ivai.retrieval.ToolDefinitionSummary(
+            toolId = "climate.fan.speed.set",
+            name = "设置风量档位",
+            description = "设置绝对风量档位",
+            positiveExamples = listOf("风量档位调到2档"),
+            negativeExamples = listOf("右边风量调到5", "后面风量调到5"),
+            parameterSchema = """{"type":"object","properties":{"zone":{"type":"string","enum":["all","middle_left","middle_right","second_row","third_row"]},"level":{"type":"integer"}},"required":["level"]}"""
+        )
+        val candidate = net.hwyz.iov.vehicle.ivi.ivai.retrieval.ToolCandidate(
+            toolId = "climate.fan.speed.set",
+            score = 0.9,
+            matchedFields = listOf("vector"),
+            definition = fanSet
+        )
+        val evidence = net.hwyz.iov.vehicle.ivi.ivai.tool.registry.aliases.PositionAliasResolver()
+            .resolve("右边风量调到5")
+        val messages = builder.buildWithCandidates(
+            session = Session(),
+            input = AgentInput("cr017-neg", "右边风量调到5"),
+            vehicleState = null,
+            candidates = listOf(candidate),
+            positionEvidence = evidence
+        )
+        val system = messages.first().content
+        assertTrue(system.contains("位置歧义"), "宽泛表达必须注入歧义提示")
+        assertTrue(system.contains("右边"), "歧义提示须含原文词")
+        assertTrue(system.contains("右边风量调到5") || system.contains("负例"), "候选摘要须含负例边界")
+    }
 }

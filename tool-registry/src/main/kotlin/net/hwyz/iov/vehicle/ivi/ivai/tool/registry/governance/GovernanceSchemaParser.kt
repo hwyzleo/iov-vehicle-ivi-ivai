@@ -84,8 +84,12 @@ object GovernanceSchemaParser {
             return """{"type":"number","minimum":${m.groupValues[1]},"maximum":${m.groupValues[2]}}"""
         }
         if ('|' in typePart) {
-            val values = typePart.split('|').map { it.trim() }.filter { it.isNotEmpty() }
-            return """{"type":"string","enum":[${values.joinToString(",") { "\"$it\"" }}]}"""
+            // CR-017: 字面枚举支持 "=default" 后缀（如 zone?:...|third_row=all → default=all）。
+            val (enumPart, default) = splitEnumDefault(typePart)
+            val values = enumPart.split('|').map { it.trim() }.filter { it.isNotEmpty() }
+            val enumBody = values.joinToString(",") { "\"$it\"" }
+            val defaultJson = if (default != null) ",\"default\":\"$default\"" else ""
+            return "{\"type\":\"string\",\"enum\":[$enumBody]$defaultJson}"
         }
         return when (typePart) {
             "boolean" -> """{"type":"boolean"}"""
@@ -102,5 +106,19 @@ object GovernanceSchemaParser {
             // 未知名 token（如单位 C / kmh）视为固定常量：携带 enum + default，不参与必填。
             else -> """{"type":"string","enum":["$typePart"],"default":"$typePart"}"""
         }
+    }
+
+    /**
+     * 拆分字面枚举与 "=default" 后缀（CR-017）。只有含 '|' 的枚举允许默认值；
+     * 默认值必须是枚举成员之一（否则不输出 default）。
+     */
+    private fun splitEnumDefault(typePart: String): Pair<String, String?> {
+        val eq = typePart.lastIndexOf('=')
+        if (eq <= 0 || eq == typePart.length - 1) return typePart to null
+        val base = typePart.substring(0, eq)
+        val def = typePart.substring(eq + 1).trim()
+        if ('|' !in base || def.isBlank()) return typePart to null
+        val values = base.split('|').map { it.trim() }.filter { it.isNotEmpty() }
+        return if (def in values) base to def else typePart to null
     }
 }

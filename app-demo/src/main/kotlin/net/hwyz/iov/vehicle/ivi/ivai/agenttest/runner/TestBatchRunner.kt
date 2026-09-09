@@ -443,7 +443,66 @@ class TestBatchRunner(
             actual = actualResult,
             status = mapStatus(result.status),
             timing = timing,
-            failureReason = result.errorMessage ?: result.errorCode
+            failureReason = result.errorMessage ?: result.errorCode,
+            // CR-018：运行时失败与评分差异拆分诊断（导出可选列）。
+            diagnostics = buildFailureDiagnostics(result, actual)
+        )
+    }
+
+    /**
+     * CR-018：从用例执行结果投影 [TestFailureDiagnostics]。
+     * 运行时成功但评分不匹配只记为 score mismatch（isScoreMismatchOnly），
+     * 不得伪装为运行时失败；快照与评分均缺失时置 IVAI-SCORE-DIAG-001。
+     */
+    private fun buildFailureDiagnostics(
+        result: AgentTestCaseResult,
+        actual: ScoredActual?
+    ): net.hwyz.iov.vehicle.ivi.ivai.agenttest.diagnostics.TestFailureDiagnostics {
+        val diag = result.diagnostics
+        val scoreStatus = when {
+            result.score == null -> net.hwyz.iov.vehicle.ivi.ivai.agenttest.diagnostics.ScoreStatus.NOT_SCORED
+            result.score.total == MAX_SCORE_PER_CASE ->
+                net.hwyz.iov.vehicle.ivi.ivai.agenttest.diagnostics.ScoreStatus.PASSED
+            else -> net.hwyz.iov.vehicle.ivi.ivai.agenttest.diagnostics.ScoreStatus.FAILED
+        }
+        val mismatchDimensions = result.score?.let { score ->
+            buildSet {
+                if (!score.tier.matched) add(net.hwyz.iov.vehicle.ivi.ivai.agenttest.diagnostics.ScoreDimension.TIER)
+                if (!score.domain.matched) add(net.hwyz.iov.vehicle.ivi.ivai.agenttest.diagnostics.ScoreDimension.DOMAIN)
+                if (!score.capabilityPack.matched) add(net.hwyz.iov.vehicle.ivi.ivai.agenttest.diagnostics.ScoreDimension.CAPABILITY_PACK)
+                if (!score.target.matched) add(net.hwyz.iov.vehicle.ivi.ivai.agenttest.diagnostics.ScoreDimension.TARGET)
+                if (!score.arguments.matched) add(net.hwyz.iov.vehicle.ivi.ivai.agenttest.diagnostics.ScoreDimension.ARGUMENTS)
+            }
+        } ?: emptySet()
+        val mismatchDetail = result.score?.let { score ->
+            listOfNotNull(
+                score.tier.reason, score.domain.reason, score.capabilityPack.reason,
+                score.target.reason, score.arguments.reason
+            ).ifEmpty { null }?.joinToString("；")
+        }
+        val runtime = net.hwyz.iov.vehicle.ivi.ivai.agenttest.diagnostics.TestResultDiagnostics.runtimeStatusOf(result.terminalStatus)
+        val domainEvidence = listOfNotNull(
+            diag?.initialDomains?.joinToString(",")?.takeIf { it.isNotBlank() },
+            diag?.finalDomain?.let { "最终=$it" }
+        ).joinToString(" → ")
+        val ragTopK = diag?.let {
+            it.retrievedCandidateIds.zip(it.retrievedCandidateScores)
+                .joinToString(";") { (id, s) -> "$id:%.3f".format(s) }
+        }
+        val selected = actual?.target?.id?.let { id ->
+            val topScore = diag?.retrievedCandidateScores?.firstOrNull()
+            topScore?.let { "$id:%.3f".format(it) } ?: id
+        }
+        return net.hwyz.iov.vehicle.ivi.ivai.agenttest.diagnostics.TestFailureDiagnostics(
+            runtimeStatus = runtime,
+            runtimeTerminalStage = diag?.terminalStage,
+            runtimeReasonCode = result.reasonCode ?: result.errorCode,
+            scoreStatus = scoreStatus,
+            mismatchDimensions = mismatchDimensions,
+            mismatchDetail = mismatchDetail,
+            domainEvidence = domainEvidence?.takeIf { it.isNotBlank() },
+            ragTopK = ragTopK?.takeIf { it.isNotBlank() },
+            selectedCandidate = selected
         )
     }
 
