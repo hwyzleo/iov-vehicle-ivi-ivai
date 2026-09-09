@@ -18,7 +18,9 @@ import net.hwyz.iov.vehicle.ivi.ivai.agenttest.gateway.AgentCommandGateway
 import net.hwyz.iov.vehicle.ivi.ivai.agenttest.model.AgentTestCase
 import net.hwyz.iov.vehicle.ivi.ivai.agenttest.result.IntentActualResult
 import net.hwyz.iov.vehicle.ivi.ivai.agenttest.result.IntentExpectation
+import net.hwyz.iov.vehicle.ivi.ivai.agenttest.canonical.ParameterCanonicalizer
 import net.hwyz.iov.vehicle.ivi.ivai.agenttest.result.JsonValueMapper
+import kotlinx.serialization.json.JsonObject
 import net.hwyz.iov.vehicle.ivi.ivai.agenttest.result.TestCaseExecutionResult
 import net.hwyz.iov.vehicle.ivi.ivai.agenttest.result.TestCaseStatus
 import net.hwyz.iov.vehicle.ivi.ivai.agenttest.scoring.AgentTestScore
@@ -324,7 +326,10 @@ class TestBatchRunner(
                                 finalDomain = it.finalDomain,
                                 actualCapabilityPacks = it.selectedCapabilityPackIds,
                                 target = it.selectedTarget,
-                                arguments = it.normalizedArguments
+                                arguments = it.normalizedArguments,
+                                // CR-019：终态与 reasonCode（Outcome 评分依据）。
+                                terminalStatus = it.terminalStatus,
+                                reasonCode = it.reasonCode
                             )
                         } ?: ScoredActual()
                         val score = TestScorer.score(case, actual)
@@ -334,8 +339,13 @@ class TestBatchRunner(
                             ?: EvaluationTerminalStatus.FAILED
                         val status = when {
                             snapshotMissing -> AgentTestCaseStatus.FAILED
+                            // CR-019 V2：业务 Outcome 显式断言（EXECUTE/NEED_DIALOGUE/
+                            // REJECTED）→ 以评分门槛为准；NEED_DIALOGUE/REJECTED 是预期
+                            // 业务终态，不得再被当作 INCOMPLETE 失败。
+                            case.expectedOutcome != null ->
+                                if (score.passed) AgentTestCaseStatus.PASSED else AgentTestCaseStatus.FAILED
                             EvaluationSnapshotProjector.isIncomplete(terminalStatus) -> AgentTestCaseStatus.INCOMPLETE
-                            score.total == MAX_SCORE_PER_CASE -> AgentTestCaseStatus.PASSED
+                            score.passed -> AgentTestCaseStatus.PASSED
                             else -> AgentTestCaseStatus.FAILED
                         }
                         val timing = timingCollector.onCaseFinalized(case.caseId)
@@ -412,12 +422,20 @@ class TestBatchRunner(
         result: AgentTestCaseResult,
         actual: ScoredActual?
     ): TestCaseExecutionResult {
+        // CR-019：参数展示与评分使用同一个 Schema-aware Comparator 的 canonical 值
+        // （数值 5 与 5.0 等价，导出列不得显示不一致，IVAI-TEST-COMPARATOR-001）。
+        val expectedArgs = ParameterCanonicalizer.canonicalForDisplay(case.expectedArguments) as? JsonObject
+        val actualArgs = actual?.arguments
+            ?.let { ParameterCanonicalizer.canonicalForDisplay(it) as? JsonObject }
         val expected = IntentExpectation(
             level = case.expectedTier.name,
             domainId = case.expectedDomain.name,
             capabilityPackId = case.expectedCapabilityPack,
             targetId = case.expectedTarget?.id,
-            arguments = JsonValueMapper.toValueMap(case.expectedArguments)
+            arguments = JsonValueMapper.toValueMap(expectedArgs),
+            // CR-019：V2 业务 Outcome 与 reasonCode 期望。
+            expectedOutcome = case.expectedOutcome?.name,
+            expectedReasonCode = case.expectedReasonCode
         )
         val actualResult = actual?.let {
             IntentActualResult(
@@ -425,7 +443,10 @@ class TestBatchRunner(
                 domainId = it.finalDomain?.name,
                 capabilityPackId = it.actualCapabilityPacks.firstOrNull(),
                 targetId = it.target?.id,
-                arguments = it.arguments?.let(JsonValueMapper::toValueMap) ?: emptyMap()
+                arguments = actualArgs?.let(JsonValueMapper::toValueMap) ?: emptyMap(),
+                // CR-019：V2 业务 Outcome 与终态 reasonCode。
+                actualOutcome = it.runtimeOutcome?.name,
+                reasonCode = it.reasonCode
             )
         }
         val timing = result.timing ?: TestCaseTiming(
@@ -461,7 +482,7 @@ class TestBatchRunner(
         val diag = result.diagnostics
         val scoreStatus = when {
             result.score == null -> net.hwyz.iov.vehicle.ivi.ivai.agenttest.diagnostics.ScoreStatus.NOT_SCORED
-            result.score.total == MAX_SCORE_PER_CASE ->
+            result.score.passed ->
                 net.hwyz.iov.vehicle.ivi.ivai.agenttest.diagnostics.ScoreStatus.PASSED
             else -> net.hwyz.iov.vehicle.ivi.ivai.agenttest.diagnostics.ScoreStatus.FAILED
         }
@@ -472,12 +493,16 @@ class TestBatchRunner(
                 if (!score.capabilityPack.matched) add(net.hwyz.iov.vehicle.ivi.ivai.agenttest.diagnostics.ScoreDimension.CAPABILITY_PACK)
                 if (!score.target.matched) add(net.hwyz.iov.vehicle.ivi.ivai.agenttest.diagnostics.ScoreDimension.TARGET)
                 if (!score.arguments.matched) add(net.hwyz.iov.vehicle.ivi.ivai.agenttest.diagnostics.ScoreDimension.ARGUMENTS)
+                // CR-019：V2 Outcome 独立评分维度。
+                if (score.outcome?.matched == false) {
+                    add(net.hwyz.iov.vehicle.ivi.ivai.agenttest.diagnostics.ScoreDimension.OUTCOME)
+                }
             }
         } ?: emptySet()
         val mismatchDetail = result.score?.let { score ->
             listOfNotNull(
                 score.tier.reason, score.domain.reason, score.capabilityPack.reason,
-                score.target.reason, score.arguments.reason
+                score.target.reason, score.arguments.reason, score.outcome?.reason
             ).ifEmpty { null }?.joinToString("；")
         }
         val runtime = net.hwyz.iov.vehicle.ivi.ivai.agenttest.diagnostics.TestResultDiagnostics.runtimeStatusOf(result.terminalStatus)

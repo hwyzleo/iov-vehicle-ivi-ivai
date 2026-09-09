@@ -19,9 +19,26 @@ data class AgentTestSuite(
     val cases: List<AgentTestCase> = emptyList()
 ) {
     companion object {
-        /** 当前支持的 Suite Schema 版本（解析器 / 校验器共享）。 */
-        const val SUPPORTED_SCHEMA_VERSION = 1
+        /** 当前支持的 Suite Schema 版本（解析器 / 校验器共享）。
+         * CR-019：v2 为业务 Outcome 评分契约（EXECUTE/NEED_DIALOGUE/REJECTED +
+         * reasonCode）；v1 保留为历史样本（不再作为发布准确率基线）。 */
+        const val SUPPORTED_SCHEMA_VERSION = 2
     }
+}
+
+/**
+ * CR-019：业务 Outcome（测试评分契约 V2，与处理 Tier 拆分）。
+ *
+ *  - EXECUTE：产生了可执行目标并执行成功（必须有 Target 与参数断言）；
+ *  - NEED_DIALOGUE：缺少必填参数 / 歧义追问（必须无可执行 Target，校验
+ *    runtimeOutcome 与 reasonCode）；
+ *  - REJECTED：安全/越界/未知目标拒绝（必须无可执行 Target，校验 reasonCode）。
+ */
+@Serializable
+enum class ExpectedOutcome {
+    EXECUTE,
+    NEED_DIALOGUE,
+    REJECTED
 }
 
 /**
@@ -43,7 +60,25 @@ data class AgentTestCase(
     val expectedCapabilityPack: String,
     val expectedTarget: ExpectedTarget? = null,
     /** 空对象表示预期无业务参数：仅当实际业务参数也为空时才匹配。 */
-    val expectedArguments: JsonObject = buildJsonObject {}
+    val expectedArguments: JsonObject = buildJsonObject {},
+    /** CR-019：V2 业务 Outcome（schemaVersion=2 时必填；v1 兼容扩展保持 null）。 */
+    val expectedOutcome: ExpectedOutcome? = null,
+    /** CR-019：V2 期望 reasonCode（NEED_DIALOGUE/REJECTED 时按此断言完整率）。 */
+    val expectedReasonCode: String? = null
+)
+
+/**
+ * CR-019：V2 意图期望契约（设计 IntentExpectationV2，与 AgentTestCase 扩展字段同源）。
+ * 用于 V2 用例的显式视图；评分器以 [AgentTestCase] 字段为准。
+ */
+data class IntentExpectationV2(
+    val expectedTier: IntentTier,
+    val expectedOutcome: ExpectedOutcome,
+    val expectedDomain: BusinessDomainId,
+    val expectedCapabilityPack: String,
+    val expectedTarget: ExpectedTarget? = null,
+    val expectedArguments: JsonObject = buildJsonObject {},
+    val expectedReasonCode: String? = null
 )
 
 /**

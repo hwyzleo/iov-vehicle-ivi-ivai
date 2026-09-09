@@ -6295,7 +6295,7 @@
        "slot": "POSITION",
        "argument": "zone",
        "required": true,
-       "aliases": "vehicle_position_v1"
+       "aliases": "vehicle_position_v2"
       }
      ],
      "presetArguments": {},
@@ -6315,16 +6315,34 @@
       "吹",
       "除霜",
       "自动",
-      "auto"
+      "auto",
+      "调高",
+      "调低",
+      "升高",
+      "降低",
+      "升温",
+      "降温",
+      "一点",
+      "一些",
+      "一丢丢",
+      "半度",
+      "明显"
      ],
      "priority": 10,
      "synonymPatterns": []
     }
    ],
    "positiveExamples": [
-    "温度调到",
-    "调到",
-    "设为"
+    "温度调到24度",
+    "温度设为26度",
+    "空调设成25度",
+    "目标温度24度",
+    "温度保持在26度",
+    "设置温度到24度",
+    "主驾温度调到24度",
+    "副驾温度设为25度",
+    "温度设为最高",
+    "温度调到最低"
    ],
    "negativeExamples": [
     "查询目标温度",
@@ -6355,7 +6373,7 @@
        "slot": "POSITION",
        "argument": "zone",
        "required": true,
-       "aliases": "vehicle_position_v1"
+       "aliases": "vehicle_position_v2"
       },
       {
        "slot": "STEP",
@@ -6368,7 +6386,19 @@
      },
      "negativePatterns": [
       "调低",
-      "降温"
+      "降温",
+      "调到",
+      "设为",
+      "设成",
+      "调成",
+      "目标温度",
+      "保持",
+      "最高",
+      "最低",
+      "最热",
+      "最冷",
+      "最大",
+      "最小"
      ],
      "priority": 5,
      "synonymPatterns": []
@@ -6388,7 +6418,7 @@
        "slot": "POSITION",
        "argument": "zone",
        "required": true,
-       "aliases": "vehicle_position_v1"
+       "aliases": "vehicle_position_v2"
       },
       {
        "slot": "STEP",
@@ -6401,7 +6431,19 @@
      },
      "negativePatterns": [
       "调高",
-      "升温"
+      "升温",
+      "调到",
+      "设为",
+      "设成",
+      "调成",
+      "目标温度",
+      "保持",
+      "最高",
+      "最低",
+      "最热",
+      "最冷",
+      "最大",
+      "最小"
      ],
      "priority": 5,
      "synonymPatterns": []
@@ -6425,7 +6467,19 @@
       "direction": "increase"
      },
      "negativePatterns": [
-      "降温"
+      "降温",
+      "调到",
+      "设为",
+      "设成",
+      "调成",
+      "目标温度",
+      "保持",
+      "最高",
+      "最低",
+      "最热",
+      "最冷",
+      "最大",
+      "最小"
      ],
      "priority": 8,
      "synonymPatterns": []
@@ -6449,7 +6503,19 @@
       "direction": "increase"
      },
      "negativePatterns": [
-      "降温"
+      "降温",
+      "调到",
+      "设为",
+      "设成",
+      "调成",
+      "目标温度",
+      "保持",
+      "最高",
+      "最低",
+      "最热",
+      "最冷",
+      "最大",
+      "最小"
      ],
      "priority": 8,
      "synonymPatterns": []
@@ -6473,7 +6539,19 @@
       "direction": "decrease"
      },
      "negativePatterns": [
-      "升温"
+      "升温",
+      "调到",
+      "设为",
+      "设成",
+      "调成",
+      "目标温度",
+      "保持",
+      "最高",
+      "最低",
+      "最热",
+      "最冷",
+      "最大",
+      "最小"
      ],
      "priority": 8,
      "synonymPatterns": []
@@ -6497,7 +6575,19 @@
       "direction": "decrease"
      },
      "negativePatterns": [
-      "升温"
+      "升温",
+      "调到",
+      "设为",
+      "设成",
+      "调成",
+      "目标温度",
+      "保持",
+      "最高",
+      "最低",
+      "最热",
+      "最冷",
+      "最大",
+      "最小"
      ],
      "priority": 8,
      "synonymPatterns": []
@@ -6521,7 +6611,9 @@
     "主驾驶降温",
     "副驾降温",
     "副驾驶降温",
-    "乘客位降温"
+    "乘客位降温",
+    "主驾温度调高1度",
+    "副驾温度降低一点"
    ],
    "negativeExamples": [
     "我不想温度调高",

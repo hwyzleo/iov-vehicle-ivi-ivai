@@ -16,6 +16,9 @@ import net.hwyz.iov.vehicle.ivi.ivai.agent.router.deterministic.ArgumentSource
 import net.hwyz.iov.vehicle.ivi.ivai.agent.router.deterministic.DeterministicFallbackReason
 import net.hwyz.iov.vehicle.ivi.ivai.agent.router.deterministic.SchemaAwareSlotExtractor
 import net.hwyz.iov.vehicle.ivi.ivai.agent.router.deterministic.SlotExtractionResult
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.TemperatureIntentSemanticNormalizer
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.Cr019ErrorCodes
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.TemperatureOperationSemantic
 
 /**
  * 通用确定性匹配器（IVI-IVAI-DSN-CR-005 + CR-010 + CR-013）。
@@ -47,12 +50,33 @@ class DefaultFastIntentMatcher(
         SchemaAwareSlotExtractor(registry, DefaultAliasLexicons.DEFAULT),
     /** CR-016：统一参数规范化服务（L0/L1/Validator/Scorer 共享同一实例）。 */
     private val canonicalizer: ParameterCanonicalizationService =
-        DefaultParameterCanonicalizationService(registry, DefaultAliasLexicons.DEFAULT)
+        DefaultParameterCanonicalizationService(registry, DefaultAliasLexicons.DEFAULT),
+    /** CR-019：温度语义标准化器（相对/绝对/边界/越界/歧义判定 + adjust/set 边界）。 */
+    private val temperatureNormalizer: TemperatureIntentSemanticNormalizer? =
+        TemperatureIntentSemanticNormalizer()
 ) : FastIntentMatcher {
 
     override suspend fun match(input: NormalizedInput, context: AgentContext): FastIntentMatchResult {
         if (input.hasNegation) return FastIntentMatchResult.NoMatch
         if (input.hasMultiIntent) return FastIntentMatchResult.NoMatch
+
+        // CR-019：温度语义边界（仅对温度相关请求干预，evidence 为空视为非温度请求）。
+        val temperatureSemantic = temperatureNormalizer?.normalize(input.normalized, context.vehicleModel)
+        if (temperatureSemantic != null && temperatureSemantic.evidence.isNotEmpty()) {
+            when (temperatureSemantic.operation) {
+                // 绝对目标越界 → 直接拒绝（IVAI-TEMP-RANGE-001），不进入 L1 执行。
+                TemperatureOperationSemantic.OUT_OF_RANGE -> return FastIntentMatchResult.Rejected(
+                    reasonCode = Cr019ErrorCodes.TEMP_RANGE,
+                    semantic = temperatureSemantic.evidence.joinToString(",")
+                )
+                // 数值缺少单位 / 动作对象无法判断 → 追问（IVAI-TEMP-SEMANTIC-001）。
+                TemperatureOperationSemantic.AMBIGUOUS -> return FastIntentMatchResult.NeedsDialogue(
+                    reasonCode = Cr019ErrorCodes.TEMP_SEMANTIC,
+                    semantic = temperatureSemantic.evidence.joinToString(",")
+                )
+                else -> {}
+            }
+        }
 
         val matches = mutableListOf<RuleMatch>()
         // CR-016：canonicalize 失败（越界/类型/缺参）的规则——跳过继续匹配其他规则，
@@ -65,6 +89,18 @@ class DefaultFastIntentMatcher(
             }
             for (rule in tool.deterministicRules) {
                 if (!versionAllowed(rule, context.softwareVersion)) continue
+                // CR-019：温度操作语义与 Tool 边界一致性——相对增减不得命中
+                // temperature.set，绝对/边界目标不得命中 temperature.adjust。
+                if (temperatureSemantic != null && temperatureSemantic.evidence.isNotEmpty()) {
+                    when (temperatureSemantic.operation) {
+                        TemperatureOperationSemantic.RELATIVE_DELTA ->
+                            if (tool.toolId == TEMPERATURE_SET_TOOL) continue
+                        TemperatureOperationSemantic.ABSOLUTE_TARGET,
+                        TemperatureOperationSemantic.BOUND_TARGET ->
+                            if (tool.toolId == TEMPERATURE_ADJUST_TOOL) continue
+                        else -> {}
+                    }
+                }
                 if (!ruleMatches(rule, input)) continue
                 // CR-013：短语命中 ≠ 可执行；导航/查询/配置意图冲突直接拦截。
                 if (intentTypeConflict(rule, tool, input)) continue
@@ -332,6 +368,10 @@ class DefaultFastIntentMatcher(
         const val SOURCE_RULE_PRESET = "rule_preset"
         const val SOURCE_SCHEMA_DEFAULT = "schema_default"
         const val SOURCE_MODEL_OUTPUT = "model_output"
+
+        /** CR-019：温度 Tool canonical ID（adjust/set 语义边界）。 */
+        const val TEMPERATURE_SET_TOOL = "climate.temperature.set"
+        const val TEMPERATURE_ADJUST_TOOL = "climate.temperature.adjust"
 
         val ACTION_OPERATION_TYPES = setOf(
             net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.OperationType.CONTROL,

@@ -33,7 +33,7 @@ object ClimateSchemas {
           "type": "object",
           "properties": {
             $POSITION_PROPERTY,
-            "temperature": { "type": "number", "minimum": 16.0, "maximum": 32.0 }
+            "temperature": { "type": "number", "minimum": 16.0, "maximum": 30.0 }
           },
           "required": ["temperature"]
         }

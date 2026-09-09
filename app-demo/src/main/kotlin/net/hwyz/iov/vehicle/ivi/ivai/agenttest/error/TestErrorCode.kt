@@ -76,4 +76,12 @@ object TestErrorCode {
 
     /** 激活 Suite 损坏，已回退内置 Suite。 */
     const val IMPORT_ACTIVE_CORRUPT_FALLBACK = "IVAI-TEST-IMPORT-008"
+
+    // ---- IVI-IVAI-DSN-CR-019：测试评分契约 V2 ----
+
+    /** Tier 与业务 Outcome 无法独立评分（V2 用例缺少 Outcome 投影或断言）。 */
+    const val OUTCOME_NOT_SCORABLE = "IVAI-TEST-OUTCOME-001"
+
+    /** 参数展示与评分使用了不同比较结果（导出列与评分不一致）。 */
+    const val COMPARATOR_MISMATCH = "IVAI-TEST-COMPARATOR-001"
 }

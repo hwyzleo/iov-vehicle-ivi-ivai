@@ -18,6 +18,8 @@ import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.ToolAvailabilityC
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.ToolDefinition
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.ClimateAirflowObjectWords
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.ClimateToolBoundaryCatalog
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.TemperatureOperationSemantic
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.TemperatureIntentSemanticNormalizer
 
 /**
  * L1 Tool/Intent RAG 检索器（CR-011 + CR-017）。
@@ -220,7 +222,10 @@ class GovernedBoost(
     /** CR-018: 动作证据权重。 */
     private val actionEvidenceWeight: Double = 0.4,
     /** CR-018: 相似 Tool 负边界惩罚权重（高于一般 Boost，用于打破跨 Tool 竞争）。 */
-    private val negativeBoundaryWeight: Double = 1.2
+    private val negativeBoundaryWeight: Double = 1.2,
+    /** CR-019: 温度语义判定（adjust/set 边界、越界 block、对象证据约束）。 */
+    private val temperatureNormalizer: TemperatureIntentSemanticNormalizer? =
+        TemperatureIntentSemanticNormalizer()
 ) {
 
     /** 绝对档位/相对增减动作词（操作边界证据）。 */
@@ -249,6 +254,10 @@ class GovernedBoost(
         val text = query.text.lowercase()
         val boundary = ClimateToolBoundaryCatalog.forTool(tool.toolId)
 
+        // CR-019：温度语义判定（仅温度相关查询干预；evidence 空视为非温度请求）。
+        val tempSemantic = temperatureNormalizer?.normalize(text, query.vehicleModel)
+        val temperatureRelevant = tempSemantic != null && tempSemantic.evidence.isNotEmpty()
+
         // 1) 批准位置 Alias 精确命中（vehicle_position_v2）：只提升具备 zone 参数的候选。
         val resolution = positionResolver.resolve(query.text, query.vehicleModel)
         val hasZoneParam = schemaHasZone(tool)
@@ -276,12 +285,16 @@ class GovernedBoost(
         val relativeHit = relativeMarkers.any { text.contains(it) }
         val isAbsoluteTool = tool.toolId.endsWith(".set") || tool.toolId.contains("set")
         val isRelativeTool = tool.toolId.endsWith(".adjust")
-        if (absoluteHit && isAbsoluteTool && !isRelativeTool) {
-            operationBoost += operationBoundaryWeight
-            matchedFields += "operation:absolute"
-        } else if (relativeHit && isRelativeTool) {
-            operationBoost += operationBoundaryWeight
-            matchedFields += "operation:relative"
+        // CR-019：温度相关查询的操作边界由温度语义单独处理（见 5），
+        // 避免“温度+数值”提升 fan/power 的档位/开关证据。
+        if (!temperatureRelevant) {
+            if (absoluteHit && isAbsoluteTool && !isRelativeTool) {
+                operationBoost += operationBoundaryWeight
+                matchedFields += "operation:absolute"
+            } else if (relativeHit && isRelativeTool) {
+                operationBoost += operationBoundaryWeight
+                matchedFields += "operation:relative"
+            }
         }
 
         // 4) CR-018：对象 / 动作证据与负边界惩罚（治理边界目录）。
@@ -301,6 +314,45 @@ class GovernedBoost(
             if (negHits.isNotEmpty()) {
                 boundaryPenalty += negativeBoundaryWeight * negHits.size
                 matchedFields += "boundary:-${negHits.sorted().joinToString(",")}"
+            }
+        }
+
+        // 5) CR-019：温度语义排序规则（adjust/set 边界、越界 block、对象证据约束）。
+        if (temperatureRelevant && tempSemantic != null) {
+            when (tempSemantic.operation) {
+                // relative action + delta/step → boost temperature.adjust。
+                TemperatureOperationSemantic.RELATIVE_DELTA ->
+                    if (tool.toolId == TEMPERATURE_ADJUST_TOOL) {
+                        operationBoost += operationBoundaryWeight
+                        matchedFields += "temp:relative-delta"
+                    }
+                // absolute action + legal temperature / bound alias → boost temperature.set。
+                TemperatureOperationSemantic.ABSOLUTE_TARGET,
+                TemperatureOperationSemantic.BOUND_TARGET ->
+                    if (tool.toolId == TEMPERATURE_SET_TOOL) {
+                        operationBoost += operationBoundaryWeight
+                        matchedFields += "temp:${tempSemantic.operation.name.lowercase()}"
+                    }
+                // absolute out-of-range → block executable candidate（大幅惩罚）。
+                TemperatureOperationSemantic.OUT_OF_RANGE ->
+                    if (tool.toolId == TEMPERATURE_SET_TOOL) {
+                        boundaryPenalty += negativeBoundaryWeight * 2
+                        matchedFields += "temp:out-of-range-block"
+                    }
+                else -> {}
+            }
+            // HVAC + temperature → 对象证据仅温度 Tool；power.set 不得被 HVAC_SYSTEM 提升。
+            if (tool.toolId == TEMPERATURE_POWER_TOOL && objectBoost > 0) {
+                objectBoost = 0.0
+                boundaryPenalty += negativeBoundaryWeight
+                matchedFields += "temp:object-evidence-only"
+            }
+            // 温度+数值 不得提升 fan.speed.set/adjust（对象与档位证据均跳过）。
+            if (tool.toolId == TEMPERATURE_FAN_SET_TOOL || tool.toolId == TEMPERATURE_FAN_ADJUST_TOOL) {
+                if (objectBoost > 0) objectBoost = 0.0
+                if (operationBoost > 0) operationBoost = 0.0
+                boundaryPenalty += negativeBoundaryWeight
+                matchedFields += "temp:no-fan-boost"
             }
         }
 
@@ -358,5 +410,14 @@ class GovernedBoost(
     private fun containsSlotWords(query: String, example: String): Boolean {
         val zoneWords = net.hwyz.iov.vehicle.ivi.ivai.tool.registry.aliases.PositionAliasLexicon.WORDS.map { it.first }
         return zoneWords.any { word -> query.contains(word) && example.contains(word) }
+    }
+
+    private companion object {
+        /** CR-019：温度相关 Tool canonical ID。 */
+        private const val TEMPERATURE_SET_TOOL = "climate.temperature.set"
+        private const val TEMPERATURE_ADJUST_TOOL = "climate.temperature.adjust"
+        private const val TEMPERATURE_POWER_TOOL = "climate.power.set"
+        private const val TEMPERATURE_FAN_SET_TOOL = "climate.fan.speed.set"
+        private const val TEMPERATURE_FAN_ADJUST_TOOL = "climate.fan.speed.adjust"
     }
 }

@@ -31,6 +31,13 @@ object SemanticTextTemplate {
         if (payload.requiredSlots.isNotEmpty()) {
             appendLine("必填槽位：${payload.requiredSlots.sorted().joinToString("、")}")
         }
+        // CR-019：温度操作语义与数值角色边界（adjust/set 区分证据）。
+        if (payload.temperatureOperationSemantics.isNotEmpty()) {
+            appendLine("温度操作语义：${payload.temperatureOperationSemantics.sorted().joinToString("、")}")
+        }
+        if (payload.temperatureValueRoles.isNotEmpty()) {
+            appendLine("温度数值角色：${payload.temperatureValueRoles.sorted().joinToString("、")}")
+        }
         if (payload.parameterSchemas.isNotEmpty()) {
             appendLine("参数：${payload.parameterSchemas.joinToString("；") { renderParameter(it) }}")
         }

@@ -62,13 +62,15 @@ enum class ScoreStatus {
     NOT_SCORED
 }
 
-/** CR-018：五维评分失败维度。 */
+/** CR-018：五维评分失败维度。CR-019：V2 增加独立业务 Outcome 维度。 */
 enum class ScoreDimension {
     TIER,
     DOMAIN,
     CAPABILITY_PACK,
     TARGET,
-    ARGUMENTS
+    ARGUMENTS,
+    /** CR-019：V2 业务 Outcome（EXECUTE/NEED_DIALOGUE/REJECTED）。 */
+    OUTCOME
 }
 
 /**

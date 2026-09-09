@@ -108,4 +108,37 @@ object ParameterCanonicalizer {
         e.all { (key, value) ->
             a[key]?.let { match(value, it, null) } ?: false
         }
+
+    /**
+     * CR-019（IVAI-TEST-COMPARATOR-001）：参数展示与评分共用同一 Schema-aware
+     * Comparator 的 canonical 值——整数 5 与 5.0 等价，导出列不得显示不一致。
+     * 递归把数值字面量按 BigDecimal 规范化（5.0 → 5）；字符串/布尔/对象/数组
+     * 原样保留。
+     */
+    fun canonicalForDisplay(value: JsonElement?): JsonElement? = when (value) {
+        null -> null
+        is JsonPrimitive -> {
+            if (value.isString || value.content == "true" || value.content == "false") {
+                value
+            } else {
+                val number = value.content.toBigDecimalOrNull()
+                if (number != null) canonicalNumber(number) else value
+            }
+        }
+        is JsonObject -> JsonObject(
+            value.mapValues { (_, v) -> canonicalForDisplay(v) ?: JsonNull }
+        )
+        is JsonArray -> JsonArray(value.map { canonicalForDisplay(it) ?: JsonNull })
+        else -> value
+    }
+
+    /** 数值展示规范化：整数 5.0 → 5；非整数保留原精度（5.5）。 */
+    private fun canonicalNumber(number: BigDecimal): JsonPrimitive {
+        val stripped = number.stripTrailingZeros()
+        return if (stripped.scale() <= 0) {
+            JsonPrimitive(stripped.toLong())
+        } else {
+            JsonPrimitive(stripped)
+        }
+    }
 }

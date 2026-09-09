@@ -89,6 +89,7 @@ import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.aliases.PositionAliasLexicon
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.aliases.PositionAliasResolver
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.BusinessDomainId
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.Cr017ErrorCodes
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.Cr019ErrorCodes
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.GovernanceWorkspace
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.ToolCatalogV1
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.WorkflowCatalogV1
@@ -491,6 +492,18 @@ class AgentWorkflow(
         if (decision.missingToolId != null && decision.missingArguments.isNotEmpty()) {
             return handleMissingArgumentsDialogue(
                 input, session, decision.missingToolId, decision.missingArguments, tracker, timings, cr008
+            )
+        }
+
+        // CR-019：温度绝对越界在路由层已判定（IVAI-TEMP-RANGE-001）→ L1 直接拒绝
+        // （不检索、不调模型、不形成候选），业务终态 REJECTED；处理路径保持 L1
+        // （Tier 评分按处理层级、Outcome 按业务终态分别计算）。
+        if (decision.reasonCode == Cr019ErrorCodes.TEMP_RANGE) {
+            tracker.finalReasonCode = decision.reasonCode
+            return turnFailed(
+                input, session, timings, decision.reasonCode,
+                "目标温度超出当前车型允许范围，已拒绝。", false, tracker, null,
+                "绝对温度越界（IVAI-TEMP-RANGE-001）", state = AgentState.REJECTED, cr008 = cr008
             )
         }
 

@@ -24,25 +24,35 @@ enum class TestCaseStatus {
 
 /**
  * 期望意图（IVI-IVAI-DSN-CR-014）。[targetId] 统一承载 canonical Tool ID 或
- * Workflow ID；展示与导出列名保持「工具或工作流」。
+ * Workflow ID；展示与导出列名保持「工具或工作流」。CR-019：V2 增加业务
+ * Outcome 期望与 reasonCode。
  */
 data class IntentExpectation(
     val level: String? = null,
     val domainId: String? = null,
     val capabilityPackId: String? = null,
     val targetId: String? = null,
-    val arguments: Map<String, Any?> = emptyMap()
+    val arguments: Map<String, Any?> = emptyMap(),
+    /** CR-019：V2 期望业务 Outcome（EXECUTE/NEED_DIALOGUE/REJECTED）。 */
+    val expectedOutcome: String? = null,
+    /** CR-019：V2 期望 reasonCode。 */
+    val expectedReasonCode: String? = null
 )
 
 /**
  * 实际意图（IVI-IVAI-DSN-CR-014）。从终态结构化快照投影，不从自然语言回复推断。
+ * CR-019：V2 增加实际业务 Outcome 与终态 reasonCode。
  */
 data class IntentActualResult(
     val level: String? = null,
     val domainId: String? = null,
     val capabilityPackId: String? = null,
     val targetId: String? = null,
-    val arguments: Map<String, Any?> = emptyMap()
+    val arguments: Map<String, Any?> = emptyMap(),
+    /** CR-019：实际业务 Outcome。 */
+    val actualOutcome: String? = null,
+    /** CR-019：终态 reasonCode。 */
+    val reasonCode: String? = null
 )
 
 /**

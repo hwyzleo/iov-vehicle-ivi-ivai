@@ -3,9 +3,12 @@ package net.hwyz.iov.vehicle.ivi.ivai.agent.router.deterministic
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.ToolRegistry
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.aliases.CanonicalAliasLexicon
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.aliases.PositionAliasResolver
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.aliases.TemperatureBoundLexicon
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.aliases.VehicleTemperatureTopology
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.DeterministicIntentRule
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.SlotPattern
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.SlotType
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.TemperatureDeltaAliasCatalog
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.schema.CanonicalSchemaParser
 
 /**
@@ -27,7 +30,10 @@ class SchemaAwareSlotExtractor(
     private val registry: ToolRegistry,
     private val lexicon: CanonicalAliasLexicon,
     /** CR-017: 位置 Alias 解析（车型拓扑 + 歧义保护），与 L1/参数规范化同源。 */
-    private val positionResolver: PositionAliasResolver = PositionAliasResolver()
+    private val positionResolver: PositionAliasResolver = PositionAliasResolver(),
+    /** CR-019: 车型温度拓扑（边界 alias → 车型上下限，禁止硬编码 16/30）。 */
+    private val temperatureTopologyResolver: (String?) -> VehicleTemperatureTopology =
+        { VehicleTemperatureTopology.forVehicle(it) }
 ) {
 
     /**
@@ -119,14 +125,25 @@ class SchemaAwareSlotExtractor(
         vehicleModel: String?
     ): SlotValue? =
         when (slot.type) {
-            SlotType.TEMPERATURE -> extractTemperature(normalized)
+            SlotType.TEMPERATURE -> extractTemperature(normalized, vehicleModel)
             SlotType.POSITION -> extractPosition(normalized, vehicleModel)
             SlotType.STEP -> extractStep(normalized)
             SlotType.NUMERIC -> extractNumeric(normalized)
             SlotType.TIME -> null
         }
 
-    private fun extractTemperature(normalized: String): SlotValue? {
+    /**
+     * 温度槽位（IVI-IVAI-DSN-CR-019）：
+     *  - 边界 alias（最高/最大/最热 → 车型 MAX，最低/最小/最冷 → 车型 MIN）经
+     *    版本化车型温度拓扑转换，禁止硬编码 16/30（IVAI-TEMP-RANGE-001 保护）；
+     *  - 常规带单位/裸数值解析。
+     */
+    private fun extractTemperature(normalized: String, vehicleModel: String?): SlotValue? {
+        val bound = TemperatureBoundLexicon.findIn(normalized)
+        if (bound != null) {
+            val topology = temperatureTopologyResolver(vehicleModel)
+            return SlotValue(topology.boundValue(bound), false)
+        }
         val withUnit = Regex("(\\d{1,3}(?:\\.\\d+)?)\\s*(?:度|℃|摄氏度)").find(normalized)
         if (withUnit != null) {
             return withUnit.groupValues[1].toDoubleOrNull()?.let {
@@ -161,14 +178,27 @@ class SchemaAwareSlotExtractor(
     }
 
     /**
-     * 步进槽位：阿拉伯数字 + 单位（档/级/度/℃/摄氏度）或中文数字 + 单位；
-     * 值域按 Schema 范围（step:[1..5] 等）收敛，越界不作为步进（绝对设定走 NUMERIC）。
+     * 步进槽位（IVI-IVAI-DSN-CR-019）：
+     *  - 定性幅度词典（一丢丢/半度/一点/一些/明显一些）→ canonicalStep（固定映射，
+     *    禁止模型猜测，IVAI-TEMP-DELTA-001 保护）；
+     *  - 阿拉伯/中文数字 + 单位（档/级/度/℃/摄氏度），温度 step 支持 0.5 步进；
+     *  - 值域按 Schema 范围（step:[0.5..5] 等）收敛，越界不作为步进。
      */
     private fun extractStep(normalized: String): SlotValue? {
+        // 定性幅度（温度相对调温）→ 固定 canonicalStep。
+        val delta = TemperatureDeltaAliasCatalog.findIn(normalized)
+        if (delta != null) {
+            return SlotValue(delta.canonicalStep, true)
+        }
         val arabic = Regex("(\\d+(?:\\.\\d+)?)\\s*(?:档|级|度|℃|摄氏度)").find(normalized)
         if (arabic != null) {
-            val v = arabic.groupValues[1].toDoubleOrNull()?.toInt()
-            if (v != null && v in 1..5) return SlotValue(v, false, arabic.range)
+            val raw = arabic.groupValues[1]
+            val v = raw.toDoubleOrNull()
+            // CR-019：温度 step 支持 0.5 步进（schema number[0.5..5]）；整数档位保持 Int。
+            if (v != null && v >= 0.5 && v <= 5.0) {
+                // 带小数保留 Double（温度 0.5 步进），整数保留 Int（档位语义）。
+                return SlotValue(if (raw.contains('.')) v else v.toInt(), false, arabic.range)
+            }
         }
         val chinese = Regex("([零一二两三四五六七八九十]{1,3})\\s*(?:档|级|度|℃|摄氏度)").find(normalized)
         if (chinese != null) {

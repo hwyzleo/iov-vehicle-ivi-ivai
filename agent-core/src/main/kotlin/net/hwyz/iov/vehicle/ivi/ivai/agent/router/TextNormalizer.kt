@@ -15,8 +15,9 @@ object TextNormalizer {
         s = s.replace(Regex("\\s+"), "")
         s = s.replace(Regex("[，。！？、；：,.!?;:]+"), "")
         val hasNegation = NEGATION_PATTERNS.any { s.contains(it) }
-        val actionCount = ACTION_VERBS.count { s.contains(it) }
-        val hasMultiIntent = actionCount >= 2 || (actionCount >= 1 && CONJUNCTIONS.any { s.contains(it) })
+        // CR-019：多意图检测以独立谓词/对象/并列结构为依据（MultiIntentDetector）；
+        // “再+单一谓词”是 continuation/discourse marker，不再误判为 MULTI_INTENT。
+        val hasMultiIntent = MultiIntentDetector.isMultiIntent(s)
         return NormalizedInput(
             original = original,
             normalized = s,
@@ -46,11 +47,4 @@ object TextNormalizer {
         "不要打开", "不要开", "不要关", "不要调", "不要",
         "不用", "勿", "禁止", "不允许", "别让"
     )
-
-    private val ACTION_VERBS = listOf(
-        "打开", "开启", "关闭", "调到", "设为", "设成", "调成",
-        "调高", "调低", "升温", "降温", "关掉"
-    )
-
-    private val CONJUNCTIONS = listOf("然后", "接着", "并且", "再", "同时", "也", "以及")
 }

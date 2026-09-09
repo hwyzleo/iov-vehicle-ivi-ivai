@@ -115,12 +115,13 @@ class L0FastIntentMatcherTest {
     }
 
     @Test
-    fun `越界数值不作为步进（调高到26度为绝对设定）`() = runTest {
+    fun `相对动词加到绝对数值归入绝对语义不命中 adjust`() = runTest {
+        // CR-019：ABSOLUTE_TARGET 语义禁止 temperature.adjust 参与候选；
+        // set 规则 exactPhrases 未覆盖“调高到”表达 → L0 NoMatch，交由 L1 检索 set
+        //（与 V2 Suite 分组8“主驾温度调高到24度 → set L1”一致）。
         val result = match("主驾温度调高到26度")
-        assertTrue(result is FastIntentMatchResult.Unique)
-        val unique = result as FastIntentMatchResult.Unique
-        assertEquals("climate.temperature.adjust", unique.candidate.toolId)
-        assertNull(unique.candidate.arguments["step"], "step 超出 Schema 值域 [1..5]，不得作为步进")
+        assertTrue(result !is FastIntentMatchResult.Unique, "不得命中 adjust（相对增减）")
+        assertTrue(result is FastIntentMatchResult.NoMatch)
     }
 
     @Test
@@ -184,12 +185,42 @@ class L0FastIntentMatcherTest {
     }
 
     @Test
-    fun `缺参返回 MissingArguments`() = runTest {
+    fun `温度语义歧义返回 NeedsDialogue`() = runTest {
+        // CR-019：“温度调到”缺少单位与目标值 → AMBIGUOUS → NEED_DIALOGUE
+        // （IVAI-TEMP-SEMANTIC-001），不再是 MissingArguments 缺参直达。
         val result = match("温度调到")
+        assertTrue(result is FastIntentMatchResult.NeedsDialogue)
+        val dialogue = result as FastIntentMatchResult.NeedsDialogue
+        assertEquals("IVAI-TEMP-SEMANTIC-001", dialogue.reasonCode)
+    }
+
+    @Test
+    fun `非温度缺参仍返回 MissingArguments`() = runTest {
+        // CR-019：非温度请求（无温度语义证据）保持原有缺参快路径。
+        val result = match("风量档位调到")
         assertTrue(result is FastIntentMatchResult.MissingArguments)
         val missing = result as FastIntentMatchResult.MissingArguments
-        assertEquals("climate.temperature.set", missing.toolId)
-        assertTrue(missing.missing.contains("temperature"))
+        assertEquals("climate.fan.speed.set", missing.toolId)
+    }
+
+    @Test
+    fun `温度越界直接拒绝`() = runTest {
+        val result = match("温度调到35度")
+        assertTrue(result is FastIntentMatchResult.Rejected)
+        val rejected = result as FastIntentMatchResult.Rejected
+        assertEquals("IVAI-TEMP-RANGE-001", rejected.reasonCode)
+    }
+
+    @Test
+    fun `相对调温不命中 temperature_set`() = runTest {
+        // CR-019：RELATIVE_DELTA 语义禁止 temperature.set 参与候选（adjust/set 混淆防护）。
+        val result = match("主驾温度调高1度")
+        assertTrue(result is FastIntentMatchResult.Unique)
+        val unique = result as FastIntentMatchResult.Unique
+        assertEquals("climate.temperature.adjust", unique.candidate.toolId)
+        assertEquals("increase", unique.candidate.arguments["direction"])
+        assertEquals(1, unique.candidate.arguments["step"])
+        assertEquals("driver", unique.candidate.arguments["zone"])
     }
 
     @Test

@@ -73,8 +73,9 @@ class AgentWorkflowTest {
 
     @Test
     fun `补充温度后恢复温度设置任务并生成合法参数`() = runTest {
-        // CR-005: “温度调到”由 L0 缺参快路径直接追问（不调模型），因此补参轮次才消费模型输出。
-        val stub = StubModelProvider(setTemp24)
+        // CR-019：“温度调到”语义歧义（AMBIGUOUS → NEED_DIALOGUE），L1 追问；
+        // 补参轮次消费模型输出后恢复执行（不因歧义直接编造目标温度）。
+        val stub = StubModelProvider(dialogueMissingTemp, setTemp24)
         val (workflow, adapter) = TestGraph.build(stub)
         val session = Session()
 

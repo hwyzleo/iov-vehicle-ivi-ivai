@@ -1,0 +1,4229 @@
+{
+ "suiteId": "ivai-agent-climate-temperature-boundary-regression-v2",
+ "schemaVersion": 2,
+ "governanceVersion": "ivai-governance-v1",
+ "cases": [
+  {
+   "caseId": "TEMP-001",
+   "description": "L0 adjust 相对调温 主驾温度调高一点",
+   "tags": [
+    "L0",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "主驾温度调高一点",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 1,
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-002",
+   "description": "L0 adjust 相对调温 副驾温度调高一点",
+   "tags": [
+    "L0",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "副驾温度调高一点",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 1,
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-003",
+   "description": "L0 adjust 相对调温 主驾温度调高",
+   "tags": [
+    "L0",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "主驾温度调高",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-004",
+   "description": "L0 adjust 相对调温 副驾温度调低一点",
+   "tags": [
+    "L0",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "副驾温度调低一点",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 1,
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-005",
+   "description": "L0 adjust 相对调温 主驾温度调低",
+   "tags": [
+    "L0",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "主驾温度调低",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-006",
+   "description": "L0 adjust 相对调温 主驾升温",
+   "tags": [
+    "L0",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "主驾升温",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-007",
+   "description": "L0 adjust 相对调温 驾驶位升温",
+   "tags": [
+    "L0",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "驾驶位升温",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-008",
+   "description": "L0 adjust 相对调温 主驾驶升温",
+   "tags": [
+    "L0",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "主驾驶升温",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-009",
+   "description": "L0 adjust 相对调温 副驾升温",
+   "tags": [
+    "L0",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "副驾升温",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-010",
+   "description": "L0 adjust 相对调温 副驾驶升温",
+   "tags": [
+    "L0",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "副驾驶升温",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-011",
+   "description": "L0 adjust 相对调温 乘客位升温",
+   "tags": [
+    "L0",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "乘客位升温",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-012",
+   "description": "L0 adjust 相对调温 主驾降温",
+   "tags": [
+    "L0",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "主驾降温",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-013",
+   "description": "L0 adjust 相对调温 驾驶位降温",
+   "tags": [
+    "L0",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "驾驶位降温",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-014",
+   "description": "L0 adjust 相对调温 主驾驶降温",
+   "tags": [
+    "L0",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "主驾驶降温",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-015",
+   "description": "L0 adjust 相对调温 副驾降温",
+   "tags": [
+    "L0",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "副驾降温",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-016",
+   "description": "L0 adjust 相对调温 副驾驶降温",
+   "tags": [
+    "L0",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "副驾驶降温",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-017",
+   "description": "L0 adjust 相对调温 乘客位降温",
+   "tags": [
+    "L0",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "乘客位降温",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-018",
+   "description": "L0 adjust 相对调温 主驾温度调高1度",
+   "tags": [
+    "L0",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "主驾温度调高1度",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 1,
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-019",
+   "description": "L0 adjust 相对调温 副驾温度调低1度",
+   "tags": [
+    "L0",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "副驾温度调低1度",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 1,
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-020",
+   "description": "L0 adjust 相对调温 主驾温度调高0.5度",
+   "tags": [
+    "L0",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "主驾温度调高0.5度",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 0.5,
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-021",
+   "description": "L0 adjust 相对调温 副驾温度调低0.5度",
+   "tags": [
+    "L0",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "副驾温度调低0.5度",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 0.5,
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-022",
+   "description": "L0 adjust 相对调温 主驾温度调高2度",
+   "tags": [
+    "L0",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "主驾温度调高2度",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 2,
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-023",
+   "description": "L0 adjust 相对调温 副驾温度调低2度",
+   "tags": [
+    "L0",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "副驾温度调低2度",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 2,
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-024",
+   "description": "L0 adjust 相对调温 主驾温度调高一点",
+   "tags": [
+    "L0",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "主驾温度调高一点",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 1,
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-025",
+   "description": "L0 adjust 相对调温 副驾温度调低一些",
+   "tags": [
+    "L0",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "副驾温度调低一些",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 1,
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-026",
+   "description": "L0 adjust 相对调温 主驾温度调高一丢丢",
+   "tags": [
+    "L0",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "主驾温度调高一丢丢",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 0.5,
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-027",
+   "description": "L0 adjust 相对调温 副驾温度调低半度",
+   "tags": [
+    "L0",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "副驾温度调低半度",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 0.5,
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-028",
+   "description": "L0 adjust 相对调温 主驾温度加1度",
+   "tags": [
+    "L0",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "主驾温度加1度",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 1,
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-029",
+   "description": "L0 adjust 相对调温 副驾温度减1度",
+   "tags": [
+    "L0",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "副驾温度减1度",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 1,
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-030",
+   "description": "L0 adjust 相对调温 主驾温度升高1度",
+   "tags": [
+    "L0",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "主驾温度升高1度",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 1,
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-031",
+   "description": "L0 adjust 相对调温 副驾温度降低1度",
+   "tags": [
+    "L0",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "副驾温度降低1度",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 1,
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-032",
+   "description": "L0 adjust 相对调温 主驾温度增加2度",
+   "tags": [
+    "L0",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "主驾温度增加2度",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 2,
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-033",
+   "description": "L0 adjust 相对调温 副驾温度减少1度",
+   "tags": [
+    "L0",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "副驾温度减少1度",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 1,
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-034",
+   "description": "L0 adjust 相对调温 主驾温度调高一点",
+   "tags": [
+    "L0",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "主驾温度调高一点",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 1,
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-035",
+   "description": "L0 adjust 相对调温 前排温度调高一点",
+   "tags": [
+    "L0",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "前排温度调高一点",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 1,
+    "zone": "front"
+   }
+  },
+  {
+   "caseId": "TEMP-036",
+   "description": "L1 adjust 相对调温改写 温度调高一点",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "温度调高一点",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 1
+   }
+  },
+  {
+   "caseId": "TEMP-037",
+   "description": "L1 adjust 相对调温改写 温度调低一点",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "温度调低一点",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 1
+   }
+  },
+  {
+   "caseId": "TEMP-038",
+   "description": "L1 adjust 相对调温改写 温度调高",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "温度调高",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase"
+   }
+  },
+  {
+   "caseId": "TEMP-039",
+   "description": "L1 adjust 相对调温改写 温度调低",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "温度调低",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease"
+   }
+  },
+  {
+   "caseId": "TEMP-040",
+   "description": "L1 adjust 相对调温改写 温度升高一点",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "温度升高一点",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 1
+   }
+  },
+  {
+   "caseId": "TEMP-041",
+   "description": "L1 adjust 相对调温改写 温度降低一点",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "温度降低一点",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 1
+   }
+  },
+  {
+   "caseId": "TEMP-042",
+   "description": "L1 adjust 相对调温改写 温度升高2度",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "温度升高2度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 2
+   }
+  },
+  {
+   "caseId": "TEMP-043",
+   "description": "L1 adjust 相对调温改写 温度降低2度",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "温度降低2度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 2
+   }
+  },
+  {
+   "caseId": "TEMP-044",
+   "description": "L1 adjust 相对调温改写 温度增加1度",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "温度增加1度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 1
+   }
+  },
+  {
+   "caseId": "TEMP-045",
+   "description": "L1 adjust 相对调温改写 温度减少1度",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "温度减少1度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 1
+   }
+  },
+  {
+   "caseId": "TEMP-046",
+   "description": "L1 adjust 相对调温改写 把主驾温度调高一点",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "把主驾温度调高一点",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 1,
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-047",
+   "description": "L1 adjust 相对调温改写 把副驾温度调低一点",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "把副驾温度调低一点",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 1,
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-048",
+   "description": "L1 adjust 相对调温改写 帮我把主驾温度升高",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "帮我把主驾温度升高",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-049",
+   "description": "L1 adjust 相对调温改写 把副驾温度降低一点",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "把副驾温度降低一点",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 1,
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-050",
+   "description": "L1 adjust 相对调温改写 空调温度调高一点",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "空调温度调高一点",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 1
+   }
+  },
+  {
+   "caseId": "TEMP-051",
+   "description": "L1 adjust 相对调温改写 空调温度调低一点",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "空调温度调低一点",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 1
+   }
+  },
+  {
+   "caseId": "TEMP-052",
+   "description": "L1 adjust 相对调温改写 温度调高一些",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "温度调高一些",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 1
+   }
+  },
+  {
+   "caseId": "TEMP-053",
+   "description": "L1 adjust 相对调温改写 温度调低一些",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "温度调低一些",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 1
+   }
+  },
+  {
+   "caseId": "TEMP-054",
+   "description": "L1 adjust 相对调温改写 温度调高明显一些",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "温度调高明显一些",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 2
+   }
+  },
+  {
+   "caseId": "TEMP-055",
+   "description": "L1 adjust 相对调温改写 温度调低明显一些",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "温度调低明显一些",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 2
+   }
+  },
+  {
+   "caseId": "TEMP-056",
+   "description": "L1 adjust 相对调温改写 温度再调高一点",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "温度再调高一点",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 1
+   }
+  },
+  {
+   "caseId": "TEMP-057",
+   "description": "L1 adjust 相对调温改写 温度再调低一点",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "温度再调低一点",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 1
+   }
+  },
+  {
+   "caseId": "TEMP-058",
+   "description": "L1 adjust 相对调温改写 主驾温度再调高1度",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "主驾温度再调高1度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 1,
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-059",
+   "description": "L1 adjust 相对调温改写 副驾温度再调低1度",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "副驾温度再调低1度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 1,
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-060",
+   "description": "L1 adjust 相对调温改写 空调温度升高一点",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "空调温度升高一点",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 1
+   }
+  },
+  {
+   "caseId": "TEMP-061",
+   "description": "L1 adjust 相对调温改写 空调温度降低一点",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "空调温度降低一点",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 1
+   }
+  },
+  {
+   "caseId": "TEMP-062",
+   "description": "L1 adjust 相对调温改写 把温度调高一点",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "把温度调高一点",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 1
+   }
+  },
+  {
+   "caseId": "TEMP-063",
+   "description": "L1 adjust 相对调温改写 把温度调低一点",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "把温度调低一点",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 1
+   }
+  },
+  {
+   "caseId": "TEMP-064",
+   "description": "L1 adjust 相对调温改写 温度升高1度",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "温度升高1度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 1
+   }
+  },
+  {
+   "caseId": "TEMP-065",
+   "description": "L1 adjust 相对调温改写 温度降低1度",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "温度降低1度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 1
+   }
+  },
+  {
+   "caseId": "TEMP-066",
+   "description": "L1 adjust 相对调温改写 主驾温度升高一点",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "主驾温度升高一点",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 1,
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-067",
+   "description": "L1 adjust 相对调温改写 副驾温度降低一点",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "副驾温度降低一点",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 1,
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-068",
+   "description": "L1 adjust 相对调温改写 温度调高一点",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "温度调高一点",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 1
+   }
+  },
+  {
+   "caseId": "TEMP-069",
+   "description": "L1 adjust 相对调温改写 主驾空调温度调高一点",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "主驾空调温度调高一点",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 1,
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-070",
+   "description": "L1 adjust 相对调温改写 副驾空调温度调低一点",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "副驾空调温度调低一点",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 1,
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-071",
+   "description": "L1 adjust 相对调温改写 温度加一点",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "温度加一点",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 1
+   }
+  },
+  {
+   "caseId": "TEMP-072",
+   "description": "L1 adjust 相对调温改写 温度减一点",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "温度减一点",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 1
+   }
+  },
+  {
+   "caseId": "TEMP-073",
+   "description": "L1 adjust 相对调温改写 温度升温一点",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "温度升温一点",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 1
+   }
+  },
+  {
+   "caseId": "TEMP-074",
+   "description": "L1 adjust 相对调温改写 温度降温一点",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "温度降温一点",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 1
+   }
+  },
+  {
+   "caseId": "TEMP-075",
+   "description": "L1 adjust 相对调温改写 温度稍微调高一点",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "温度稍微调高一点",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 1
+   }
+  },
+  {
+   "caseId": "TEMP-076",
+   "description": "L1 adjust 相对调温改写 温度稍微调低一点",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "温度稍微调低一点",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 1
+   }
+  },
+  {
+   "caseId": "TEMP-077",
+   "description": "L1 adjust 相对调温改写 空调温度升高",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "空调温度升高",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase"
+   }
+  },
+  {
+   "caseId": "TEMP-078",
+   "description": "L1 adjust 相对调温改写 空调温度降低",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "空调温度降低",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease"
+   }
+  },
+  {
+   "caseId": "TEMP-079",
+   "description": "L1 adjust 相对调温改写 主驾温度再升高1度",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "主驾温度再升高1度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 1,
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-080",
+   "description": "L1 adjust 相对调温改写 副驾温度再降低1度",
+   "tags": [
+    "L1",
+    "adjust",
+    "relative"
+   ],
+   "enabled": true,
+   "input": "副驾温度再降低1度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 1,
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-081",
+   "description": "set 合法绝对目标 主驾温度调到24度",
+   "tags": [
+    "set",
+    "absolute"
+   ],
+   "enabled": true,
+   "input": "主驾温度调到24度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 24,
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-082",
+   "description": "set 合法绝对目标 副驾温度调到25度",
+   "tags": [
+    "set",
+    "absolute"
+   ],
+   "enabled": true,
+   "input": "副驾温度调到25度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 25,
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-083",
+   "description": "set 合法绝对目标 主驾温度设为26度",
+   "tags": [
+    "set",
+    "absolute"
+   ],
+   "enabled": true,
+   "input": "主驾温度设为26度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 26,
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-084",
+   "description": "set 合法绝对目标 副驾温度设为24度",
+   "tags": [
+    "set",
+    "absolute"
+   ],
+   "enabled": true,
+   "input": "副驾温度设为24度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 24,
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-085",
+   "description": "set 合法绝对目标 主驾温度调到20度",
+   "tags": [
+    "set",
+    "absolute"
+   ],
+   "enabled": true,
+   "input": "主驾温度调到20度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 20,
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-086",
+   "description": "set 合法绝对目标 副驾温度调到28度",
+   "tags": [
+    "set",
+    "absolute"
+   ],
+   "enabled": true,
+   "input": "副驾温度调到28度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 28,
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-087",
+   "description": "set 合法绝对目标 主驾温度设成25度",
+   "tags": [
+    "set",
+    "absolute"
+   ],
+   "enabled": true,
+   "input": "主驾温度设成25度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 25,
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-088",
+   "description": "set 合法绝对目标 副驾温度设成22度",
+   "tags": [
+    "set",
+    "absolute"
+   ],
+   "enabled": true,
+   "input": "副驾温度设成22度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 22,
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-089",
+   "description": "set 合法绝对目标 温度调到24度",
+   "tags": [
+    "set",
+    "absolute"
+   ],
+   "enabled": true,
+   "input": "温度调到24度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 24
+   }
+  },
+  {
+   "caseId": "TEMP-090",
+   "description": "set 合法绝对目标 温度设为26度",
+   "tags": [
+    "set",
+    "absolute"
+   ],
+   "enabled": true,
+   "input": "温度设为26度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 26
+   }
+  },
+  {
+   "caseId": "TEMP-091",
+   "description": "set 合法绝对目标 空调设成25度",
+   "tags": [
+    "set",
+    "absolute"
+   ],
+   "enabled": true,
+   "input": "空调设成25度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 25
+   }
+  },
+  {
+   "caseId": "TEMP-092",
+   "description": "set 合法绝对目标 目标温度24度",
+   "tags": [
+    "set",
+    "absolute"
+   ],
+   "enabled": true,
+   "input": "目标温度24度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 24
+   }
+  },
+  {
+   "caseId": "TEMP-093",
+   "description": "set 合法绝对目标 温度保持在26度",
+   "tags": [
+    "set",
+    "absolute"
+   ],
+   "enabled": true,
+   "input": "温度保持在26度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 26
+   }
+  },
+  {
+   "caseId": "TEMP-094",
+   "description": "set 合法绝对目标 设置温度到24度",
+   "tags": [
+    "set",
+    "absolute"
+   ],
+   "enabled": true,
+   "input": "设置温度到24度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 24
+   }
+  },
+  {
+   "caseId": "TEMP-095",
+   "description": "set 合法绝对目标 温度调节到25度",
+   "tags": [
+    "set",
+    "absolute"
+   ],
+   "enabled": true,
+   "input": "温度调节到25度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 25
+   }
+  },
+  {
+   "caseId": "TEMP-096",
+   "description": "set 合法绝对目标 主驾目标温度24度",
+   "tags": [
+    "set",
+    "absolute"
+   ],
+   "enabled": true,
+   "input": "主驾目标温度24度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 24,
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-097",
+   "description": "set 合法绝对目标 副驾目标温度26度",
+   "tags": [
+    "set",
+    "absolute"
+   ],
+   "enabled": true,
+   "input": "副驾目标温度26度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 26,
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-098",
+   "description": "set 合法绝对目标 温度调到16度",
+   "tags": [
+    "set",
+    "absolute"
+   ],
+   "enabled": true,
+   "input": "温度调到16度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 16
+   }
+  },
+  {
+   "caseId": "TEMP-099",
+   "description": "set 合法绝对目标 温度调到30度",
+   "tags": [
+    "set",
+    "absolute"
+   ],
+   "enabled": true,
+   "input": "温度调到30度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 30
+   }
+  },
+  {
+   "caseId": "TEMP-100",
+   "description": "set 合法绝对目标 主驾温度调到16度",
+   "tags": [
+    "set",
+    "absolute"
+   ],
+   "enabled": true,
+   "input": "主驾温度调到16度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 16,
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-101",
+   "description": "set 合法绝对目标 副驾温度调到30度",
+   "tags": [
+    "set",
+    "absolute"
+   ],
+   "enabled": true,
+   "input": "副驾温度调到30度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 30,
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-102",
+   "description": "set 合法绝对目标 温度设为20度",
+   "tags": [
+    "set",
+    "absolute"
+   ],
+   "enabled": true,
+   "input": "温度设为20度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 20
+   }
+  },
+  {
+   "caseId": "TEMP-103",
+   "description": "set 合法绝对目标 温度设为28度",
+   "tags": [
+    "set",
+    "absolute"
+   ],
+   "enabled": true,
+   "input": "温度设为28度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 28
+   }
+  },
+  {
+   "caseId": "TEMP-104",
+   "description": "set 合法绝对目标 主驾空调温度调到24度",
+   "tags": [
+    "set",
+    "absolute"
+   ],
+   "enabled": true,
+   "input": "主驾空调温度调到24度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 24,
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-105",
+   "description": "set 合法绝对目标 副驾空调温度调到25度",
+   "tags": [
+    "set",
+    "absolute"
+   ],
+   "enabled": true,
+   "input": "副驾空调温度调到25度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 25,
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-106",
+   "description": "set 合法绝对目标 温度设置到26度",
+   "tags": [
+    "set",
+    "absolute"
+   ],
+   "enabled": true,
+   "input": "温度设置到26度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 26
+   }
+  },
+  {
+   "caseId": "TEMP-107",
+   "description": "set 合法绝对目标 温度设定为24度",
+   "tags": [
+    "set",
+    "absolute"
+   ],
+   "enabled": true,
+   "input": "温度设定为24度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 24
+   }
+  },
+  {
+   "caseId": "TEMP-108",
+   "description": "set 合法绝对目标 主驾温度设定为25度",
+   "tags": [
+    "set",
+    "absolute"
+   ],
+   "enabled": true,
+   "input": "主驾温度设定为25度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 25,
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-109",
+   "description": "set 合法绝对目标 副驾温度设定为26度",
+   "tags": [
+    "set",
+    "absolute"
+   ],
+   "enabled": true,
+   "input": "副驾温度设定为26度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 26,
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-110",
+   "description": "set 合法绝对目标 温度调到18度",
+   "tags": [
+    "set",
+    "absolute"
+   ],
+   "enabled": true,
+   "input": "温度调到18度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 18
+   }
+  },
+  {
+   "caseId": "TEMP-111",
+   "description": "set 合法绝对目标 温度调到29度",
+   "tags": [
+    "set",
+    "absolute"
+   ],
+   "enabled": true,
+   "input": "温度调到29度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 29
+   }
+  },
+  {
+   "caseId": "TEMP-112",
+   "description": "set 合法绝对目标 主驾温度调到18度",
+   "tags": [
+    "set",
+    "absolute"
+   ],
+   "enabled": true,
+   "input": "主驾温度调到18度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 18,
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-113",
+   "description": "set 合法绝对目标 副驾温度调到29度",
+   "tags": [
+    "set",
+    "absolute"
+   ],
+   "enabled": true,
+   "input": "副驾温度调到29度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 29,
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-114",
+   "description": "set 合法绝对目标 把主驾温度调到24度",
+   "tags": [
+    "set",
+    "absolute"
+   ],
+   "enabled": true,
+   "input": "把主驾温度调到24度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 24,
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-115",
+   "description": "set 合法绝对目标 把副驾温度调到25度",
+   "tags": [
+    "set",
+    "absolute"
+   ],
+   "enabled": true,
+   "input": "把副驾温度调到25度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 25,
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-116",
+   "description": "set 边界Alias 主驾温度调到最高",
+   "tags": [
+    "set",
+    "bound"
+   ],
+   "enabled": true,
+   "input": "主驾温度调到最高",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 30,
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-117",
+   "description": "set 边界Alias 副驾温度调到最高",
+   "tags": [
+    "set",
+    "bound"
+   ],
+   "enabled": true,
+   "input": "副驾温度调到最高",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 30,
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-118",
+   "description": "set 边界Alias 主驾温度调到最低",
+   "tags": [
+    "set",
+    "bound"
+   ],
+   "enabled": true,
+   "input": "主驾温度调到最低",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 16,
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-119",
+   "description": "set 边界Alias 副驾温度调到最低",
+   "tags": [
+    "set",
+    "bound"
+   ],
+   "enabled": true,
+   "input": "副驾温度调到最低",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 16,
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-120",
+   "description": "set 边界Alias 主驾温度设为最高",
+   "tags": [
+    "set",
+    "bound"
+   ],
+   "enabled": true,
+   "input": "主驾温度设为最高",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 30,
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-121",
+   "description": "set 边界Alias 副驾温度设为最低",
+   "tags": [
+    "set",
+    "bound"
+   ],
+   "enabled": true,
+   "input": "副驾温度设为最低",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 16,
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-122",
+   "description": "set 边界Alias 温度调到最高",
+   "tags": [
+    "set",
+    "bound"
+   ],
+   "enabled": true,
+   "input": "温度调到最高",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 30
+   }
+  },
+  {
+   "caseId": "TEMP-123",
+   "description": "set 边界Alias 温度调到最低",
+   "tags": [
+    "set",
+    "bound"
+   ],
+   "enabled": true,
+   "input": "温度调到最低",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 16
+   }
+  },
+  {
+   "caseId": "TEMP-124",
+   "description": "set 边界Alias 温度设为最高",
+   "tags": [
+    "set",
+    "bound"
+   ],
+   "enabled": true,
+   "input": "温度设为最高",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 30
+   }
+  },
+  {
+   "caseId": "TEMP-125",
+   "description": "set 边界Alias 温度设为最低",
+   "tags": [
+    "set",
+    "bound"
+   ],
+   "enabled": true,
+   "input": "温度设为最低",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 16
+   }
+  },
+  {
+   "caseId": "TEMP-126",
+   "description": "set 边界Alias 主驾温度调至最高",
+   "tags": [
+    "set",
+    "bound"
+   ],
+   "enabled": true,
+   "input": "主驾温度调至最高",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 30,
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-127",
+   "description": "set 边界Alias 副驾温度调至最低",
+   "tags": [
+    "set",
+    "bound"
+   ],
+   "enabled": true,
+   "input": "副驾温度调至最低",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 16,
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-128",
+   "description": "set 边界Alias 温度调最大",
+   "tags": [
+    "set",
+    "bound"
+   ],
+   "enabled": true,
+   "input": "温度调最大",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 30
+   }
+  },
+  {
+   "caseId": "TEMP-129",
+   "description": "set 边界Alias 温度调最小",
+   "tags": [
+    "set",
+    "bound"
+   ],
+   "enabled": true,
+   "input": "温度调最小",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 16
+   }
+  },
+  {
+   "caseId": "TEMP-130",
+   "description": "set 边界Alias 温度调到最大",
+   "tags": [
+    "set",
+    "bound"
+   ],
+   "enabled": true,
+   "input": "温度调到最大",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 30
+   }
+  },
+  {
+   "caseId": "TEMP-131",
+   "description": "set 边界Alias 温度调到最小",
+   "tags": [
+    "set",
+    "bound"
+   ],
+   "enabled": true,
+   "input": "温度调到最小",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 16
+   }
+  },
+  {
+   "caseId": "TEMP-132",
+   "description": "set 边界Alias 主驾温度调到最热",
+   "tags": [
+    "set",
+    "bound"
+   ],
+   "enabled": true,
+   "input": "主驾温度调到最热",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 30,
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-133",
+   "description": "set 边界Alias 副驾温度调到最热",
+   "tags": [
+    "set",
+    "bound"
+   ],
+   "enabled": true,
+   "input": "副驾温度调到最热",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 30,
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-134",
+   "description": "set 边界Alias 主驾温度调到最冷",
+   "tags": [
+    "set",
+    "bound"
+   ],
+   "enabled": true,
+   "input": "主驾温度调到最冷",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 16,
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-135",
+   "description": "set 边界Alias 副驾温度调到最冷",
+   "tags": [
+    "set",
+    "bound"
+   ],
+   "enabled": true,
+   "input": "副驾温度调到最冷",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 16,
+    "zone": "passenger"
+   }
+  },
+  {
+   "caseId": "TEMP-136",
+   "description": "越界绝对温度 温度调到35度",
+   "tags": [
+    "set",
+    "out-of-range"
+   ],
+   "enabled": true,
+   "input": "温度调到35度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "REJECTED",
+   "expectedReasonCode": "IVAI-TEMP-RANGE-001"
+  },
+  {
+   "caseId": "TEMP-137",
+   "description": "越界绝对温度 温度调到5度",
+   "tags": [
+    "set",
+    "out-of-range"
+   ],
+   "enabled": true,
+   "input": "温度调到5度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "REJECTED",
+   "expectedReasonCode": "IVAI-TEMP-RANGE-001"
+  },
+  {
+   "caseId": "TEMP-138",
+   "description": "越界绝对温度 温度调到40度",
+   "tags": [
+    "set",
+    "out-of-range"
+   ],
+   "enabled": true,
+   "input": "温度调到40度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "REJECTED",
+   "expectedReasonCode": "IVAI-TEMP-RANGE-001"
+  },
+  {
+   "caseId": "TEMP-139",
+   "description": "越界绝对温度 温度调到0度",
+   "tags": [
+    "set",
+    "out-of-range"
+   ],
+   "enabled": true,
+   "input": "温度调到0度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "REJECTED",
+   "expectedReasonCode": "IVAI-TEMP-RANGE-001"
+  },
+  {
+   "caseId": "TEMP-140",
+   "description": "越界绝对温度 主驾温度调到35度",
+   "tags": [
+    "set",
+    "out-of-range"
+   ],
+   "enabled": true,
+   "input": "主驾温度调到35度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "REJECTED",
+   "expectedReasonCode": "IVAI-TEMP-RANGE-001"
+  },
+  {
+   "caseId": "TEMP-141",
+   "description": "越界绝对温度 副驾温度调到38度",
+   "tags": [
+    "set",
+    "out-of-range"
+   ],
+   "enabled": true,
+   "input": "副驾温度调到38度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "REJECTED",
+   "expectedReasonCode": "IVAI-TEMP-RANGE-001"
+  },
+  {
+   "caseId": "TEMP-142",
+   "description": "越界绝对温度 温度调到100度",
+   "tags": [
+    "set",
+    "out-of-range"
+   ],
+   "enabled": true,
+   "input": "温度调到100度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "REJECTED",
+   "expectedReasonCode": "IVAI-TEMP-RANGE-001"
+  },
+  {
+   "caseId": "TEMP-143",
+   "description": "越界绝对温度 温度调到-10度",
+   "tags": [
+    "set",
+    "out-of-range"
+   ],
+   "enabled": true,
+   "input": "温度调到-10度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "REJECTED",
+   "expectedReasonCode": "IVAI-TEMP-RANGE-001"
+  },
+  {
+   "caseId": "TEMP-144",
+   "description": "越界绝对温度 主驾温度调到50度",
+   "tags": [
+    "set",
+    "out-of-range"
+   ],
+   "enabled": true,
+   "input": "主驾温度调到50度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "REJECTED",
+   "expectedReasonCode": "IVAI-TEMP-RANGE-001"
+  },
+  {
+   "caseId": "TEMP-145",
+   "description": "越界绝对温度 温度调到15度",
+   "tags": [
+    "set",
+    "out-of-range"
+   ],
+   "enabled": true,
+   "input": "温度调到15度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "REJECTED",
+   "expectedReasonCode": "IVAI-TEMP-RANGE-001"
+  },
+  {
+   "caseId": "TEMP-146",
+   "description": "越界绝对温度 温度调到31度",
+   "tags": [
+    "set",
+    "out-of-range"
+   ],
+   "enabled": true,
+   "input": "温度调到31度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "REJECTED",
+   "expectedReasonCode": "IVAI-TEMP-RANGE-001"
+  },
+  {
+   "caseId": "TEMP-147",
+   "description": "越界绝对温度 副驾温度调到32度",
+   "tags": [
+    "set",
+    "out-of-range"
+   ],
+   "enabled": true,
+   "input": "副驾温度调到32度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "REJECTED",
+   "expectedReasonCode": "IVAI-TEMP-RANGE-001"
+  },
+  {
+   "caseId": "TEMP-148",
+   "description": "越界绝对温度 温度调到60度",
+   "tags": [
+    "set",
+    "out-of-range"
+   ],
+   "enabled": true,
+   "input": "温度调到60度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "REJECTED",
+   "expectedReasonCode": "IVAI-TEMP-RANGE-001"
+  },
+  {
+   "caseId": "TEMP-149",
+   "description": "越界绝对温度 温度调到45度",
+   "tags": [
+    "set",
+    "out-of-range"
+   ],
+   "enabled": true,
+   "input": "温度调到45度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "REJECTED",
+   "expectedReasonCode": "IVAI-TEMP-RANGE-001"
+  },
+  {
+   "caseId": "TEMP-150",
+   "description": "越界绝对温度 主驾温度调到8度",
+   "tags": [
+    "set",
+    "out-of-range"
+   ],
+   "enabled": true,
+   "input": "主驾温度调到8度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "REJECTED",
+   "expectedReasonCode": "IVAI-TEMP-RANGE-001"
+  },
+  {
+   "caseId": "TEMP-151",
+   "description": "歧义追问 温度调到",
+   "tags": [
+    "ambiguous"
+   ],
+   "enabled": true,
+   "input": "温度调到",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "NEED_DIALOGUE",
+   "expectedReasonCode": "IVAI-TEMP-SEMANTIC-001"
+  },
+  {
+   "caseId": "TEMP-152",
+   "description": "歧义追问 温度设为",
+   "tags": [
+    "ambiguous"
+   ],
+   "enabled": true,
+   "input": "温度设为",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "NEED_DIALOGUE",
+   "expectedReasonCode": "IVAI-TEMP-SEMANTIC-001"
+  },
+  {
+   "caseId": "TEMP-153",
+   "description": "歧义追问 温度调到5",
+   "tags": [
+    "ambiguous"
+   ],
+   "enabled": true,
+   "input": "温度调到5",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "NEED_DIALOGUE",
+   "expectedReasonCode": "IVAI-TEMP-SEMANTIC-001"
+  },
+  {
+   "caseId": "TEMP-154",
+   "description": "歧义追问 温度调到",
+   "tags": [
+    "ambiguous"
+   ],
+   "enabled": true,
+   "input": "温度调到",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "NEED_DIALOGUE",
+   "expectedReasonCode": "IVAI-TEMP-SEMANTIC-001"
+  },
+  {
+   "caseId": "TEMP-155",
+   "description": "歧义追问 调到24度",
+   "tags": [
+    "ambiguous"
+   ],
+   "enabled": true,
+   "input": "调到24度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "NEED_DIALOGUE",
+   "expectedReasonCode": "IVAI-TEMP-SEMANTIC-001"
+  },
+  {
+   "caseId": "TEMP-156",
+   "description": "歧义追问 24度",
+   "tags": [
+    "ambiguous"
+   ],
+   "enabled": true,
+   "input": "24度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "NEED_DIALOGUE",
+   "expectedReasonCode": "IVAI-TEMP-SEMANTIC-001"
+  },
+  {
+   "caseId": "TEMP-157",
+   "description": "歧义追问 空调温度",
+   "tags": [
+    "ambiguous"
+   ],
+   "enabled": true,
+   "input": "空调温度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "NEED_DIALOGUE",
+   "expectedReasonCode": "IVAI-TEMP-SEMANTIC-001"
+  },
+  {
+   "caseId": "TEMP-158",
+   "description": "歧义追问 温度",
+   "tags": [
+    "ambiguous"
+   ],
+   "enabled": true,
+   "input": "温度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "NEED_DIALOGUE",
+   "expectedReasonCode": "IVAI-TEMP-SEMANTIC-001"
+  },
+  {
+   "caseId": "TEMP-159",
+   "description": "歧义追问 温度调到多少",
+   "tags": [
+    "ambiguous"
+   ],
+   "enabled": true,
+   "input": "温度调到多少",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "NEED_DIALOGUE",
+   "expectedReasonCode": "IVAI-TEMP-SEMANTIC-001"
+  },
+  {
+   "caseId": "TEMP-160",
+   "description": "歧义追问 调到多少度",
+   "tags": [
+    "ambiguous"
+   ],
+   "enabled": true,
+   "input": "调到多少度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "NEED_DIALOGUE",
+   "expectedReasonCode": "IVAI-TEMP-SEMANTIC-001"
+  },
+  {
+   "caseId": "TEMP-161",
+   "description": "歧义追问 温度调高到",
+   "tags": [
+    "ambiguous"
+   ],
+   "enabled": true,
+   "input": "温度调高到",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "NEED_DIALOGUE",
+   "expectedReasonCode": "IVAI-TEMP-SEMANTIC-001"
+  },
+  {
+   "caseId": "TEMP-162",
+   "description": "歧义追问 温度降低到",
+   "tags": [
+    "ambiguous"
+   ],
+   "enabled": true,
+   "input": "温度降低到",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "NEED_DIALOGUE",
+   "expectedReasonCode": "IVAI-TEMP-SEMANTIC-001"
+  },
+  {
+   "caseId": "TEMP-163",
+   "description": "歧义追问 调到",
+   "tags": [
+    "ambiguous"
+   ],
+   "enabled": true,
+   "input": "调到",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "NEED_DIALOGUE",
+   "expectedReasonCode": "IVAI-TEMP-SEMANTIC-001"
+  },
+  {
+   "caseId": "TEMP-164",
+   "description": "歧义追问 设定温度",
+   "tags": [
+    "ambiguous"
+   ],
+   "enabled": true,
+   "input": "设定温度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "NEED_DIALOGUE",
+   "expectedReasonCode": "IVAI-TEMP-SEMANTIC-001"
+  },
+  {
+   "caseId": "TEMP-165",
+   "description": "歧义追问 温度目标",
+   "tags": [
+    "ambiguous"
+   ],
+   "enabled": true,
+   "input": "温度目标",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "NEED_DIALOGUE",
+   "expectedReasonCode": "IVAI-TEMP-SEMANTIC-001"
+  },
+  {
+   "caseId": "TEMP-166",
+   "description": "歧义追问 温度调到多少度",
+   "tags": [
+    "ambiguous"
+   ],
+   "enabled": true,
+   "input": "温度调到多少度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "NEED_DIALOGUE",
+   "expectedReasonCode": "IVAI-TEMP-SEMANTIC-001"
+  },
+  {
+   "caseId": "TEMP-167",
+   "description": "歧义追问 温度调一丢丢",
+   "tags": [
+    "ambiguous"
+   ],
+   "enabled": true,
+   "input": "温度调一丢丢",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "NEED_DIALOGUE",
+   "expectedReasonCode": "IVAI-TEMP-SEMANTIC-001"
+  },
+  {
+   "caseId": "TEMP-168",
+   "description": "歧义追问 温度调一下",
+   "tags": [
+    "ambiguous"
+   ],
+   "enabled": true,
+   "input": "温度调一下",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "NEED_DIALOGUE",
+   "expectedReasonCode": "IVAI-TEMP-SEMANTIC-001"
+  },
+  {
+   "caseId": "TEMP-169",
+   "description": "歧义追问 把温度调到",
+   "tags": [
+    "ambiguous"
+   ],
+   "enabled": true,
+   "input": "把温度调到",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "NEED_DIALOGUE",
+   "expectedReasonCode": "IVAI-TEMP-SEMANTIC-001"
+  },
+  {
+   "caseId": "TEMP-170",
+   "description": "歧义追问 温度要多少",
+   "tags": [
+    "ambiguous"
+   ],
+   "enabled": true,
+   "input": "温度要多少",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "NEED_DIALOGUE",
+   "expectedReasonCode": "IVAI-TEMP-SEMANTIC-001"
+  },
+  {
+   "caseId": "TEMP-171",
+   "description": "中左/中右拓扑 adjust 中左温度调高一点",
+   "tags": [
+    "zone",
+    "topology",
+    "L0"
+   ],
+   "enabled": true,
+   "input": "中左温度调高一点",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 1,
+    "zone": "middle_left"
+   }
+  },
+  {
+   "caseId": "TEMP-172",
+   "description": "中左/中右拓扑 adjust 中右温度调高一点",
+   "tags": [
+    "zone",
+    "topology",
+    "L0"
+   ],
+   "enabled": true,
+   "input": "中右温度调高一点",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 1,
+    "zone": "middle_right"
+   }
+  },
+  {
+   "caseId": "TEMP-173",
+   "description": "中左/中右拓扑 adjust 中左温度调低一点",
+   "tags": [
+    "zone",
+    "topology",
+    "L0"
+   ],
+   "enabled": true,
+   "input": "中左温度调低一点",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 1,
+    "zone": "middle_left"
+   }
+  },
+  {
+   "caseId": "TEMP-174",
+   "description": "中左/中右拓扑 adjust 中右温度调低一点",
+   "tags": [
+    "zone",
+    "topology",
+    "L0"
+   ],
+   "enabled": true,
+   "input": "中右温度调低一点",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 1,
+    "zone": "middle_right"
+   }
+  },
+  {
+   "caseId": "TEMP-175",
+   "description": "中左/中右拓扑 adjust 2排左温度调高一点",
+   "tags": [
+    "zone",
+    "topology",
+    "L0"
+   ],
+   "enabled": true,
+   "input": "2排左温度调高一点",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 1,
+    "zone": "middle_left"
+   }
+  },
+  {
+   "caseId": "TEMP-176",
+   "description": "中左/中右拓扑 adjust 2排右温度调低一点",
+   "tags": [
+    "zone",
+    "topology",
+    "L0"
+   ],
+   "enabled": true,
+   "input": "2排右温度调低一点",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 1,
+    "zone": "middle_right"
+   }
+  },
+  {
+   "caseId": "TEMP-177",
+   "description": "中左/中右拓扑 adjust 中排左温度调高一点",
+   "tags": [
+    "zone",
+    "topology",
+    "L0"
+   ],
+   "enabled": true,
+   "input": "中排左温度调高一点",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 1,
+    "zone": "middle_left"
+   }
+  },
+  {
+   "caseId": "TEMP-178",
+   "description": "中左/中右拓扑 adjust 中排右温度调高一点",
+   "tags": [
+    "zone",
+    "topology",
+    "L0"
+   ],
+   "enabled": true,
+   "input": "中排右温度调高一点",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 1,
+    "zone": "middle_right"
+   }
+  },
+  {
+   "caseId": "TEMP-179",
+   "description": "中左/中右拓扑 adjust 第二排左温度调高1度",
+   "tags": [
+    "zone",
+    "topology",
+    "L0"
+   ],
+   "enabled": true,
+   "input": "第二排左温度调高1度",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 1,
+    "zone": "middle_left"
+   }
+  },
+  {
+   "caseId": "TEMP-180",
+   "description": "中左/中右拓扑 adjust 第二排右温度调低1度",
+   "tags": [
+    "zone",
+    "topology",
+    "L0"
+   ],
+   "enabled": true,
+   "input": "第二排右温度调低1度",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 1,
+    "zone": "middle_right"
+   }
+  },
+  {
+   "caseId": "TEMP-181",
+   "description": "中左/中右拓扑 adjust 2排左温度调高2度",
+   "tags": [
+    "zone",
+    "topology",
+    "L0"
+   ],
+   "enabled": true,
+   "input": "2排左温度调高2度",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 2,
+    "zone": "middle_left"
+   }
+  },
+  {
+   "caseId": "TEMP-182",
+   "description": "中左/中右拓扑 adjust 2排右温度调低2度",
+   "tags": [
+    "zone",
+    "topology",
+    "L0"
+   ],
+   "enabled": true,
+   "input": "2排右温度调低2度",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "decrease",
+    "step": 2,
+    "zone": "middle_right"
+   }
+  },
+  {
+   "caseId": "TEMP-183",
+   "description": "中左/中右拓扑 set 中左温度调到24度",
+   "tags": [
+    "zone",
+    "topology",
+    "L0"
+   ],
+   "enabled": true,
+   "input": "中左温度调到24度",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 24,
+    "zone": "middle_left"
+   }
+  },
+  {
+   "caseId": "TEMP-184",
+   "description": "中左/中右拓扑 set 中右温度调到25度",
+   "tags": [
+    "zone",
+    "topology",
+    "L0"
+   ],
+   "enabled": true,
+   "input": "中右温度调到25度",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 25,
+    "zone": "middle_right"
+   }
+  },
+  {
+   "caseId": "TEMP-185",
+   "description": "中左/中右拓扑 set 中左温度设为26度",
+   "tags": [
+    "zone",
+    "topology",
+    "L0"
+   ],
+   "enabled": true,
+   "input": "中左温度设为26度",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 26,
+    "zone": "middle_left"
+   }
+  },
+  {
+   "caseId": "TEMP-186",
+   "description": "中左/中右拓扑 set 中右温度设为24度",
+   "tags": [
+    "zone",
+    "topology",
+    "L0"
+   ],
+   "enabled": true,
+   "input": "中右温度设为24度",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 24,
+    "zone": "middle_right"
+   }
+  },
+  {
+   "caseId": "TEMP-187",
+   "description": "中左/中右拓扑 set 中左温度调到最高",
+   "tags": [
+    "zone",
+    "topology",
+    "L0"
+   ],
+   "enabled": true,
+   "input": "中左温度调到最高",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 30,
+    "zone": "middle_left"
+   }
+  },
+  {
+   "caseId": "TEMP-188",
+   "description": "中左/中右拓扑 set 中右温度调到最低",
+   "tags": [
+    "zone",
+    "topology",
+    "L0"
+   ],
+   "enabled": true,
+   "input": "中右温度调到最低",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 16,
+    "zone": "middle_right"
+   }
+  },
+  {
+   "caseId": "TEMP-189",
+   "description": "中左/中右拓扑 set 2排左温度调到24度",
+   "tags": [
+    "zone",
+    "topology",
+    "L0"
+   ],
+   "enabled": true,
+   "input": "2排左温度调到24度",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 24,
+    "zone": "middle_left"
+   }
+  },
+  {
+   "caseId": "TEMP-190",
+   "description": "中左/中右拓扑 set 2排右温度调到25度",
+   "tags": [
+    "zone",
+    "topology",
+    "L0"
+   ],
+   "enabled": true,
+   "input": "2排右温度调到25度",
+   "expectedTier": "L0_DETERMINISTIC_TOOL",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 25,
+    "zone": "middle_right"
+   }
+  },
+  {
+   "caseId": "TEMP-191",
+   "description": "adjust/set 边界 → set 主驾温度调高到24度",
+   "tags": [
+    "boundary",
+    "set"
+   ],
+   "enabled": true,
+   "input": "主驾温度调高到24度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 24,
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-192",
+   "description": "adjust/set 边界 → set 温度调高到25度",
+   "tags": [
+    "boundary",
+    "set"
+   ],
+   "enabled": true,
+   "input": "温度调高到25度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 25
+   }
+  },
+  {
+   "caseId": "TEMP-193",
+   "description": "adjust/set 边界 → set 主驾温度调至24度",
+   "tags": [
+    "boundary",
+    "set"
+   ],
+   "enabled": true,
+   "input": "主驾温度调至24度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.set"
+   },
+   "expectedArguments": {
+    "temperature": 24,
+    "zone": "driver"
+   }
+  },
+  {
+   "caseId": "TEMP-194",
+   "description": "adjust/set 边界 → adjust 温度调高1度",
+   "tags": [
+    "boundary",
+    "adjust"
+   ],
+   "enabled": true,
+   "input": "温度调高1度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 1
+   }
+  },
+  {
+   "caseId": "TEMP-195",
+   "description": "adjust/set 边界 → adjust 空调温度调高",
+   "tags": [
+    "boundary",
+    "adjust"
+   ],
+   "enabled": true,
+   "input": "空调温度调高",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase"
+   }
+  },
+  {
+   "caseId": "TEMP-196",
+   "description": "adjust/set 边界 → adjust 温度升高2度",
+   "tags": [
+    "boundary",
+    "adjust"
+   ],
+   "enabled": true,
+   "input": "温度升高2度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "EXECUTE",
+   "expectedTarget": {
+    "type": "TOOL",
+    "id": "climate.temperature.adjust"
+   },
+   "expectedArguments": {
+    "direction": "increase",
+    "step": 2
+   }
+  },
+  {
+   "caseId": "TEMP-197",
+   "description": "adjust/set 边界 → 追问 空调温度",
+   "tags": [
+    "boundary",
+    "ambiguous"
+   ],
+   "enabled": true,
+   "input": "空调温度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "NEED_DIALOGUE",
+   "expectedReasonCode": "IVAI-TEMP-SEMANTIC-001"
+  },
+  {
+   "caseId": "TEMP-198",
+   "description": "adjust/set 边界 → 追问 打开空调温度",
+   "tags": [
+    "boundary",
+    "ambiguous"
+   ],
+   "enabled": true,
+   "input": "打开空调温度",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "NEED_DIALOGUE",
+   "expectedReasonCode": "IVAI-TEMP-SEMANTIC-001"
+  },
+  {
+   "caseId": "TEMP-199",
+   "description": "adjust/set 边界 → 追问 温度调到5档",
+   "tags": [
+    "boundary",
+    "ambiguous"
+   ],
+   "enabled": true,
+   "input": "温度调到5档",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "NEED_DIALOGUE",
+   "expectedReasonCode": "IVAI-TEMP-SEMANTIC-001"
+  },
+  {
+   "caseId": "TEMP-200",
+   "description": "adjust/set 边界 → 追问 温度调到24",
+   "tags": [
+    "boundary",
+    "ambiguous"
+   ],
+   "enabled": true,
+   "input": "温度调到24",
+   "expectedTier": "L1_LOCAL_TOOL_REASONING",
+   "expectedDomain": "CABIN_COMFORT",
+   "expectedCapabilityPack": "cabin.climate",
+   "expectedOutcome": "NEED_DIALOGUE",
+   "expectedReasonCode": "IVAI-TEMP-SEMANTIC-001"
+  }
+ ]
+}

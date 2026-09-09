@@ -48,11 +48,23 @@ class TieredIntentRouterTest {
     }
 
     @Test
-    fun `温度调到缺参路由到 L1 且携带缺参信息`() {
+    fun `温度调到歧义路由到 L1 且记录语义码`() {
+        // CR-019：“温度调到”缺少单位与目标值 → AMBIGUOUS → L1 追问，
+        // reasonCode 记录 IVAI-TEMP-SEMANTIC-001（业务终态 NEED_DIALOGUE）。
         val decision = route("温度调到")
         assertEquals(IntentTier.L1_LOCAL_TOOL_REASONING, decision.tier)
-        assertEquals("climate.temperature_set", decision.missingToolId)
-        assertTrue(decision.missingArguments.contains("temperature"))
+        assertEquals("IVAI-TEMP-SEMANTIC-001", decision.reasonCode)
+        assertNull(decision.directCandidate)
+        assertTrue(decision.retrievalQuery is RetrievalQuery.Tools)
+    }
+
+    @Test
+    fun `温度越界路由到 L1 且记录越界码`() {
+        // CR-019：越界绝对温度处理路径 L1（reasonCode=IVAI-TEMP-RANGE-001），
+        // 业务层直接拒绝（业务终态 REJECTED），Tier 与 Outcome 分别计算。
+        val decision = route("温度调到35度")
+        assertEquals(IntentTier.L1_LOCAL_TOOL_REASONING, decision.tier)
+        assertEquals("IVAI-TEMP-RANGE-001", decision.reasonCode)
     }
 
     @Test

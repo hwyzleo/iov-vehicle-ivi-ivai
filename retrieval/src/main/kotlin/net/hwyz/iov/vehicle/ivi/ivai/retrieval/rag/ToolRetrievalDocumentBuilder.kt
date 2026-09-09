@@ -5,9 +5,11 @@ import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.ToolDefinition
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.ClimateToolBoundaryCatalog
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.Cr017ErrorCodes
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.Cr018ErrorCodes
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.Cr019ErrorCodes
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.DeterministicIntentCatalog
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.GovernanceCatalog
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.RuntimeCapabilitySet
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.TemperatureToolBoundaryCatalog
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.workflows.WorkflowDefinition
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.workflows.WorkflowRegistry
 
@@ -106,6 +108,20 @@ class ToolRetrievalDocumentBuilder(
             ) {
                 throw IllegalArgumentException(
                     "${Cr018ErrorCodes.RAG_BOUNDARY}: Tool ${tool.toolId} 检索文档缺少相似 Tool 边界"
+                )
+            }
+        }
+        // CR-019（IVAI-TEMP-RAG-001）：温度 Tool 检索文档必须携带操作/数值角色边界
+        // （RELATIVE_DELTA/ABSOLUTE_TARGET/BOUND_TARGET 与 delta/target/bound），
+        // 否则无法区分 adjust/set 与“空调温度”对象证据。
+        val temperatureBoundary = TemperatureToolBoundaryCatalog.forTool(tool.toolId)
+        if (temperatureBoundary != null) {
+            if (payload.temperatureOperationSemantics.isEmpty() ||
+                payload.temperatureValueRoles.isEmpty() ||
+                payload.temperatureOperationSemantics.none { it in temperatureBoundary.operationSemantics }
+            ) {
+                throw IllegalArgumentException(
+                    "${Cr019ErrorCodes.TEMP_RAG}: Tool ${tool.toolId} 检索文档缺少温度操作/数值角色边界"
                 )
             }
         }

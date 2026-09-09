@@ -78,6 +78,30 @@ sealed interface FastIntentMatchResult {
         val matchedRuleIds: List<String> = emptyList()
     ) : FastIntentMatchResult
 
+    /**
+     * CR-019：温度语义已确定为不可执行的业务终态（如绝对温度越界
+     * IVAI-TEMP-RANGE-001）→ 直接拒绝，不进入 L1 执行。
+     */
+    data class Rejected(
+        val reasonCode: String,
+        /** 命中的确定性规则 ID（可观测性）。 */
+        val matchedRuleIds: List<String> = emptyList(),
+        /** 语义证据（温度操作/数值/边界）。 */
+        val semantic: String? = null
+    ) : FastIntentMatchResult
+
+    /**
+     * CR-019：温度语义无法判定（缺少单位 / 动作对象无法判断，
+     * IVAI-TEMP-SEMANTIC-001）→ 需要追问，不产生可执行候选。
+     */
+    data class NeedsDialogue(
+        val reasonCode: String,
+        /** 缺失/待澄清的参数（可观测性与追问提示）。 */
+        val missing: List<String> = emptyList(),
+        val matchedRuleIds: List<String> = emptyList(),
+        val semantic: String? = null
+    ) : FastIntentMatchResult
+
     /** No deterministic match — continue to L1 / L2 / L3. */
     data object NoMatch : FastIntentMatchResult
 }

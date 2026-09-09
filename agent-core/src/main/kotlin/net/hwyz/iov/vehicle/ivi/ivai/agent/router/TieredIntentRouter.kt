@@ -178,6 +178,40 @@ class TieredIntentRouter(
                     matchedRuleIds = match.matchedRuleIds
                 )
             )
+            // CR-019：温度语义已判定为不可执行（绝对越界 IVAI-TEMP-RANGE-001）。
+            // 处理路径保持 L1（Tier 评分按处理层级，与业务终态 REJECTED 分别计算），
+            // 由 L1 业务层直接拒绝（不调模型），不产生可执行候选。
+            is FastIntentMatchResult.Rejected -> toolDomainDecision(
+                reasonCode = match.reasonCode,
+                input = input,
+                context = context,
+                domain = domainDecision,
+                snapshot = snapshot,
+                missingToolId = null,
+                missingArguments = emptyList(),
+                observability = observability(
+                    snapshot,
+                    errorCode = match.reasonCode,
+                    fallbackReason = match.semantic,
+                    matchedRuleIds = match.matchedRuleIds
+                )
+            )
+            // CR-019：温度语义无法判定（缺少单位/动作对象）→ 进 L1 追问
+            // （IVAI-TEMP-SEMANTIC-001 作为 reasonCode 记录，业务终态 NEED_DIALOGUE）。
+            is FastIntentMatchResult.NeedsDialogue -> toolDomainDecision(
+                reasonCode = match.reasonCode,
+                input = input,
+                context = context,
+                domain = domainDecision,
+                snapshot = snapshot,
+                missingToolId = null,
+                missingArguments = match.missing,
+                observability = observability(
+                    snapshot,
+                    errorCode = match.reasonCode,
+                    matchedRuleIds = match.matchedRuleIds
+                )
+            )
             FastIntentMatchResult.NoMatch -> {
                 val l0Reason = when {
                     input.hasNegation -> RouteReasonCode.L0_NEGATED
@@ -444,6 +478,41 @@ class TieredIntentRouter(
                         snapshot,
                         canonicalToolId = match.toolId,
                         fallbackReason = match.deterministicFallbackReason,
+                        matchedRuleIds = match.matchedRuleIds
+                    )
+                )
+            }
+            // CR-019：温度语义不可执行 → 保持 L1 处理路径（业务层拒绝）。
+            is FastIntentMatchResult.Rejected -> {
+                return toolDomainDecisionLegacy(
+                    reasonCode = match.reasonCode,
+                    input = input,
+                    context = context,
+                    domain = domain,
+                    snapshot = snapshot,
+                    missingToolId = null,
+                    missingArguments = emptyList(),
+                    observability = observability(
+                        snapshot,
+                        errorCode = match.reasonCode,
+                        fallbackReason = match.semantic,
+                        matchedRuleIds = match.matchedRuleIds
+                    )
+                )
+            }
+            // CR-019：温度语义歧义 → 进 L1 追问。
+            is FastIntentMatchResult.NeedsDialogue -> {
+                return toolDomainDecisionLegacy(
+                    reasonCode = match.reasonCode,
+                    input = input,
+                    context = context,
+                    domain = domain,
+                    snapshot = snapshot,
+                    missingToolId = null,
+                    missingArguments = match.missing,
+                    observability = observability(
+                        snapshot,
+                        errorCode = match.reasonCode,
                         matchedRuleIds = match.matchedRuleIds
                     )
                 )

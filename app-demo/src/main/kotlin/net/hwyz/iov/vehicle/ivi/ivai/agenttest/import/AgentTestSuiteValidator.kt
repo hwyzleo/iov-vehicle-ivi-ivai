@@ -3,6 +3,7 @@ package net.hwyz.iov.vehicle.ivi.ivai.agenttest.import
 import net.hwyz.iov.vehicle.ivi.ivai.agenttest.error.TestErrorCode
 import net.hwyz.iov.vehicle.ivi.ivai.agenttest.model.AgentTestCase
 import net.hwyz.iov.vehicle.ivi.ivai.agenttest.model.AgentTestSuite
+import net.hwyz.iov.vehicle.ivi.ivai.agenttest.model.ExpectedOutcome
 
 /**
  * Suite 全量校验结果（IVI-IVAI-DSN-CR-015）。
@@ -91,6 +92,24 @@ class AgentTestSuiteValidator(
         if (case.caseId.isBlank()) return "caseId 为空"
         if (case.input.isBlank()) return "input 为空"
         if (case.expectedCapabilityPack.isBlank()) return "expectedCapabilityPack 为空"
+        // CR-019：V2 业务 Outcome 契约——EXECUTE 必须有 Target 与参数断言；
+        // NEED_DIALOGUE/REJECTED 必须无可执行 Target（reasonCode 断言可选）。
+        val outcome = case.expectedOutcome
+        if (outcome != null) {
+            when (outcome) {
+                ExpectedOutcome.EXECUTE -> {
+                    if (case.expectedTarget == null) {
+                        return "V2 EXECUTE 用例必须有 expectedTarget（业务目标）"
+                    }
+                }
+                ExpectedOutcome.NEED_DIALOGUE,
+                ExpectedOutcome.REJECTED -> {
+                    if (case.expectedTarget != null) {
+                        return "V2 ${outcome.name} 用例必须无可执行 expectedTarget"
+                    }
+                }
+            }
+        }
         val target = case.expectedTarget ?: return null
         if (!TARGET_ID_PATTERN.matches(target.id)) {
             return "目标 ID 格式非法：${target.id}（仅允许字母、数字、点、短横线、下划线）"
