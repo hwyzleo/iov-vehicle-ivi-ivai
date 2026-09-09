@@ -50,4 +50,30 @@ object TestErrorCode {
 
     /** 导出过程异常或批次 ID 非法。 */
     const val EXPORT_INVALID = "IVAI-TEST-015"
+
+    // ---- IVI-IVAI-DSN-CR-015：测试 Suite JSON 导入与激活 ----
+
+    /** 文件 URI 无法打开或读取失败。 */
+    const val IMPORT_URI_UNREADABLE = "IVAI-TEST-IMPORT-001"
+
+    /** 文件大小超过限制。 */
+    const val IMPORT_SIZE_EXCEEDED = "IVAI-TEST-IMPORT-002"
+
+    /** JSON 语法或字符编码非法。 */
+    const val IMPORT_INVALID_JSON = "IVAI-TEST-IMPORT-003"
+
+    /** Suite Schema 版本不支持。 */
+    const val IMPORT_UNSUPPORTED_VERSION = "IVAI-TEST-IMPORT-004"
+
+    /** Suite 字段或用例全量校验失败。 */
+    const val IMPORT_VALIDATION_FAILED = "IVAI-TEST-IMPORT-005"
+
+    /** 激活文件写入、Hash 校验或原子替换失败。 */
+    const val IMPORT_ACTIVATION_FAILED = "IVAI-TEST-IMPORT-006"
+
+    /** 当前批次或导出状态不允许切换 Suite。 */
+    const val IMPORT_BATCH_BLOCKED = "IVAI-TEST-IMPORT-007"
+
+    /** 激活 Suite 损坏，已回退内置 Suite。 */
+    const val IMPORT_ACTIVE_CORRUPT_FALLBACK = "IVAI-TEST-IMPORT-008"
 }

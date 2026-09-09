@@ -59,6 +59,8 @@ dependencies {
     implementation(project(":speech-input"))
     // CR-012: 测试资产模型 / 评分器直接引用 tool-registry 的 BusinessDomainId。
     implementation(project(":tool-registry"))
+    // CR-016: 批量稳定性——ProviderCleanupBarrier / 分阶段超时模型。
+    implementation(project(":model-client"))
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
 

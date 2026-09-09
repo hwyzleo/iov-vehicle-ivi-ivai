@@ -17,7 +17,12 @@ data class AgentTestSuite(
     val schemaVersion: Int = 1,
     val governanceVersion: String? = null,
     val cases: List<AgentTestCase> = emptyList()
-)
+) {
+    companion object {
+        /** 当前支持的 Suite Schema 版本（解析器 / 校验器共享）。 */
+        const val SUPPORTED_SCHEMA_VERSION = 1
+    }
+}
 
 /**
  * 单条本地回归测试用例（IVI-IVAI-DSN-CR-012 / IVAI-REQ-111）。

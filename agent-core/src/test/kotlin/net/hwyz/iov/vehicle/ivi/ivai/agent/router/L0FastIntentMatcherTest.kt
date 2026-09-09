@@ -291,7 +291,7 @@ class L0FastIntentMatcherTest {
             positiveExamples = listOf(),
             negativeExamples = listOf(),
             selectionPriority = 1,
-            parameterSchema = """{"type":"object","properties":{},"required":[]}""",
+            parameterSchema = """{"type":"object","properties":{"zone":{"type":"string","enum":["driver","passenger"]}},"required":[]}""",
             policy = net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.ToolPolicy(),
             execution = net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.ToolExecutionBinding(
                 adapterId = "test", methodId = "test"
@@ -318,7 +318,8 @@ class L0FastIntentMatcherTest {
         assertTrue(result is FastIntentMatchResult.ArgumentConflict, "显式槽位与预置矛盾应返回 ArgumentConflict")
         val conflict = result as FastIntentMatchResult.ArgumentConflict
         assertEquals("zone", conflict.conflictingArgument)
-        assertEquals("explicit_slot", conflict.sources["zone"])
+        // CR-016：位置词经版本化 Alias Lexicon 映射 → alias_mapping 来源。
+        assertEquals("alias_mapping", conflict.sources["zone"])
     }
 
     @Test
@@ -329,7 +330,8 @@ class L0FastIntentMatcherTest {
         assertEquals("L0.climate.power.set.on", unique.matchedPatternId)
         assertTrue(unique.matchedRuleIds.contains("L0.climate.power.set.on"))
         assertEquals("driver", unique.candidate.arguments["zone"])
-        assertEquals("explicit_slot", unique.argumentSources["zone"])
+        // CR-016：位置词经版本化 Alias Lexicon 映射 → alias_mapping 来源。
+        assertEquals("alias_mapping", unique.argumentSources["zone"])
         assertEquals("rule_preset", unique.argumentSources["enabled"])
     }
 

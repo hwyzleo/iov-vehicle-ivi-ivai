@@ -70,6 +70,16 @@
         android:layout_marginBottom="4dp"
         android:text="开始" />
 
+    <!-- CR-015：读取 JSON（SAF 选择 Suite；批次运行 / 取消 / 激活 / 导出生成中禁用） -->
+    <Button
+        android:id="@+id/importButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="12dp"
+        android:layout_marginBottom="4dp"
+        android:text="读取 JSON" />
+
     <!-- CR-014：批次全部终态后启用导出 Excel（SAF 保存 .xlsx） -->
     <Button
         android:id="@+id/exportButton"

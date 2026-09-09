@@ -179,12 +179,12 @@ class AgentTestCr014IntegrationTest {
 
     private fun loadSuite(vararg caseIds: String): List<AgentTestCase> {
         val file = File("src/debug/assets/agent-tests/v1/agent-regression.json")
-        val repository = net.hwyz.iov.vehicle.ivi.ivai.agenttest.repository.AgentTestCaseRepository(
+        val repository = net.hwyz.iov.vehicle.ivi.ivai.agenttest.repository.AgentTestCaseRepository.builtInOnly(
             net.hwyz.iov.vehicle.ivi.ivai.agenttest.repository.AgentTestCaseLoader {
                 file.takeIf { it.exists() }?.readText()
             }
         )
-        val result = repository.load()
+        val result = repository.loadActiveSuite()
         assertNull(result.errorCode, "资产应可解析：${result.errorMessage}")
         return result.validCases.filter { it.caseId in caseIds }
     }

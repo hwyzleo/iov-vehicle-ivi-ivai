@@ -11,6 +11,8 @@ import net.hwyz.iov.vehicle.ivi.ivai.agent.evaluation.EvaluationTerminalStatus
 import net.hwyz.iov.vehicle.ivi.ivai.agent.evaluation.EvaluationSnapshotProjector
 import net.hwyz.iov.vehicle.ivi.ivai.agent.event.AgentEvent
 import net.hwyz.iov.vehicle.ivi.ivai.agent.router.IntentTier
+import net.hwyz.iov.vehicle.ivi.ivai.agenttest.diagnostics.CaseDiagnostics
+import net.hwyz.iov.vehicle.ivi.ivai.agenttest.diagnostics.TestResultDiagnostics
 import net.hwyz.iov.vehicle.ivi.ivai.agenttest.error.TestErrorCode
 import net.hwyz.iov.vehicle.ivi.ivai.agenttest.gateway.AgentCommandGateway
 import net.hwyz.iov.vehicle.ivi.ivai.agenttest.model.AgentTestCase
@@ -27,6 +29,8 @@ import net.hwyz.iov.vehicle.ivi.ivai.agenttest.timing.TestCaseTiming
 import net.hwyz.iov.vehicle.ivi.ivai.agenttest.timing.TestCaseTimingCollector
 import net.hwyz.iov.vehicle.ivi.ivai.agenttest.result.ActualResultCollector
 import net.hwyz.iov.vehicle.ivi.ivai.demo.BuildConfig
+import net.hwyz.iov.vehicle.ivi.ivai.model.lifecycle.ModelTimeoutPolicy
+import net.hwyz.iov.vehicle.ivi.ivai.model.lifecycle.ProviderCleanupBarrier
 
 /**
  * 单条用例执行状态（IVI-IVAI-DSN-CR-012 批次状态机 / UI 展示）。
@@ -66,7 +70,9 @@ data class AgentTestCaseResult(
     val errorMessage: String? = null,
     val timing: TestCaseTiming? = null,
     /** CR-014：该用例在终态时投影出的结构化实际值（供导出组装）。 */
-    val executionActual: ScoredActual? = null
+    val executionActual: ScoredActual? = null,
+    /** CR-016：故障定位辅助字段（terminalStage / failureReason / 候选 Hash / 规则与参数来源）。 */
+    val diagnostics: CaseDiagnostics? = null
 )
 
 /**
@@ -111,7 +117,15 @@ class TestBatchRunner(
     private val caseTimeoutMs: Long = DEFAULT_CASE_TIMEOUT_MS,
     private val awaitIdleTimeoutMs: Long = DEFAULT_AWAIT_IDLE_TIMEOUT_MS,
     private val environmentAllowed: () -> Boolean = { BuildConfig.DEBUG },
-    private val timingCollector: TestCaseTimingCollector = DefaultTestCaseTimingCollector()
+    private val timingCollector: TestCaseTimingCollector = DefaultTestCaseTimingCollector(),
+    /** CR-016: Provider 清理屏障（下一条开始前确认上一条清理完成或达到独立超时）。 */
+    private val cleanupBarrier: ProviderCleanupBarrier = ProviderCleanupBarrier(
+        ModelTimeoutPolicy.DEFAULT.cleanupTimeoutMs
+    ),
+    /** CR-016: 连续 Provider 失败达到阈值后有限指数退避，不无限重试。 */
+    private val consecutiveFailureThreshold: Int = DEFAULT_CONSECUTIVE_FAILURE_THRESHOLD,
+    private val retryBackoffBaseMs: Long = DEFAULT_RETRY_BACKOFF_BASE_MS,
+    private val retryBackoffMaxMs: Long = DEFAULT_RETRY_BACKOFF_MAX_MS
 ) {
 
     /**
@@ -142,6 +156,7 @@ class TestBatchRunner(
         var failed = 0
         var skipped = 0
         var scoreSum = 0
+        var consecutiveFailures = 0
 
         for (case in cases) {
             if (!case.enabled) {
@@ -156,7 +171,40 @@ class TestBatchRunner(
                 continue
             }
 
+            // CR-016: 下一条开始前等待上一条 Provider 清理确认（或独立清理超时）。
+            val cleaned = cleanupBarrier.awaitCleanup()
+            if (!cleaned) {
+                // 清理未确认：记录 IVAI-MODEL-CLEANUP-001（可继续，避免批次卡死）。
+                val cleanupResult = AgentTestCaseResult(
+                    runId = runId,
+                    caseId = case.caseId,
+                    status = AgentTestCaseStatus.FAILED,
+                    terminalStatus = EvaluationTerminalStatus.FAILED,
+                    errorCode = "IVAI-MODEL-CLEANUP-001",
+                    errorMessage = "上一条 Provider 资源清理未在限定时间确认（IVAI-MODEL-CLEANUP-001）"
+                )
+                onCaseResult(cleanupResult)
+                onExecutionResult?.invoke(toExecutionResult(runId, case, cleanupResult, actual = null))
+                failed++
+                executed++
+                continue
+            }
+
+            // CR-016: 连续失败达到阈值 → 有限指数退避（健康检查窗口），不无限重试。
+            if (consecutiveFailures >= consecutiveFailureThreshold) {
+                val backoffMs = (retryBackoffBaseMs shl (consecutiveFailures - consecutiveFailureThreshold))
+                    .coerceAtMost(retryBackoffMaxMs)
+                delay(backoffMs)
+            }
+
             val result = runOne(runId, case, onTimingUpdate)
+            // CR-016: 每条用例结束后确认 Provider 清理（终态后进入清理确认阶段）。
+            cleanupBarrier.markCleaned()
+            consecutiveFailures = if (result.status == AgentTestCaseStatus.PASSED) {
+                0
+            } else {
+                consecutiveFailures + 1
+            }
             when (result.status) {
                 AgentTestCaseStatus.PASSED -> passed++
                 AgentTestCaseStatus.SKIPPED -> skipped++
@@ -301,7 +349,8 @@ class TestBatchRunner(
                             errorCode = if (snapshotMissing) TestErrorCode.RESULT_MISSING else collector.errorCode,
                             errorMessage = if (snapshotMissing) "结构化实际结果缺失或无法关联 requestId" else null,
                             timing = timing,
-                            executionActual = if (snapshotMissing) null else actual
+                            executionActual = if (snapshotMissing) null else actual,
+                            diagnostics = TestResultDiagnostics.project(snapshot)
                         )
                     }
                 }
@@ -415,6 +464,11 @@ class TestBatchRunner(
 
         /** 提交下一条前等待服务端释放活动 Turn 的超时（串行语义加固）。 */
         const val DEFAULT_AWAIT_IDLE_TIMEOUT_MS = 5_000L
+
+        /** CR-016: 连续失败达到阈值后进入有限指数退避（健康检查窗口）。 */
+        const val DEFAULT_CONSECUTIVE_FAILURE_THRESHOLD = 3
+        const val DEFAULT_RETRY_BACKOFF_BASE_MS = 500L
+        const val DEFAULT_RETRY_BACKOFF_MAX_MS = 4_000L
 
         /** 终态事件与快照写入竞态兜底：重试次数与间隔（合计约 1s）。 */
         const val SNAPSHOT_READ_RETRY_TIMES = 20

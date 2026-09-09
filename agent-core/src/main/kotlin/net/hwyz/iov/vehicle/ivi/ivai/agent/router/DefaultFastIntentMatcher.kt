@@ -1,12 +1,21 @@
 package net.hwyz.iov.vehicle.ivi.ivai.agent.router
 
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.ToolRegistry
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.aliases.DefaultAliasLexicons
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.DeterministicIntentRule
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.SlotPattern
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.SlotType
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.ToolAvailabilityCheck
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.ToolDefinition
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.VersionRange
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.schema.CanonicalizationResult
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.schema.CanonicalizationSource
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.schema.DefaultParameterCanonicalizationService
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.schema.ParameterCanonicalizationService
+import net.hwyz.iov.vehicle.ivi.ivai.agent.router.deterministic.ArgumentSource
+import net.hwyz.iov.vehicle.ivi.ivai.agent.router.deterministic.DeterministicFallbackReason
+import net.hwyz.iov.vehicle.ivi.ivai.agent.router.deterministic.SchemaAwareSlotExtractor
+import net.hwyz.iov.vehicle.ivi.ivai.agent.router.deterministic.SlotExtractionResult
 
 /**
  * 通用确定性匹配器（IVI-IVAI-DSN-CR-005 + CR-010 + CR-013）。
@@ -32,7 +41,13 @@ import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.definitions.VersionRange
 class DefaultFastIntentMatcher(
     private val registry: ToolRegistry,
     /** CR-008/CR-010/CR-013：非空时只在指定统一确定性候选集内匹配。 */
-    private val scopeToolIds: Set<String>? = null
+    private val scopeToolIds: Set<String>? = null,
+    /** CR-016：Schema 感知槽位提取器（默认共享实例，注入同一 Alias Lexicon）。 */
+    private val slotExtractor: SchemaAwareSlotExtractor =
+        SchemaAwareSlotExtractor(registry, DefaultAliasLexicons.DEFAULT),
+    /** CR-016：统一参数规范化服务（L0/L1/Validator/Scorer 共享同一实例）。 */
+    private val canonicalizer: ParameterCanonicalizationService =
+        DefaultParameterCanonicalizationService(registry, DefaultAliasLexicons.DEFAULT)
 ) : FastIntentMatcher {
 
     override suspend fun match(input: NormalizedInput, context: AgentContext): FastIntentMatchResult {
@@ -40,6 +55,9 @@ class DefaultFastIntentMatcher(
         if (input.hasMultiIntent) return FastIntentMatchResult.NoMatch
 
         val matches = mutableListOf<RuleMatch>()
+        // CR-016：canonicalize 失败（越界/类型/缺参）的规则——跳过继续匹配其他规则，
+        // 全部失败时作为类型化降级原因返回（IVAI-L0-SLOT-001/002）。
+        val fallbacks = mutableListOf<FallbackMatch>()
         for (tool in registry.all()) {
             if (scopeToolIds != null && tool.toolId !in scopeToolIds) continue
             if (!ToolAvailabilityCheck.isAvailable(tool, context.vehicleModel, context.softwareVersion)) {
@@ -50,24 +68,86 @@ class DefaultFastIntentMatcher(
                 if (!ruleMatches(rule, input)) continue
                 // CR-013：短语命中 ≠ 可执行；导航/查询/配置意图冲突直接拦截。
                 if (intentTypeConflict(rule, tool, input)) continue
-                // CR-013：参数合并（显式槽位 > 规则预置），矛盾 → IVAI-ROUTE-005。
-                val merge = mergeArguments(rule, input)
+                // CR-016：Schema 感知槽位提取（带来源）+ 统一参数规范化。
+                val extraction = slotExtractor.extract(rule, tool.toolId, input.normalized)
+                // 同为用户显式语义且值冲突 → IVAI-ROUTE-005（不得静默决胜）。
+                if (extraction.conflict != null) {
+                    return FastIntentMatchResult.ArgumentConflict(
+                        toolId = tool.toolId,
+                        conflictingArgument = extraction.conflict,
+                        sources = extraction.sourcesCompat(),
+                        deterministicFallbackReason = DeterministicFallbackReason.ARGUMENT_CONFLICT.name,
+                        matchedRuleIds = matches.map { it.rule.ruleId } + rule.ruleId
+                    )
+                }
+                // CR-013：参数合并（显式槽位 > Alias 映射 > 规则预置），矛盾 → IVAI-ROUTE-005。
+                val merge = mergeArguments(rule, extraction)
                 if (merge.conflict != null) {
                     return FastIntentMatchResult.ArgumentConflict(
                         toolId = tool.toolId,
                         conflictingArgument = merge.conflict,
-                        sources = merge.sources
+                        sources = merge.sources,
+                        deterministicFallbackReason = DeterministicFallbackReason.ARGUMENT_CONFLICT.name,
+                        matchedRuleIds = matches.map { it.rule.ruleId } + rule.ruleId
                     )
                 }
+                // 规则声明的必填槽位缺失 → 该规则缺参（IVAI-L0-SLOT-002）。
                 val missing = rule.slotPatterns
                     .filter { it.required && merge.arguments[it.name] == null }
                     .map { it.name }
-                matches += RuleMatch(tool, rule, merge.arguments, missing, merge.sources)
+                if (missing.isNotEmpty()) {
+                    matches += RuleMatch(tool, rule, merge.arguments, missing, merge.sources + extraction.sourcesCompat())
+                    continue
+                }
+                // CR-016：统一 canonicalize（类型/枚举/范围/冲突校验）。
+                // 必填语义以规则声明的必填槽位为准（Schema required 可能更宽，如
+                // adjust 的 step 规则可选但 Schema 必填——不是缺参）。
+                val ruleRequired = rule.slotPatterns.filter { it.required }.map { it.name }.toSet()
+                val canonical = canonicalizer.canonicalize(
+                    tool.toolId, merge.arguments, CanonicalizationSource.L0_RULE,
+                    requiredOverride = ruleRequired
+                )
+                if (canonical is CanonicalizationResult.Failed) {
+                    // 越界 / 类型非法：该规则无法形成合法 L0 候选，记录降级原因后继续
+                    // 尝试其他规则（不得因一条越界规则中断同输入的正确规则匹配）。
+                    fallbacks += FallbackMatch(
+                        tool = tool,
+                        rule = rule,
+                        fallbackReason = if (canonical.missingArguments.isNotEmpty()) {
+                            DeterministicFallbackReason.REQUIRED_SLOT_MISSING
+                        } else {
+                            DeterministicFallbackReason.ARGUMENT_OUT_OF_RANGE
+                        },
+                        message = canonical.message
+                    )
+                    continue
+                }
+                matches += RuleMatch(
+                    tool, rule,
+                    (canonical as CanonicalizationResult.Success).canonicalArguments,
+                    missing, merge.sources + extraction.sourcesCompat()
+                )
             }
         }
 
         val distinctTools = matches.map { it.tool.toolId }.distinct()
-        if (distinctTools.isEmpty()) return FastIntentMatchResult.NoMatch
+        if (distinctTools.isEmpty()) {
+            // CR-016：无合法候选但有越界/缺参降级记录 → 类型化降级（禁止生成 L0 Candidate）。
+            val first = fallbacks.firstOrNull()
+            if (first != null) {
+                return FastIntentMatchResult.MissingArguments(
+                    toolId = first.tool.toolId,
+                    missing = if (first.fallbackReason == DeterministicFallbackReason.REQUIRED_SLOT_MISSING) {
+                        first.rule.slotPatterns.filter { it.required }.map { it.name }
+                    } else {
+                        emptyList()
+                    },
+                    deterministicFallbackReason = first.fallbackReason.name,
+                    matchedRuleIds = fallbacks.map { it.rule.ruleId }
+                )
+            }
+            return FastIntentMatchResult.NoMatch
+        }
         if (distinctTools.size > 1) {
             // CR-010/CR-013：确定性匹配产生冲突，不能唯一确定 Tool（IVAI-ROUTE-003）；
             // priority 只用于可兼容规则比较，不得静默决胜跨 canonical 冲突。
@@ -93,7 +173,12 @@ class DefaultFastIntentMatcher(
             return FastIntentMatchResult.NoMatch
         }
         return if (only.missing.isNotEmpty()) {
-            FastIntentMatchResult.MissingArguments(only.tool.toolId, only.missing)
+            FastIntentMatchResult.MissingArguments(
+                toolId = only.tool.toolId,
+                missing = only.missing,
+                deterministicFallbackReason = DeterministicFallbackReason.REQUIRED_SLOT_MISSING.name,
+                matchedRuleIds = matches.map { it.rule.ruleId }
+            )
         } else {
             val confidence = confidence(only.rule, only.slots)
             FastIntentMatchResult.Unique(
@@ -158,108 +243,56 @@ class DefaultFastIntentMatcher(
     }
 
     /**
-     * CR-013 参数合并：显式槽位（用户文本）> 规则预置（默认值）。高优先级来源
-     * 可覆盖低优先级默认值；但显式槽位与预置同时表达用户语义且值冲突时返回
-     * 矛盾状态（IVAI-ROUTE-005），不得静默决胜。Schema 默认值与 Alias 映射
-     * 由 L1 补槽链路处理，L0 不引入不可见默认。
+     * CR-013 + CR-016 参数合并：用户显式槽位 > Alias 映射 > 规则预置（默认值由
+     * canonicalizer 的 Schema 默认值步骤处理）。高优先级来源可覆盖低优先级默认值；
+     * 但显式槽位与预置同时表达用户语义且值冲突时返回矛盾状态（IVAI-ROUTE-005），
+     * 不得静默决胜。
      */
-    private fun mergeArguments(rule: DeterministicIntentRule, input: NormalizedInput): ArgumentMerge {
+    private fun mergeArguments(rule: DeterministicIntentRule, extraction: SlotExtractionResult): ArgumentMerge {
         val merged = LinkedHashMap<String, Any?>()
         val sources = LinkedHashMap<String, String>()
         for ((key, value) in rule.presetArguments) {
             merged[key] = value
             sources[key] = SOURCE_RULE_PRESET
         }
-        val slots = extractSlots(rule, input)
-        for ((key, value) in slots) {
+        // 提取结果按来源优先级排序：用户显式 > Alias 映射。
+        val ordered = extraction.arguments.sortedBy { priorityOf(it.source) }
+        for (arg in ordered) {
+            val key = arg.name
+            val value = arg.rawValue
             val existing = merged[key]
             if (existing != null && existing != value) {
                 // 两个来源都代表用户明确语义且值冲突 → IVAI-ROUTE-005。
                 return ArgumentMerge(
                     arguments = emptyMap(),
                     conflict = key,
-                    sources = sources + (key to SOURCE_EXPLICIT_SLOT)
+                    sources = sources + (key to sourceCompat(arg.source))
                 )
             }
             merged[key] = value
-            sources[key] = SOURCE_EXPLICIT_SLOT
+            sources[key] = sourceCompat(arg.source)
         }
         return ArgumentMerge(merged, null, sources)
     }
 
-    private fun extractSlots(rule: DeterministicIntentRule, input: NormalizedInput): Map<String, Any?> {
-        val normalized = input.normalized
-        val slots = LinkedHashMap<String, Any?>()
-        for (slot in rule.slotPatterns) {
-            val value = extractSlot(slot, normalized)
-            if (value != null) slots[slot.name] = value
-        }
-        return slots
+    private fun priorityOf(source: ArgumentSource): Int = when (source) {
+        ArgumentSource.USER_EXPLICIT -> 0
+        ArgumentSource.ALIAS_MAPPING -> 1
+        ArgumentSource.RULE_PRESET -> 2
+        ArgumentSource.SCHEMA_DEFAULT -> 3
+        ArgumentSource.MODEL_OUTPUT -> 4
     }
 
-    private fun extractSlot(slot: SlotPattern, normalized: String): Any? = when (slot.type) {
-        SlotType.TEMPERATURE -> extractTemperature(normalized)
-        SlotType.POSITION -> extractPosition(normalized, slot.aliases)
-        SlotType.STEP -> extractStep(normalized)
-        SlotType.NUMERIC -> extractNumber(normalized)
-        // CR-013：TIME 槽位需自然语言时间解析，L0 不做抽取（可选槽位允许缺失）。
-        SlotType.TIME -> null
+    private fun sourceCompat(source: ArgumentSource): String = when (source) {
+        ArgumentSource.USER_EXPLICIT -> SOURCE_EXPLICIT_SLOT
+        ArgumentSource.ALIAS_MAPPING -> SOURCE_ALIAS_MAPPING
+        ArgumentSource.RULE_PRESET -> SOURCE_RULE_PRESET
+        ArgumentSource.SCHEMA_DEFAULT -> SOURCE_SCHEMA_DEFAULT
+        ArgumentSource.MODEL_OUTPUT -> SOURCE_MODEL_OUTPUT
     }
 
-    private fun extractTemperature(normalized: String): Double? {
-        val withUnit = Regex("(\\d{1,3}(?:\\.\\d+)?)\\s*(?:度|℃|摄氏度)").find(normalized)
-        if (withUnit != null) return withUnit.groupValues[1].toDoubleOrNull()
-        val bare = Regex("(\\d{1,3}(?:\\.\\d+)?)").find(normalized)
-        return bare?.groupValues?.get(1)?.toDoubleOrNull()
-    }
-
-    private fun extractPosition(normalized: String, aliases: Map<String, String>): String? {
-        val sorted = aliases.entries.sortedByDescending { it.key.length }
-        for ((word, canonical) in sorted) {
-            if (normalized.contains(word)) return canonical
-        }
-        return null
-    }
-
-    /**
-     * 步进槽位抽取（CR-005 + CR-010 覆盖补齐）：
-     *  - 阿拉伯数字 + 单位（档 / 度 / ℃ / 摄氏度）："调高2度"、"2档" → 2
-     *  - 中文数字 + 单位："两度" → 2、"二档" → 2、"三度" → 3
-     *  - 值域对齐 adjust Schema（step:[0.5..5]），越界值不作为步进（如
-     *    "温度调高到26度" 是绝对设定而非相对步进）。
-     */
-    private fun extractStep(normalized: String): Int? {
-        val arabic = Regex("(\\d+(?:\\.\\d+)?)\\s*(?:档|度|℃|摄氏度)").find(normalized)
-        if (arabic != null) {
-            val v = arabic.groupValues[1].toDoubleOrNull()?.toInt()
-            if (v != null && v in 1..5) return v
-        }
-        val chinese = Regex("([零一二两三四五六七八九十]{1,3})\\s*(?:档|度|℃|摄氏度)").find(normalized)
-        if (chinese != null) {
-            val v = chineseNumber(chinese.groupValues[1])
-            if (v != null && v in 1..5) return v
-        }
-        return null
-    }
-
-    /** 中文数字 1~99 转换（一/两/二/三…十/十一/二十/二十五）。 */
-    private fun chineseNumber(s: String): Int? {
-        if (s.isEmpty()) return null
-        val digits = mapOf(
-            '零' to 0, '一' to 1, '二' to 2, '两' to 2, '三' to 3, '四' to 4,
-            '五' to 5, '六' to 6, '七' to 7, '八' to 8, '九' to 9
-        )
-        if (s == "十") return 10
-        if (s.length == 1) return digits[s[0]]
-        val idx = s.indexOf('十')
-        if (idx < 0) return null
-        val tens = if (idx == 0) 1 else digits[s[0]] ?: return null
-        val ones = if (s.length > idx + 1) digits[s[idx + 1]] ?: 0 else 0
-        return tens * 10 + ones
-    }
-
-    private fun extractNumber(normalized: String): Int? =
-        Regex("(\\d+)").find(normalized)?.groupValues?.get(1)?.toIntOrNull()
+    private fun SlotExtractionResult.sourcesCompat(): Map<String, String> =
+        arguments.associate { it.name to sourceCompat(it.source) }
 
     private fun confidence(rule: DeterministicIntentRule, slots: Map<String, Any?>): Double {
         val slotBonus = slots.size * 0.02
@@ -274,6 +307,14 @@ class DefaultFastIntentMatcher(
         val sources: Map<String, String>
     )
 
+    /** CR-016: canonicalize 失败的规则（类型化降级原因，IVAI-L0-SLOT-001/002）。 */
+    private data class FallbackMatch(
+        val tool: ToolDefinition,
+        val rule: DeterministicIntentRule,
+        val fallbackReason: DeterministicFallbackReason,
+        val message: String
+    )
+
     private data class ArgumentMerge(
         val arguments: Map<String, Any?>,
         val conflict: String? = null,
@@ -282,7 +323,10 @@ class DefaultFastIntentMatcher(
 
     private companion object {
         const val SOURCE_EXPLICIT_SLOT = "explicit_slot"
+        const val SOURCE_ALIAS_MAPPING = "alias_mapping"
         const val SOURCE_RULE_PRESET = "rule_preset"
+        const val SOURCE_SCHEMA_DEFAULT = "schema_default"
+        const val SOURCE_MODEL_OUTPUT = "model_output"
 
         val ACTION_OPERATION_TYPES = setOf(
             net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.OperationType.CONTROL,

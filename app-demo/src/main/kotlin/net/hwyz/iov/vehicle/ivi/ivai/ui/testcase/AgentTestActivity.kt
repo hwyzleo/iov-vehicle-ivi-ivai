@@ -19,19 +19,30 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.hwyz.iov.vehicle.ivi.ivai.agenttest.export.ExportedFile
 import net.hwyz.iov.vehicle.ivi.ivai.agenttest.gateway.ServiceAgentCommandGateway
+import net.hwyz.iov.vehicle.ivi.ivai.agenttest.import.AgentTestSuiteImporter
+import net.hwyz.iov.vehicle.ivi.ivai.agenttest.import.AgentTestSuiteParser
+import net.hwyz.iov.vehicle.ivi.ivai.agenttest.import.AgentTestSuiteValidator
+import net.hwyz.iov.vehicle.ivi.ivai.agenttest.import.ContentResolverSuiteImporter
+import net.hwyz.iov.vehicle.ivi.ivai.agenttest.import.ImportSizeGuard
+import net.hwyz.iov.vehicle.ivi.ivai.agenttest.import.SuiteImportPipeline
+import net.hwyz.iov.vehicle.ivi.ivai.agenttest.repository.ActiveFileSuiteSource
+import net.hwyz.iov.vehicle.ivi.ivai.agenttest.repository.ActiveSuiteStore
 import net.hwyz.iov.vehicle.ivi.ivai.agenttest.repository.AgentTestCaseRepository
 import net.hwyz.iov.vehicle.ivi.ivai.agenttest.repository.AssetsAgentTestCaseLoader
+import net.hwyz.iov.vehicle.ivi.ivai.agenttest.repository.BuiltInSuiteSource
+import net.hwyz.iov.vehicle.ivi.ivai.agenttest.repository.SuiteSourceType
 import net.hwyz.iov.vehicle.ivi.ivai.agenttest.result.ExportState
 import net.hwyz.iov.vehicle.ivi.ivai.demo.R
 import net.hwyz.iov.vehicle.ivi.ivai.service.AgentService
 
 /**
- * 本地 Agent 回归测试用例页（IVI-IVAI-DSN-CR-012 / CR-014）。
+ * 本地 Agent 回归测试用例页（IVI-IVAI-DSN-CR-012 / CR-014 / CR-015）。
  *
  * 经典 Android View：Toolbar（返回 / 测试用例 / Suite 版本）、Summary、Action
  * 按钮、RecyclerView。列表默认展示概要，点击单条展开预期/实际差异；运行中自动
@@ -39,6 +50,10 @@ import net.hwyz.iov.vehicle.ivi.ivai.service.AgentService
  *
  * CR-014：批次全部终态后启用「导出 Excel」，通过 SAF 让用户选择保存位置并写入
  * .xlsx；导出期间按钮显示生成中并防重复触发，失败时提示且不清空结果。
+ *
+ * CR-015：新增「读取 JSON」操作，通过 SAF OpenDocument 选择单个 Suite JSON 文件；
+ * ContentResolver 读取、受限内存、全量校验后原子激活；导入成功后刷新列表并显示
+ * 来源。批次运行 / 取消 / 激活 / 导出生成中禁用读取操作。
  *
  * 不持有任何 Agent 状态：绑定服务后把 [ServiceAgentCommandGateway] 与资产仓库
  * 交给 [AgentTestViewModel]。测试页不直接依赖 DomainRouter / Retriever /
@@ -52,12 +67,14 @@ class AgentTestActivity : ComponentActivity() {
     private lateinit var adapter: AgentTestCaseAdapter
     private lateinit var summaryText: TextView
     private lateinit var startButton: Button
+    private lateinit var importButton: Button
     private lateinit var exportButton: Button
     private lateinit var suiteVersionText: TextView
 
     private var agentService: AgentService? = null
     private var userScrolled = false
     private var lastActiveCaseId: String? = null
+    private var lastImportState: SuiteImportState? = null
     private var pendingExport: ExportedFile? = null
 
     /** SAF：导出前让用户选择 .xlsx 保存位置。 */
@@ -73,15 +90,27 @@ class AgentTestActivity : ComponentActivity() {
         }
     }
 
+    /** CR-015：系统文件选择器选择单个 JSON Suite（不申请全盘存储权限）。 */
+    private val openSuiteDocument = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            viewModel.importSuite(uri)
+        } else {
+            // 用户取消选择：视为无变更。
+            viewModel.onImportCancelled()
+        }
+    }
+
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
             val service = (binder as AgentService.LocalBinder).getService()
             agentService = service
+            val repository = buildRepository()
             viewModel.attach(
                 gateway = ServiceAgentCommandGateway(service, service),
-                repository = AgentTestCaseRepository(
-                    AssetsAgentTestCaseLoader(this@AgentTestActivity)
-                )
+                repository = repository,
+                importer = buildImporter(repository)
             )
             viewModel.load()
         }
@@ -91,6 +120,26 @@ class AgentTestActivity : ComponentActivity() {
         }
     }
 
+    /** CR-015：激活存储 + 双数据源仓库（激活文件优先，内置回退）。 */
+    private fun buildRepository(): AgentTestCaseRepository {
+        val store = ActiveSuiteStore(File(filesDir, ActiveSuiteStore.DEFAULT_DIR))
+        return AgentTestCaseRepository(
+            builtIn = BuiltInSuiteSource(AssetsAgentTestCaseLoader(this)),
+            active = ActiveFileSuiteSource(store),
+            parser = AgentTestSuiteParser(),
+            validator = AgentTestSuiteValidator()
+        )
+    }
+
+    /** CR-015：ContentResolver 导入器（与仓库共享同一解析 / 校验 / 激活管线）。 */
+    private fun buildImporter(repository: AgentTestCaseRepository): AgentTestSuiteImporter {
+        val pipeline = SuiteImportPipeline(
+            guard = ImportSizeGuard(),
+            repository = repository
+        )
+        return ContentResolverSuiteImporter(contentResolver, pipeline)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_agent_test)
@@ -98,6 +147,7 @@ class AgentTestActivity : ComponentActivity() {
         caseList = findViewById(R.id.caseList)
         summaryText = findViewById(R.id.summaryText)
         startButton = findViewById(R.id.startButton)
+        importButton = findViewById(R.id.importButton)
         exportButton = findViewById(R.id.exportButton)
         suiteVersionText = findViewById(R.id.suiteVersionText)
 
@@ -109,6 +159,10 @@ class AgentTestActivity : ComponentActivity() {
             } else {
                 viewModel.start()
             }
+        }
+        importButton.setOnClickListener {
+            viewModel.beginImportSelection()
+            openSuiteDocument.launch(arrayOf("application/json", "text/json", "text/plain"))
         }
         exportButton.setOnClickListener { viewModel.exportXlsx() }
 
@@ -153,7 +207,15 @@ class AgentTestActivity : ComponentActivity() {
 
     private fun render(state: AgentTestUiState) {
         summaryText.text = summaryOf(state)
-        suiteVersionText.text = state.suiteVersion?.let { "v: $it" } ?: ""
+        // CR-015：显示 Suite 来源（内置 / 已导入）。
+        val sourceLabel = when (state.suiteSource) {
+            SuiteSourceType.ACTIVE_FILE -> "已导入"
+            else -> "内置"
+        }
+        suiteVersionText.text = buildString {
+            state.suiteVersion?.let { append("v: $it ") }
+            if (state.suiteId != null) append("· $sourceLabel")
+        }
         val busy = state.runState == TestRunState.RUNNING ||
             state.runState == TestRunState.CANCELLING ||
             state.runState == TestRunState.LOADING
@@ -162,6 +224,19 @@ class AgentTestActivity : ComponentActivity() {
             TestRunState.RUNNING -> "取消"
             TestRunState.CANCELLING -> "取消中…"
             else -> "开始"
+        }
+
+        // CR-015 读取按钮：批次运行 / 取消 / 导入进行中 / 导出生成中禁用。
+        val importing = state.importState == SuiteImportState.READING ||
+            state.importState == SuiteImportState.VALIDATING ||
+            state.importState == SuiteImportState.ACTIVATING
+        importButton.isEnabled = !busy && !importing &&
+            state.exportState != ExportState.EXPORTING
+        importButton.text = when (state.importState) {
+            SuiteImportState.READING -> "读取中…"
+            SuiteImportState.VALIDATING -> "校验中…"
+            SuiteImportState.ACTIVATING -> "激活中…"
+            else -> "读取 JSON"
         }
 
         // CR-014 导出按钮：仅批次全部终态且可导出时可用；生成中显示进度并防重复触发。
@@ -175,6 +250,22 @@ class AgentTestActivity : ComponentActivity() {
         if (state.exportErrorMessage != null) {
             Toast.makeText(this, state.exportErrorMessage, Toast.LENGTH_SHORT).show()
         }
+        // CR-015：导入结果一次性提示（成功显示 suiteId / 用例数，失败显示错误）。
+        if (state.importErrorMessage != null) {
+            Toast.makeText(this, state.importErrorMessage, Toast.LENGTH_SHORT).show()
+        }
+        if (state.importState == SuiteImportState.SUCCEEDED &&
+            lastImportState != SuiteImportState.SUCCEEDED
+        ) {
+            // CR-015：显示 suiteId、schemaVersion、用例数量与来源「已导入」。
+            val schema = state.suiteSchemaVersion?.let { " · schema v$it" } ?: ""
+            Toast.makeText(
+                this,
+                "导入成功：${state.suiteId}$schema（${state.cases.size} 条用例 · 已导入）",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+        lastImportState = state.importState
 
         adapter.submitList(state.cases)
 

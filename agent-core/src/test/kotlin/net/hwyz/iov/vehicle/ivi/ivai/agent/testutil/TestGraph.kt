@@ -167,4 +167,55 @@ object TestGraph {
         )
         return Triple(workflow, governedAdapter, registry)
     }
+
+    /**
+     * CR-016：治理桩图 + 终态快照捕获（供候选边界冻结 / 不变量校验断言）。
+     */
+    fun buildGovernedStubGraphWithSnapshot(
+        model: ModelProvider,
+        holder: SnapshotHolder
+    ): AgentWorkflow {
+        val (workflow, _, _) = buildGovernedStubGraph(
+            model,
+            eventListener = null
+        )
+        // 重新装配并注入 evaluationListener 捕获快照。
+        val governedAdapter = net.hwyz.iov.vehicle.ivi.ivai.adapter.mock.MockGovernedToolAdapter()
+        val registry = GovernanceWorkspace.registerAllStubs(ToolRegistry())
+        val validator = ToolValidator(registry)
+        val agentPolicy = AgentPolicyEngine(registry, ToolPolicyEngine())
+        val executor = DefaultToolExecutor(
+            registry = registry,
+            adapterRegistry = AdapterRegistry().register(governedAdapter),
+            executionTimeoutMs = AgentConfig(model = "qwen3.5:4b", ollamaBaseUrl = "http://localhost:11434").executionTimeoutMs
+        )
+        val capabilitySelector = CapabilityPackSelector.governed(
+            catalog = GovernanceWorkspace.runtimePacks(),
+            governanceCatalog = GovernanceWorkspace.catalog,
+            defaultEnvironment = GovernanceWorkspace.devStubEnvironment()
+        )
+        val tieredRouter = TieredIntentRouter(
+            DefaultFastIntentMatcher(registry), DomainClassifier(registry),
+            domainRouter = DomainRouter(registry),
+            capabilitySelector = capabilitySelector,
+            registry = registry
+        )
+        val config = AgentConfig(model = "qwen3.5:4b", ollamaBaseUrl = "http://localhost:11434")
+        return AgentWorkflow(
+            modelProvider = model,
+            registry = registry,
+            router = Router(),
+            promptBuilder = PromptBuilder(registry),
+            validator = validator,
+            agentPolicy = agentPolicy,
+            toolExecutor = executor,
+            config = config,
+            tieredRouter = tieredRouter,
+            toolCandidateProvider = net.hwyz.iov.vehicle.ivi.ivai.agent.router.AllEnabledToolsProvider(registry),
+            vehicleStateProvider = VehicleStateProvider { governedAdapter.snapshot() },
+            evaluationListener = { holder.snapshot = it },
+            vehicleModel = null,
+            softwareVersion = null
+        )
+    }
 }

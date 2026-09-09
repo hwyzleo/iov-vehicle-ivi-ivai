@@ -157,7 +157,9 @@ class TieredIntentRouter(
                     snapshot,
                     canonicalToolId = match.toolId,
                     errorCode = ErrorCodeString.ROUTE_ARGUMENT_CONFLICT,
-                    argumentSources = match.sources
+                    fallbackReason = match.deterministicFallbackReason,
+                    argumentSources = match.sources,
+                    matchedRuleIds = match.matchedRuleIds
                 )
             )
             is FastIntentMatchResult.MissingArguments -> toolDomainDecision(
@@ -168,7 +170,12 @@ class TieredIntentRouter(
                 snapshot = snapshot,
                 missingToolId = match.toolId,
                 missingArguments = match.missing,
-                observability = observability(snapshot, canonicalToolId = match.toolId)
+                observability = observability(
+                    snapshot,
+                    canonicalToolId = match.toolId,
+                    fallbackReason = match.deterministicFallbackReason,
+                    matchedRuleIds = match.matchedRuleIds
+                )
             )
             FastIntentMatchResult.NoMatch -> {
                 val l0Reason = when {
@@ -384,7 +391,26 @@ class TieredIntentRouter(
                         snapshot,
                         canonicalToolId = match.toolId,
                         errorCode = ErrorCodeString.ROUTE_ARGUMENT_CONFLICT,
-                        argumentSources = match.sources
+                        fallbackReason = match.deterministicFallbackReason,
+                        argumentSources = match.sources,
+                        matchedRuleIds = match.matchedRuleIds
+                    )
+                )
+            }
+            is FastIntentMatchResult.MissingArguments -> {
+                return toolDomainDecisionLegacy(
+                    reasonCode = RouteReasonCode.L0_MISSING_ARGUMENTS,
+                    input = input,
+                    context = context,
+                    domain = domain,
+                    snapshot = snapshot,
+                    missingToolId = match.toolId,
+                    missingArguments = match.missing,
+                    observability = observability(
+                        snapshot,
+                        canonicalToolId = match.toolId,
+                        fallbackReason = match.deterministicFallbackReason,
+                        matchedRuleIds = match.matchedRuleIds
                     )
                 )
             }

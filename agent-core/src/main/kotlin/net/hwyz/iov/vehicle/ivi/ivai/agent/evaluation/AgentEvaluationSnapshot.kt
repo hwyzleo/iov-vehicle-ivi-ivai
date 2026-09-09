@@ -3,6 +3,7 @@ package net.hwyz.iov.vehicle.ivi.ivai.agent.evaluation
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 import net.hwyz.iov.vehicle.ivi.ivai.agent.domain.DomainCandidate
+import net.hwyz.iov.vehicle.ivi.ivai.agent.execution.TerminalStage
 import net.hwyz.iov.vehicle.ivi.ivai.agent.router.IntentTier
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.BusinessDomainId
 
@@ -78,5 +79,20 @@ data class AgentEvaluationSnapshot(
     val terminalStatus: EvaluationTerminalStatus,
     val reasonCode: String? = null,
     val governanceVersion: String? = null,
-    val candidateVersion: String? = null
+    val candidateVersion: String? = null,
+    // ---- CR-016 诊断辅助字段（可选扩展，不改变 16 个必选列语义） ----
+    /** 终止阶段（非成功终态必填）。 */
+    val terminalStage: TerminalStage? = null,
+    /** 失败原因（细分错误码 IVAI-STATE-001 等，供定位失败层）。 */
+    val failureReason: String? = null,
+    /** 受控候选集 Hash（可观测性）。 */
+    val candidateSetHash: String? = null,
+    /** 命中的确定性规则 ID（L0/L1 候选来源）。 */
+    val matchedRuleIds: List<String> = emptyList(),
+    /** 参数 → 来源（USER_EXPLICIT / ALIAS_MAPPING / RULE_PRESET / ...）。 */
+    val argumentSources: Map<String, String> = emptyMap(),
+    /** CR-016: 是否发起过模型请求（L1 状态一致性证据）。 */
+    val llmInvoked: Boolean? = null,
+    /** CR-016: 模型请求计数。 */
+    val modelRequestCount: Int? = null
 )

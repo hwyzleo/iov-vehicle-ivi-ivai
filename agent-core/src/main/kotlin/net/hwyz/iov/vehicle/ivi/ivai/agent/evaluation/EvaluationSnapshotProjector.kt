@@ -4,6 +4,7 @@ import kotlinx.serialization.json.JsonObject
 import net.hwyz.iov.vehicle.ivi.ivai.agent.AgentState
 import net.hwyz.iov.vehicle.ivi.ivai.agent.domain.DomainCandidate
 import net.hwyz.iov.vehicle.ivi.ivai.agent.event.AgentExecutionPath
+import net.hwyz.iov.vehicle.ivi.ivai.agent.execution.TerminalStage
 import net.hwyz.iov.vehicle.ivi.ivai.agent.output.AgentRoute
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.BusinessDomainId
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.ExecutionStatus
@@ -29,7 +30,15 @@ data class SnapshotFacts(
     val reasonCode: String? = null,
     val governanceVersion: String? = null,
     val candidateVersion: String? = null,
-    val cancelled: Boolean = false
+    val cancelled: Boolean = false,
+    // ---- CR-016 诊断辅助字段 ----
+    val terminalStage: TerminalStage? = null,
+    val failureReason: String? = null,
+    val candidateSetHash: String? = null,
+    val matchedRuleIds: List<String> = emptyList(),
+    val argumentSources: Map<String, String> = emptyMap(),
+    val llmInvoked: Boolean? = null,
+    val modelRequestCount: Int? = null
 )
 
 /**
@@ -64,7 +73,14 @@ object EvaluationSnapshotProjector {
             terminalStatus = terminalStatus(facts),
             reasonCode = facts.reasonCode ?: path?.finalReasonCode,
             governanceVersion = facts.governanceVersion,
-            candidateVersion = facts.candidateVersion
+            candidateVersion = facts.candidateVersion,
+            terminalStage = facts.terminalStage,
+            failureReason = facts.failureReason,
+            candidateSetHash = facts.candidateSetHash,
+            matchedRuleIds = facts.matchedRuleIds,
+            argumentSources = facts.argumentSources,
+            llmInvoked = facts.llmInvoked,
+            modelRequestCount = facts.modelRequestCount
         )
     }
 

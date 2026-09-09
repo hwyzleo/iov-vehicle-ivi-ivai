@@ -202,8 +202,8 @@ class AgentTestCr012IntegrationTest {
 
     private fun loadSampleSuite(): List<net.hwyz.iov.vehicle.ivi.ivai.agenttest.model.AgentTestCase> {
         val file = File("src/debug/assets/agent-tests/v1/agent-regression.json")
-        val repository = AgentTestCaseRepository(AgentTestCaseLoader { file.takeIf { it.exists() }?.readText() })
-        val result = repository.load()
+        val repository = AgentTestCaseRepository.builtInOnly(AgentTestCaseLoader { file.takeIf { it.exists() }?.readText() })
+        val result = repository.loadActiveSuite()
         assertNull(result.errorCode, "资产应可解析：${result.errorMessage}")
         return result.validCases
     }

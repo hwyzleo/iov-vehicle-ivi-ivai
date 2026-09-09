@@ -54,6 +54,10 @@ class PromptBuilder(private val registry: ToolRegistry) {
      * L1 tool-selection prompt (CR-005): the candidate set is the recalled Top-K
      * (retrieved or fixed) instead of the full registry. The output Schema stays
      * identical so the downstream parse / validate / execute chain is unchanged.
+     *
+     * CR-016：候选集只注入 canonical ID、必要描述、相似 Tool 的正反例与最小参数
+     * Schema，帮助模型区分易混淆 Tool（绝对档位 vs 相对步进、风口开关 vs 风向模式
+     * vs 自动模式）。
      */
     fun buildWithCandidates(
         session: Session,
@@ -61,16 +65,17 @@ class PromptBuilder(private val registry: ToolRegistry) {
         vehicleState: VehicleStateSnapshot?,
         candidates: List<ToolCandidate>
     ): List<ChatMessage> =
-        buildToolSelection(session, input, vehicleState, candidates.map { it.definition })
+        buildToolSelection(session, input, vehicleState, candidates.map { it.definition }, candidates.map { it.toolId })
 
     private fun buildToolSelection(
         session: Session,
         input: AgentInput,
         vehicleState: VehicleStateSnapshot?,
-        toolSummaries: List<ToolDefinitionSummary>
+        toolSummaries: List<ToolDefinitionSummary>,
+        candidateToolIds: List<String>? = null
     ): List<ChatMessage> {
         val messages = mutableListOf<ChatMessage>()
-        messages += ChatMessage("system", buildSystem(session, input, vehicleState, toolSummaries))
+        messages += ChatMessage("system", buildSystem(session, input, vehicleState, toolSummaries, candidateToolIds))
         messages += FEW_SHOT_EXAMPLES
         messages += session.history().takeLast(MAX_HISTORY_TURNS)
         messages += ChatMessage("user", input.text)
@@ -116,7 +121,8 @@ class PromptBuilder(private val registry: ToolRegistry) {
         session: Session,
         input: AgentInput,
         vehicleState: VehicleStateSnapshot?,
-        toolSummaries: List<ToolDefinitionSummary>
+        toolSummaries: List<ToolDefinitionSummary>,
+        candidateToolIds: List<String>? = null
     ): String = buildString {
         appendLine(SYSTEM_PROMPT)
         appendLine()
@@ -129,8 +135,34 @@ class PromptBuilder(private val registry: ToolRegistry) {
         appendLine("## 候选工具（只能使用以下 toolId，不得使用集合之外的工具）")
         toolSummaries.forEach { appendLine(renderToolSummary(it)) }
         appendLine()
+        appendLine("## 相似工具区分（必须严格遵守，避免选择错误工具）")
+        appendLine(renderSimilarToolGuidance(candidateToolIds))
+        appendLine()
         appendLine("## 输出 Schema")
         appendLine(OUTPUT_SCHEMA)
+    }
+
+    /**
+     * CR-016：相似 Tool 区分指引（设计文档明确的四组易混淆候选）。
+     * 只在候选包含对应 Tool 时输出，避免引入无关内容。
+     */
+    private fun renderSimilarToolGuidance(candidateToolIds: List<String>?): String {
+        val ids = candidateToolIds?.toSet()
+        val lines = mutableListOf<String>()
+        if (ids == null || "climate.fan.speed.set" in ids && "climate.fan.speed.adjust" in ids) {
+            lines += "- climate.fan.speed.set：设置绝对档位（如“风量调到3档”→ level=3）。"
+            lines += "- climate.fan.speed.adjust：在当前值上增减步长（如“风量调大一点”→ direction=increase）。"
+        }
+        if (ids == null || "climate.vent.set" in ids) {
+            lines += "- climate.vent.set：风口开关（如“打开前排风口”→ enabled=true）。"
+        }
+        if (ids == null || "climate.airflow.mode.set" in ids) {
+            lines += "- climate.airflow.mode.set：吹面/吹脚/除霜等风向模式（如“吹脚”→ mode=feet）。"
+        }
+        if (ids == null || "climate.auto.set" in ids) {
+            lines += "- climate.auto.set：自动空调模式开关（如“开启自动空调”→ enabled=true）。"
+        }
+        return if (lines.isEmpty()) "（无）" else lines.joinToString("\n")
     }
 
     private fun renderVehicleState(state: VehicleStateSnapshot?): String =

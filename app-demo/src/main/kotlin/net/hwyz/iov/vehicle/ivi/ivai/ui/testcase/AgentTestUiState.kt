@@ -1,6 +1,7 @@
 package net.hwyz.iov.vehicle.ivi.ivai.ui.testcase
 
 import net.hwyz.iov.vehicle.ivi.ivai.agent.evaluation.EvaluationTerminalStatus
+import net.hwyz.iov.vehicle.ivi.ivai.agenttest.repository.SuiteSourceType
 import net.hwyz.iov.vehicle.ivi.ivai.agenttest.result.ExportState
 import net.hwyz.iov.vehicle.ivi.ivai.agenttest.runner.AgentTestCaseStatus
 import net.hwyz.iov.vehicle.ivi.ivai.agenttest.runner.TestRunSummary
@@ -23,12 +24,29 @@ enum class TestRunState {
 }
 
 /**
+ * Suite 导入状态（IVI-IVAI-DSN-CR-015 页面操作区）。
+ * 批次 RUNNING / CANCELLING、导入 ACTIVATING 或导出生成中禁用读取操作。
+ */
+enum class SuiteImportState {
+    IDLE,
+    SELECTING,
+    READING,
+    VALIDATING,
+    ACTIVATING,
+    SUCCEEDED,
+    FAILED
+}
+
+/**
  * 测试用例列表 UI 状态（IVI-IVAI-DSN-CR-012 / CR-014）。ViewModel 持有批次
  * Job 与内存结果，配置变化不重启批次。
  */
 data class AgentTestUiState(
     val suiteId: String? = null,
     val suiteVersion: String? = null,
+    val suiteSchemaVersion: Int? = null,
+    val suiteSource: SuiteSourceType? = null,
+    val suiteSha256: String? = null,
     val runState: TestRunState = TestRunState.IDLE,
     val cases: List<AgentTestCaseUiModel> = emptyList(),
     val activeCaseId: String? = null,
@@ -37,7 +55,10 @@ data class AgentTestUiState(
     // ---- CR-014 导出状态 ----
     val exportState: ExportState = ExportState.DISABLED,
     val exportFileName: String? = null,
-    val exportErrorMessage: String? = null
+    val exportErrorMessage: String? = null,
+    // ---- CR-015 导入状态 ----
+    val importState: SuiteImportState = SuiteImportState.IDLE,
+    val importErrorMessage: String? = null
 )
 
 /**

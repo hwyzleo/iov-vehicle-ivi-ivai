@@ -51,8 +51,19 @@ sealed interface FastIntentMatchResult {
         val deterministicCandidateCount: Int = 0
     ) : FastIntentMatchResult
 
-    /** A single tool matched but required slots are missing. */
-    data class MissingArguments(val toolId: String, val missing: List<String>) : FastIntentMatchResult
+    /**
+     * A single tool matched but required slots are missing.
+     *
+     * CR-016：[deterministicFallbackReason] 记录类型化降级原因（必填缺失 →
+     * REQUIRED_SLOT_MISSING；数值/位置槽位无法解析 → SLOT_UNPARSEABLE；越界 →
+     * ARGUMENT_OUT_OF_RANGE），供可观测性展示。
+     */
+    data class MissingArguments(
+        val toolId: String,
+        val missing: List<String>,
+        val deterministicFallbackReason: String? = null,
+        val matchedRuleIds: List<String> = emptyList()
+    ) : FastIntentMatchResult
 
     /**
      * CR-013：单个 Tool 命中但显式槽位与预置/Alias 参数存在不可安全消解的矛盾
@@ -62,7 +73,9 @@ sealed interface FastIntentMatchResult {
         val toolId: String,
         val conflictingArgument: String,
         /** argument → 冲突来源（explicit_slot / rule_preset / ...）。 */
-        val sources: Map<String, String> = emptyMap()
+        val sources: Map<String, String> = emptyMap(),
+        val deterministicFallbackReason: String? = null,
+        val matchedRuleIds: List<String> = emptyList()
     ) : FastIntentMatchResult
 
     /** No deterministic match — continue to L1 / L2 / L3. */

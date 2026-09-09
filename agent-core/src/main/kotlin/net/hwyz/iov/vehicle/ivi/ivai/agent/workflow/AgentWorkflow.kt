@@ -7,7 +7,13 @@ import kotlinx.serialization.json.buildJsonObject
 import java.util.UUID
 import net.hwyz.iov.vehicle.ivi.ivai.agent.AgentState
 import net.hwyz.iov.vehicle.ivi.ivai.agent.capability.CapabilitySnapshot
+import net.hwyz.iov.vehicle.ivi.ivai.agent.candidate.FrozenCandidateSnapshot
 import net.hwyz.iov.vehicle.ivi.ivai.agent.domain.DomainCandidate
+import net.hwyz.iov.vehicle.ivi.ivai.agent.execution.AgentExecutionState
+import net.hwyz.iov.vehicle.ivi.ivai.agent.execution.DefaultExecutionInvariantValidator
+import net.hwyz.iov.vehicle.ivi.ivai.agent.execution.ExecutionInvariantValidator
+import net.hwyz.iov.vehicle.ivi.ivai.agent.execution.InvariantResult
+import net.hwyz.iov.vehicle.ivi.ivai.agent.execution.TerminalStage
 import net.hwyz.iov.vehicle.ivi.ivai.agent.domain.DomainRouteDecision
 import net.hwyz.iov.vehicle.ivi.ivai.agent.error.ErrorCode
 import net.hwyz.iov.vehicle.ivi.ivai.agent.evaluation.ActualTarget
@@ -59,6 +65,11 @@ import net.hwyz.iov.vehicle.ivi.ivai.model.ModelResponse
 import net.hwyz.iov.vehicle.ivi.ivai.model.PerformanceMetricsValidator
 import net.hwyz.iov.vehicle.ivi.ivai.model.ProviderComputeMetrics
 import net.hwyz.iov.vehicle.ivi.ivai.model.StreamingModelProvider
+import net.hwyz.iov.vehicle.ivi.ivai.model.lifecycle.ModelCallOutcome
+import net.hwyz.iov.vehicle.ivi.ivai.model.lifecycle.ModelRequestLifecycle
+import net.hwyz.iov.vehicle.ivi.ivai.model.lifecycle.ModelTimeoutPolicy
+import net.hwyz.iov.vehicle.ivi.ivai.model.parsing.ConstrainedModelResponseParser
+import net.hwyz.iov.vehicle.ivi.ivai.model.parsing.ParsedModelResponse
 import net.hwyz.iov.vehicle.ivi.ivai.observability.RequestTelemetry
 import net.hwyz.iov.vehicle.ivi.ivai.observability.TelemetryRecord
 import net.hwyz.iov.vehicle.ivi.ivai.observability.TelemetryRecorder
@@ -70,10 +81,16 @@ import net.hwyz.iov.vehicle.ivi.ivai.retrieval.ToolRetrievalQuery
 import net.hwyz.iov.vehicle.ivi.ivai.retrieval.knowledge.KnowledgeCitationMapper
 import net.hwyz.iov.vehicle.ivi.ivai.retrieval.knowledge.KnowledgeReranker
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.ToolRegistry
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.aliases.CanonicalAliasLexicon
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.aliases.DefaultAliasLexicons
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.domain.BusinessDomainId
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.GovernanceWorkspace
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.ToolCatalogV1
 import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.governance.WorkflowCatalogV1
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.schema.CanonicalizationResult
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.schema.CanonicalizationSource
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.schema.DefaultParameterCanonicalizationService
+import net.hwyz.iov.vehicle.ivi.ivai.tool.registry.schema.ParameterCanonicalizationService
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.ExecutionContext
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.ExecutionStatus
 import net.hwyz.iov.vehicle.ivi.ivai.tool.runtime.ToolExecutionResult
@@ -189,6 +206,10 @@ private class CandidateTrace {
     var governanceVersion: String? = null
     var candidateVersion: String? = null
 
+    /** CR-016：候选边界通过后的不可变冻结快照（执行失败不得清空）。 */
+    var frozenSnapshot: FrozenCandidateSnapshot? = null
+        private set
+
     fun reset(): CandidateTrace {
         initialDomains = emptyList()
         finalDomain = null
@@ -197,7 +218,36 @@ private class CandidateTrace {
         normalizedArguments = null
         governanceVersion = null
         candidateVersion = null
+        frozenSnapshot = null
         return this
+    }
+
+    /**
+     * CR-016：候选边界通过后冻结 canonical Target/Arguments。
+     * 后续 Policy/Confirmation/Adapter 失败只能更新终态和错误，不得清空快照。
+     */
+    fun freeze(
+        type: TargetType,
+        targetId: String,
+        canonicalArguments: JsonObject,
+        candidateSetHash: String,
+        source: net.hwyz.iov.vehicle.ivi.ivai.agent.router.CandidateSource,
+        matchedRuleIds: List<String>,
+        argumentSources: Map<String, String>
+    ) {
+        selectedTarget = ActualTarget(type, targetId)
+        normalizedArguments = canonicalArguments
+        frozenSnapshot = FrozenCandidateSnapshot(
+            type = type,
+            targetId = targetId,
+            canonicalArguments = canonicalArguments,
+            candidateSetHash = candidateSetHash,
+            source = source,
+            matchedRuleIds = matchedRuleIds,
+            argumentSources = argumentSources.mapValues { (_, v) ->
+                net.hwyz.iov.vehicle.ivi.ivai.agent.router.deterministic.ArgumentSource.valueOf(v)
+            }
+        )
     }
 
     /** 从路由决策捕获领域 / 能力包事实。 */
@@ -250,8 +300,32 @@ class AgentWorkflow(
     private val vehicleModel: String? = null,
     private val softwareVersion: String? = null,
     /** CR-008: 已注册 Workflow 的运行时（首期内部实现），注入后支持 WORKFLOW_EXECUTION。 */
-    private val workflowRuntime: WorkflowRuntime? = null
+    private val workflowRuntime: WorkflowRuntime? = null,
+    /** CR-016: 共享版本化 Alias Lexicon（L0/L1/Validator/Scorer 同一实例）。 */
+    private val aliasLexicon: CanonicalAliasLexicon = DefaultAliasLexicons.DEFAULT,
+    /**
+     * CR-016: 共享参数规范化服务（L0/L1/Validator/Scorer 同一实例）。
+     * 不注入时在 init 中基于 [registry] 构建，保证 L1 候选边界使用完整注册表。
+     */
+    private val canonicalizer: ParameterCanonicalizationService? = null,
+    /** CR-016: 模型请求生命周期（分阶段超时 + 清理屏障）。 */
+    private val modelRequestLifecycle: ModelRequestLifecycle = ModelRequestLifecycle(
+        ModelTimeoutPolicy(totalTimeoutMs = AgentConfig.DEFAULT_REQUEST_TIMEOUT_MS)
+    )
 ) {
+
+    /** 实际使用的参数规范化服务（CR-016 共享实例）。 */
+    private val effectiveCanonicalizer: ParameterCanonicalizationService =
+        canonicalizer ?: DefaultParameterCanonicalizationService(registry, aliasLexicon)
+
+    /** CR-016: 执行状态不变量校验器（终态封口时验证）。 */
+    private val invariantValidator: ExecutionInvariantValidator = DefaultExecutionInvariantValidator()
+
+    /** CR-016: 当前 Turn 执行状态跟踪（单活动 Turn 串行，共享实例安全）。 */
+    private var executionState: AgentExecutionState = AgentExecutionState("")
+
+    /** CR-016: 本轮 LLM 是否已发起（callModel 记录）。 */
+    private var llmInvokedThisTurn: Boolean = false
 
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -260,6 +334,9 @@ class AgentWorkflow(
 
     suspend fun process(input: AgentInput, session: Session): AgentResult {
         candidateTrace.reset()
+        // CR-016: 每轮创建独立执行状态跟踪；终态封口时校验不变量。
+        executionState = AgentExecutionState(requestId = input.requestId)
+        llmInvokedThisTurn = false
         val turnStartNs = System.nanoTime()
         val timings = TurnTimings(input.submittedAtNs)
         timings.queueMs = msBetween(input.submittedAtNs, turnStartNs)
@@ -458,84 +535,105 @@ class AgentWorkflow(
         timings.timeToFirstTokenMs = modelResponse.timeToFirstTokenMs
         record(input, session, AgentState.MODEL_RESPONDED, latencyMs = modelResponse.latencyMs)
 
-        // --- parse structured output ---
+        // --- parse structured output (CR-016: constrained parse → safe repair) ---
         val parseStartNs = System.nanoTime()
-        val contentJson = modelResponse.contentJson
-        if (contentJson == null) {
-            timings.parseAndSchemaMs = msSince(parseStartNs)
-            return turnFailed(
-                input, session, timings, ErrorCode.MODEL_RESPONSE_PARSE.code,
-                "暂时无法理解你的请求，请稍后再试", true, tracker, ragInfo,
-                "模型返回内容不是合法 JSON：\n${modelResponse.content}", cr008 = cr008
-            )
-        }
-        record(input, session, AgentState.PARSED)
-        val output: AgentOutput = try {
-            json.decodeFromJsonElement(AgentOutput.serializer(), contentJson)
-        } catch (e: Exception) {
-            timings.parseAndSchemaMs = msSince(parseStartNs)
-            return turnFailed(
-                input, session, timings, ErrorCode.OUTPUT_SCHEMA.code,
-                "暂时无法安全理解该请求，请换一种说法", false, tracker, ragInfo,
-                "结构化输出不符合 Schema：${e.message}\n—— 原始返回 ——\n$contentJson", cr008 = cr008
-            )
-        }
-        timings.parseAndSchemaMs = msSince(parseStartNs)
-
-        // --- route decision (model-proposed route) ---
-        val routeStartNs = System.nanoTime()
-        val routeDecision = router.resolve(output)
-        if (routeDecision is net.hwyz.iov.vehicle.ivi.ivai.agent.router.RouteDecision.Unsafe) {
-            timings.addRouteAndPolicy(msSince(routeStartNs))
-            return turnFailed(
-                input, session, timings, ErrorCode.ROUTE_UNSAFE.code,
-                "暂时无法安全处理该请求", false, tracker, ragInfo, routeDecision.message,
-                state = AgentState.REJECTED, cr008 = cr008
-            )
-        }
-        val route = (routeDecision as net.hwyz.iov.vehicle.ivi.ivai.agent.router.RouteDecision.Safe).route
-        session.setRoute(route)
-        tracker.candidateSource = CandidateSource.L1_LOCAL_LLM
-
-        return when (route) {
-            AgentRoute.LOCAL_DIALOGUE -> handleDialogue(
-                input, session, output, timings, modelResponse, routeStartNs,
-                tracker, ragInfo, candidateToolIds, cr008
-            )
-            AgentRoute.CLOUD_AI -> {
-                timings.addRouteAndPolicy(msSince(routeStartNs))
-                tracker.transition(IntentTier.L3_CLOUD_AI, RouteReasonCode.L3_OPEN_DOMAIN)
-                tracker.finalReasonCode = RouteReasonCode.L3_OPEN_DOMAIN
-                // CLOUD_AI 不是缺参追问场景，模型编造的 missingArguments 不得展示为「缺参」。
-                val sanitized = output.copy(missingArguments = emptyList())
-                val text = "该请求需要云端 AI 处理（预留功能，暂不执行）。"
-                
-                finish(
-                    input, session, AgentState.CLOUD_REQUIRED, route, sanitized, emptyList(), null, null,
-                    text, modelResponse.content, false, timings,
-                    validJson = true, schemaPassed = true, toolExecuted = false,
-                    executionPath = tracker.build(), ragInfo = ragInfo, cr008 = cr008
-                ).also { emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build())) }
+        val parsed = ConstrainedModelResponseParser.parse(
+            modelResponse.content,
+            expectedTopLevelFields = setOf("route")
+        )
+        when (parsed) {
+            is ParsedModelResponse.Failed -> {
+                timings.parseAndSchemaMs = msSince(parseStartNs)
+                if (parsed.structureInvalid) {
+                    // 合法 JSON 但结构不满足 AgentOutput → IVAI-SCHEMA-001（OUTPUT_SCHEMA）。
+                    return turnFailed(
+                        input, session, timings, ErrorCode.OUTPUT_SCHEMA.code,
+                        "暂时无法安全理解该请求，请换一种说法", false, tracker, ragInfo,
+                        "结构化输出不符合 Schema：${parsed.message}\n—— 原始返回 ——\n${modelResponse.content}", cr008 = cr008
+                    )
+                }
+                // CR-016：无法安全修复（IVAI-MODEL-REPAIR-001）；汇总码仍为 IVAI-MODEL-002。
+                return turnFailed(
+                    input, session, timings, ErrorCode.MODEL_RESPONSE_PARSE.code,
+                    "暂时无法理解你的请求，请稍后再试", true, tracker, ragInfo,
+                    "模型返回内容无法安全解析/修复：${parsed.message}\n—— 原始返回 ——\n${modelResponse.content}", cr008 = cr008
+                )
             }
-            AgentRoute.REJECT -> {
-                timings.addRouteAndPolicy(msSince(routeStartNs))
-                tracker.transition(IntentTier.REJECT, RouteReasonCode.REJECT_UNSUPPORTED)
-                tracker.finalReasonCode = RouteReasonCode.REJECT_UNSUPPORTED
-                // 模型可给出拒绝理由（如 TOOL_NOT_AVAILABLE）；但 REJECT 不是缺参追问场景，
-                // 模型编造的 missingArguments（如 blower_mode）不得展示为「缺参」。
-                val sanitized = output.copy(missingArguments = emptyList())
-                val text = "已拒绝该请求。"
-                
-                finish(
-                    input, session, AgentState.REJECTED, route, sanitized, emptyList(), null, null,
-                    text, modelResponse.content, false, timings,
-                    validJson = true, schemaPassed = true, toolExecuted = false,
-                    executionPath = tracker.build(), ragInfo = ragInfo, cr008 = cr008
-                ).also { emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build())) }
+            is ParsedModelResponse.Success -> {
+                record(input, session, AgentState.PARSED)
+                val output: AgentOutput = try {
+                    json.decodeFromJsonElement(AgentOutput.serializer(), parsed.element)
+                } catch (e: Exception) {
+                    timings.parseAndSchemaMs = msSince(parseStartNs)
+                    return turnFailed(
+                        input, session, timings, ErrorCode.OUTPUT_SCHEMA.code,
+                        "暂时无法安全理解该请求，请换一种说法", false, tracker, ragInfo,
+                        "结构化输出不符合 Schema：${e.message}\n—— 原始返回 ——\n${parsed.element}", cr008 = cr008
+                    )
+                }
+                // CR-016：候选集约束 + 旧 ID canonicalization + 参数 canonicalization。
+                // 边界通过时返回 canonical 化后的 output（旧 ID → canonical Tool ID）。
+                val effectiveOutput = applyCandidateBoundary(
+                    input, session, output, candidateToolIds, tracker, ragInfo, timings, cr008
+                ) ?: output
+                timings.parseAndSchemaMs = msSince(parseStartNs)
+
+                // --- route decision (model-proposed route) ---
+                val routeStartNs = System.nanoTime()
+                val routeDecision = router.resolve(effectiveOutput)
+                if (routeDecision is net.hwyz.iov.vehicle.ivi.ivai.agent.router.RouteDecision.Unsafe) {
+                    timings.addRouteAndPolicy(msSince(routeStartNs))
+                    return turnFailed(
+                        input, session, timings, ErrorCode.ROUTE_UNSAFE.code,
+                        "暂时无法安全处理该请求", false, tracker, ragInfo, routeDecision.message,
+                        state = AgentState.REJECTED, cr008 = cr008
+                    )
+                }
+                val route = (routeDecision as net.hwyz.iov.vehicle.ivi.ivai.agent.router.RouteDecision.Safe).route
+                session.setRoute(route)
+                tracker.candidateSource = CandidateSource.L1_LOCAL_LLM
+
+                return when (route) {
+                    AgentRoute.LOCAL_DIALOGUE -> handleDialogue(
+                        input, session, effectiveOutput, timings, modelResponse, routeStartNs,
+                        tracker, ragInfo, candidateToolIds, cr008
+                    )
+                    AgentRoute.CLOUD_AI -> {
+                        timings.addRouteAndPolicy(msSince(routeStartNs))
+                        tracker.transition(IntentTier.L3_CLOUD_AI, RouteReasonCode.L3_OPEN_DOMAIN)
+                        tracker.finalReasonCode = RouteReasonCode.L3_OPEN_DOMAIN
+                        // CLOUD_AI 不是缺参追问场景，模型编造的 missingArguments 不得展示为「缺参」。
+                        val sanitized = effectiveOutput.copy(missingArguments = emptyList())
+                        val text = "该请求需要云端 AI 处理（预留功能，暂不执行）。"
+
+                        finish(
+                            input, session, AgentState.CLOUD_REQUIRED, route, sanitized, emptyList(), null, null,
+                            text, modelResponse.content, false, timings,
+                            validJson = true, schemaPassed = true, toolExecuted = false,
+                            executionPath = tracker.build(), ragInfo = ragInfo, cr008 = cr008
+                        ).also { emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build())) }
+                    }
+                    AgentRoute.REJECT -> {
+                        timings.addRouteAndPolicy(msSince(routeStartNs))
+                        tracker.transition(IntentTier.REJECT, RouteReasonCode.REJECT_UNSUPPORTED)
+                        tracker.finalReasonCode = RouteReasonCode.REJECT_UNSUPPORTED
+                        // 模型可给出拒绝理由（如 TOOL_NOT_AVAILABLE）；但 REJECT 不是缺参追问场景，
+                        // 模型编造的 missingArguments（如 blower_mode）不得展示为「缺参」。
+                        val sanitized = effectiveOutput.copy(missingArguments = emptyList())
+                        val text = "已拒绝该请求。"
+
+                        finish(
+                            input, session, AgentState.REJECTED, route, sanitized, emptyList(), null, null,
+                            text, modelResponse.content, false, timings,
+                            validJson = true, schemaPassed = true, toolExecuted = false,
+                            executionPath = tracker.build(), ragInfo = ragInfo, cr008 = cr008
+                        ).also { emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build())) }
+                    }
+                    AgentRoute.LOCAL_TOOL -> handleLocalTool(
+                        input, session, effectiveOutput, timings, modelResponse, routeStartNs, tracker, ragInfo, candidateToolIds, cr008
+                    )
+                }
             }
-            AgentRoute.LOCAL_TOOL -> handleLocalTool(
-                input, session, output, timings, modelResponse, routeStartNs, tracker, ragInfo, candidateToolIds, cr008
-            )
         }
     }
 
@@ -915,6 +1013,11 @@ class AgentWorkflow(
      * [AgentEvent.ModelCallCompleted] once the full response is received (or the
      * call failed / was cancelled), enabling LLM timing in the test collector.
      */
+    /**
+     * CR-016：通过 [ModelRequestLifecycle] 调用模型，实现分阶段超时（排队/首字/
+     * 空闲块/总生成）与取消清理传播。超时以 [ModelClientException] 抛出，由调用方
+     * 映射为 IVAI-MODEL-001 汇总码；细分错误码记录在 [ModelCallReport]。
+     */
     private suspend fun callModel(
         input: AgentInput,
         session: Session,
@@ -929,29 +1032,39 @@ class AgentWorkflow(
         )
         val providerType = modelProvider::class.simpleName
         emit(AgentEvent.ModelCallStarted(session.sessionId, input.turnId, input.requestId, config.model, providerType))
-        if (!config.streamingEnabled) {
-            timings.streamingUsed = false
-            return try {
-                modelProvider.generate(request)
-            } finally {
-                emit(AgentEvent.ModelCallCompleted(session.sessionId, input.turnId, input.requestId, config.model, providerType))
-            }
-        }
+        // CR-016: 记录模型请求事件（不变量校验 llmInvoked / modelRequestCount）。
+        executionState.recordModelRequest()
+        llmInvokedThisTurn = true
         val streaming = modelProvider as? StreamingModelProvider
-        if (streaming == null) {
-            timings.streamingUsed = false
-            return try {
-                modelProvider.generate(request)
-            } finally {
-                emit(AgentEvent.ModelCallCompleted(session.sessionId, input.turnId, input.requestId, config.model, providerType))
-            }
-        }
-        timings.streamingUsed = true
         val sb = StringBuilder()
         return try {
-            streaming.generateStreaming(request) { delta ->
-                sb.append(delta)
-                emit(AgentEvent.StreamingDelta(session.sessionId, input.turnId, input.requestId, sb.toString()))
+            val outcome = modelRequestLifecycle.call(
+                request = request,
+                provider = modelProvider,
+                onDelta = if (streaming != null && config.streamingEnabled) {
+                    { delta ->
+                        sb.append(delta)
+                        emit(AgentEvent.StreamingDelta(session.sessionId, input.turnId, input.requestId, sb.toString()))
+                    }
+                } else {
+                    null
+                }
+            )
+            when (outcome) {
+                is ModelCallOutcome.Success -> {
+                    timings.streamingUsed = streaming != null && config.streamingEnabled
+                    timings.timeToFirstTokenMs = outcome.report.firstOutputMs
+                    outcome.response
+                }
+                is ModelCallOutcome.Timeout -> {
+                    timings.streamingUsed = streaming != null && config.streamingEnabled
+                    throw ModelClientException(
+                        kind = ModelErrorKind.TIMEOUT,
+                        message = outcome.message,
+                        cause = null
+                    )
+                }
+                is ModelCallOutcome.ProviderFailure -> throw outcome.exception
             }
         } finally {
             emit(AgentEvent.ModelCallCompleted(session.sessionId, input.turnId, input.requestId, config.model, providerType))
@@ -1154,6 +1267,75 @@ class AgentWorkflow(
             executionPath = tracker.build(), ragInfo = ragInfo, cr008 = cr008
         ).also { emit(AgentEvent.Reply(session.sessionId, input.turnId, input.requestId, text, tracker.build())) }
     }
+
+    /**
+     * CR-016：候选边界（Candidate Boundary）——非阻断冻结版。
+     *
+     * 在模型解析后、进入 Policy/Confirmation/执行链之前执行：
+     *  1. Tool ID canonicalize（旧 ID / Function-ID → canonical，仅当 registry 未直接
+     *     注册该 ID 时映射；旧 ID registry 直接命中则保留——兼容既有链路）；
+     *  2. 参数 canonicalization（统一参数语义 + 范围 + 必填）；
+     *  3. 候选边界通过后在 CandidateTrace 冻结 canonical Target/Arguments
+     *     （FrozenCandidateSnapshot），后续 Policy/Adapter 失败不清空；
+     *  4. 边界未通过 → 不冻结（Target/Arguments 保持空），由既有链路按
+     *     IVAI-TOOL-001/002/003 汇总码拒绝，细分码进入 trace（不改变兼容码语义）。
+     *
+     * @return 候选边界通过时返回 canonical 化后的 [AgentOutput]（旧 ID → canonical
+     *   Tool ID + canonical 参数）；非 LOCAL_TOOL 或未发生重写时返回 null（调用方
+     *   沿用原 output）。
+     */
+    private suspend fun applyCandidateBoundary(
+        input: AgentInput,
+        session: Session,
+        output: AgentOutput,
+        candidateToolIds: Set<String>?,
+        tracker: ExecutionPathTracker,
+        ragInfo: RagExecutionInfo?,
+        timings: TurnTimings,
+        cr008: Cr008DebugInfo?
+    ): AgentOutput? {
+        // 非 LOCAL_TOOL 路由不进入候选边界（对话/云/拒绝不产生可执行目标）。
+        if (output.route != AgentRoute.LOCAL_TOOL.name) return null
+        val intent = output.intents.firstOrNull() ?: return null
+        // 1) Tool ID canonicalization：registry 直接注册则保留；否则旧 ID → canonical。
+        val rawId = intent.toolId
+        val canonicalId = if (registry.get(rawId) != null) {
+            rawId
+        } else {
+            aliasLexicon.canonicalToolId(rawId)
+        }
+        val tool = registry.get(canonicalId) ?: return null // 放行：既有链路报 UNKNOWN_TOOL
+        // 2) 参数 canonicalization（统一参数语义 + 范围 + 必填）。
+        val args = jsonArgsToValues(intent.arguments)
+        val canonical = effectiveCanonicalizer.canonicalize(
+            canonicalId, args, CanonicalizationSource.L1_LOCAL_LLM
+        )
+        if (canonical is CanonicalizationResult.Failed) {
+            // 边界未通过：不冻结；细分码进 trace（既有一致汇总码由校验/执行链给出）。
+            emitLifecycle(ToolLifecyclePhase.FAILED, input.requestId, canonicalId, canonical.message)
+            return null
+        }
+        // 3) 冻结候选快照（canonical Target/Arguments 在候选边界通过后固化）。
+        val success = canonical as CanonicalizationResult.Success
+        candidateTrace.freeze(
+            type = net.hwyz.iov.vehicle.ivi.ivai.agent.evaluation.TargetType.TOOL,
+            targetId = canonicalId,
+            canonicalArguments = JsonObject(valuesToJsonArgs(success.canonicalArguments)),
+            candidateSetHash = candidateSetHash(candidateToolIds),
+            source = CandidateSource.L1_LOCAL_LLM,
+            matchedRuleIds = emptyList(),
+            argumentSources = success.argumentSources
+        )
+        // 4) 返回 canonical 化后的 output（旧 ID → canonical Tool ID + canonical 参数）。
+        val rewritten = intent.copy(
+            toolId = canonicalId,
+            arguments = valuesToJsonArgs(success.canonicalArguments)
+        )
+        return output.copy(intents = listOf(rewritten))
+    }
+
+    private fun candidateSetHash(candidateToolIds: Set<String>?): String =
+        candidateToolIds?.sorted()?.joinToString(",")?.hashCode()?.toString(16) ?: ""
 
     private suspend fun handleLocalTool(
         input: AgentInput,
@@ -1611,6 +1793,40 @@ class AgentWorkflow(
         executionStatus: ExecutionStatus?,
         executionPath: AgentExecutionPath?
     ) {
+        // CR-016: 终态封口——记录终止阶段 / 原因 / 终态并执行不变量校验。
+        val terminalStatus = EvaluationSnapshotProjector.terminalStatus(
+            SnapshotFacts(
+                requestId = input.requestId,
+                sessionId = session.sessionId,
+                executionPath = executionPath,
+                state = state,
+                route = route,
+                executionStatus = executionStatus,
+                pendingConfirmation = session.pendingConfirmationId != null,
+                cancelled = state == AgentState.REJECTED && route == AgentRoute.REJECT
+            )
+        )
+        val terminalStage = terminalStageOf(state, route, executionStatus)
+        executionState.finalTier = executionPath?.finalTier
+        executionState.markTerminal(
+            terminalStage = terminalStage,
+            reasonCode = executionPath?.finalReasonCode,
+            terminalStatus = terminalStatus
+        )
+        val invariantResult = invariantValidator.validate(
+            executionState.invariantContext(candidateTrace.selectedTarget)
+        )
+        // 违规：输出 IVAI-STATE-001，不得生成看似正常的空 L1 结果。
+        val failureReason: String?
+        val reasonCode: String?
+        if (invariantResult is InvariantResult.Violated) {
+            failureReason = invariantResult.message
+            reasonCode = net.hwyz.iov.vehicle.ivi.ivai.agent.error.Cr016ErrorCodes.STATE_INVARIANT
+        } else {
+            failureReason = null
+            reasonCode = executionPath?.finalReasonCode
+        }
+        val frozen = candidateTrace.frozenSnapshot
         evaluationListener?.invoke(
             EvaluationSnapshotProjector.project(
                 SnapshotFacts(
@@ -1626,12 +1842,37 @@ class AgentWorkflow(
                     route = route,
                     executionStatus = executionStatus,
                     pendingConfirmation = session.pendingConfirmationId != null,
-                    reasonCode = executionPath?.finalReasonCode,
+                    reasonCode = reasonCode,
                     governanceVersion = candidateTrace.governanceVersion,
-                    candidateVersion = candidateTrace.candidateVersion
+                    candidateVersion = candidateTrace.candidateVersion,
+                    terminalStage = terminalStage,
+                    failureReason = failureReason,
+                    candidateSetHash = frozen?.candidateSetHash,
+                    matchedRuleIds = frozen?.matchedRuleIds ?: emptyList(),
+                    argumentSources = frozen?.argumentSources?.mapValues { (_, v) -> v.name } ?: emptyMap(),
+                    llmInvoked = executionState.llmInvoked,
+                    modelRequestCount = executionState.modelRequestCount
                 )
             )
         )
+    }
+
+    /** CR-016: 状态/路由 → 终止阶段映射（非成功终态必填 terminalStage）。 */
+    private fun terminalStageOf(
+        state: AgentState,
+        route: AgentRoute?,
+        executionStatus: ExecutionStatus?
+    ): TerminalStage = when {
+        executionStatus == ExecutionStatus.SUCCEEDED || state == AgentState.SUCCEEDED ->
+            TerminalStage.SUCCESS
+        route == AgentRoute.REJECT -> TerminalStage.ROUTING
+        state == AgentState.WAITING_USER || state == AgentState.NEED_DIALOGUE ->
+            if (route == AgentRoute.LOCAL_DIALOGUE) TerminalStage.CONFIRMATION
+            else TerminalStage.CANDIDATE_BOUNDARY
+        state == AgentState.REJECTED -> TerminalStage.POLICY
+        state == AgentState.TIMEOUT -> TerminalStage.MODEL_REQUEST
+        state == AgentState.FAILED -> TerminalStage.EXECUTION
+        else -> TerminalStage.SNAPSHOT
     }
 
     private fun emitDebugInfo(
